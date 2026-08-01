@@ -95,4 +95,6 @@ chmod +x "$R/root/firstboot.sh"
 install -d "$R/usr/local/bin"
 install -m 0755 "$HERE/det-audio-session" "$R/usr/local/bin/det-audio-session"
 install -m 0755 "$HERE/setup-audio.sh" "$R/root/setup-audio.sh"
+install -m 0644 "$HERE/90-determination-direct.conf" \
+    "$R/root/90-determination-direct.conf"
 chroot "$R" /root/setup-audio.sh --configure-only

@@ -74,7 +74,11 @@ sleep 0.5
 # claim, wait for PipeWire to release every ALSA fd, then restore only the
 # Android owners recorded in the journal. Display recovery continues if audio
 # restore fails, but doctor will keep reporting the failed audio phase.
-if [ -x "$DET/bin/det-audio-owner" ] && \
+if [ -x "$DET/bin/det-audio-route" ] && \
+   [ -f "$DET/run/audio-route.state" ]; then
+    "$DET/bin/det-audio-route" restore ||
+        echo "WARN: direct audio route restore failed; run detctl doctor"
+elif [ -x "$DET/bin/det-audio-owner" ] && \
    [ -f "$DET/etc/audio-owner.conf" ] && \
    [ -f "$DET/run/audio-owner.state" ]; then
     audio_phase=$(sed -n 's/^phase=//p' "$DET/run/audio-owner.state" | tail -n 1)

@@ -1,0 +1,124 @@
+#!/system/bin/sh
+# Journalled guacamoleb speaker route around det-audio-owner arbitration.
+set -eu
+
+DET=${DET_ROOT:-/data/determination}
+OWNER="$DET/bin/det-audio-owner"
+STATE="$DET/run/audio-route.state"
+ROUTE='QUAT_MI2S_RX Audio Mixer MultiMedia1'
+SELECTOR='TFA_CHIP_SELECTOR'
+
+read_route() {
+    route_value=$(tinymix "$ROUTE" 2>/dev/null)
+    case "$route_value" in
+        *'On On')   route_left=1; route_right=1 ;;
+        *'On Off')  route_left=1; route_right=0 ;;
+        *'Off On')  route_left=0; route_right=1 ;;
+        *'Off Off') route_left=0; route_right=0 ;;
+        *) echo "cannot parse route state: $route_value" >&2; return 1 ;;
+    esac
+}
+
+read_selector() {
+    selector_value=$(tinymix "$SELECTOR" 2>/dev/null | awk '{print $2}')
+    case "$selector_value" in
+        0|1|2|3) ;;
+        *) echo "cannot parse TFA selector: $selector_value" >&2; return 1 ;;
+    esac
+}
+
+write_state() {
+    umask 077
+    tmp="$STATE.tmp.$$"
+    {
+        echo schema=1
+        echo route_left="$route_left"
+        echo route_right="$route_right"
+        echo selector="$selector_value"
+    } > "$tmp"
+    mv -f "$tmp" "$STATE"
+}
+
+load_state() {
+    [ -f "$STATE" ] || { echo "no audio route journal" >&2; return 1; }
+    route_left=$(sed -n 's/^route_left=//p' "$STATE" | tail -n 1)
+    route_right=$(sed -n 's/^route_right=//p' "$STATE" | tail -n 1)
+    selector_value=$(sed -n 's/^selector=//p' "$STATE" | tail -n 1)
+    case "$route_left$route_right" in 00|01|10|11) ;; *) return 1;; esac
+    case "$selector_value" in 0|1|2|3) ;; *) return 1;; esac
+}
+
+verify_mixer() {
+    read_selector && [ "$selector_value" = "$saved_selector" ]
+    read_route && [ "$route_left" = "$saved_left" ] &&
+        [ "$route_right" = "$saved_right" ]
+}
+
+wait_for_mixer() {
+    tries=0
+    until verify_mixer; do
+        tries=$((tries + 1))
+        [ "$tries" -lt 50 ] || {
+            echo "Android audio route did not converge to journal" >&2
+            return 1
+        }
+        sleep 0.1
+    done
+}
+
+claim_route() {
+    if [ -f "$STATE" ] && [ -f "$DET/run/control/audio-claimed" ]; then
+        echo "direct speaker route already claimed"
+        return 0
+    fi
+    rm -f "$STATE"
+    read_route
+    read_selector
+    write_state
+
+    claimed=0
+    rollback_claim() {
+        rc=$?
+        trap - EXIT INT TERM
+        if [ "$rc" -ne 0 ]; then
+            [ "$claimed" = 0 ] || "$OWNER" restore --apply || true
+            rm -f "$STATE"
+        fi
+        exit "$rc"
+    }
+    trap rollback_claim EXIT INT TERM
+
+    "$OWNER" claim --apply
+    claimed=1
+    [ -f "$DET/run/control/audio-claimed" ]
+    tinymix "$ROUTE" 1 >/dev/null
+    tinymix "$SELECTOR" 2 >/dev/null
+    read_route
+    [ "$route_left" = 1 ]
+    read_selector
+    [ "$selector_value" = 2 ]
+
+    trap - EXIT INT TERM
+    echo "direct speaker route claimed"
+}
+
+restore_route() {
+    load_state
+    saved_left=$route_left
+    saved_right=$route_right
+    saved_selector=$selector_value
+    "$OWNER" restore --apply
+    # Starting Android's audio HAL reapplies its complete vendor route. Direct
+    # writes cannot faithfully restore TFA selector value 3 (the kernel's put
+    # callback reads it back as 1), so verify the HAL against our snapshot.
+    wait_for_mixer
+    rm -f "$STATE"
+    echo "Android audio route restored"
+}
+
+[ -x "$OWNER" ] || { echo "det-audio-owner is not installed" >&2; exit 2; }
+case "${1:-}" in
+    claim) claim_route ;;
+    restore) restore_route ;;
+    *) echo "usage: det-audio-route claim|restore" >&2; exit 2 ;;
+esac

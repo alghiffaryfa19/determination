@@ -1,6 +1,7 @@
 # Direct audio architecture
 
-Status: foundation implemented; hardware routing not yet qualified on-device.
+Status: internal-speaker alpha hardware-proven on `guacamoleb`; full route and
+failure qualification remains.
 
 ## Product invariant
 
@@ -23,7 +24,7 @@ The guest owns the application graph. A small host component may arbitrate
 hardware ownership and execute a device-profile route transaction, but it must
 never proxy sample buffers.
 
-## Current foundation
+## Current implementation
 
 `det-audio-probe` has Android/bionic and Debian/glibc builds with one stable
 JSON schema. It inventories `/dev/snd`, captures `/proc/asound`, identifies all
@@ -40,10 +41,28 @@ PipeWire, pipewire-pulse, and WirePlumber only while the host's fsync'd
 Normal owner restore then requires a fresh zero-holder probe before it restarts
 Android's HAL. This prevents PipeWire and Android racing the same codec.
 
+`det-audio-owner` snapshots `audioserver` and `vendor.audio-hal`, converges both
+to a stable stopped state, proves zero ALSA holders, and publishes the guest
+claim. The settling check is load-bearing on Android 16: `audioserver.rc`
+deliberately restarts `vendor.audio-hal` after audioserver stops for VTS.
+
+`det-audio-route` journals the pre-claim mixer state, applies the vendor speaker
+route (`MultiMedia1` to `QUAT_MI2S_RX`, TFA selector 2), and verifies Android's
+HAL asynchronously rebuilds the exact original route after ownership returns.
+PipeWire creates one static `determination-speaker` sink for `hw:0,0`; desktop
+udev discovery does not describe this Qualcomm card correctly in the guest.
+
+On 2026-08-02 a one-second 440 Hz, -40 dBFS tone was heard first through direct
+ALSA and then through `pw-play`. Both paths returned to `Off Off`, TFA selector
+3, and running Android audio services. `desktop-on` and `desktop-off` now call
+the same journalled route transaction. This proves the internal speaker slice,
+not the remaining routes or stress gates.
+
 ## Ownership transaction
 
-Internal display mode needs an exclusive codec transaction. This becomes a
-journalled `detd` child operation, not another free-running shell loop:
+Internal display mode needs an exclusive codec transaction. The current alpha
+uses the journalled native owner plus a bounded route wrapper; folding the
+transaction under `detd` remains the intended control-plane endpoint:
 
 1. Refuse the request during calls, alarms, recording, or an existing audio
    transition unless the policy explicitly permits interruption.
@@ -98,17 +117,17 @@ unavailable; Determination does not smuggle it through Android.
 
 ## Qualification gate
 
-Direct audio is not called working until all of these pass on-device:
+Full direct audio is not called working until all of these pass on-device:
 
-- exact card/PCM/control inventory captured on both sides;
-- zero `/dev/snd` holders after quiesce;
-- a direct speaker tone with a conservative gain ceiling;
-- Android route and service state restored byte-for-byte;
-- PipeWire app playback without a companion service;
+- [x] exact card/PCM/control inventory captured on both sides;
+- [x] zero `/dev/snd` holders after quiesce;
+- [x] a direct speaker tone with a conservative gain ceiling;
+- [x] Android route and service state restored byte-for-byte;
+- [x] PipeWire app playback without a companion service;
 - volume/mute, headset and DP/USB routes;
 - suspend/wake, cable cycles, daemon kill, guest crash and failed-restore tests;
 - measured latency, drift and xrun recovery under CPU/GPU load;
 - microphone disabled by default with visible privacy state when enabled.
 
-Until those gates pass, the honest state is `direct_audio=inventory`, not
-`audio=working`.
+Until those gates pass, the honest state is
+`direct_audio=internal-speaker-alpha`, not `audio=working`.

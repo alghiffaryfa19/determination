@@ -568,6 +568,41 @@ private:
     return false;
 }
 
+[[nodiscard]] bool quiesce_services(const Options &options,
+                                    const Profile &profile,
+                                    const Journal &journal,
+                                    std::string *error) {
+    constexpr auto settle_time = std::chrono::milliseconds(500);
+    const auto deadline = std::chrono::steady_clock::now() +
+                          std::chrono::milliseconds(profile.timeout_ms);
+    std::optional<std::chrono::steady_clock::time_point> settled_since;
+
+    while (std::chrono::steady_clock::now() < deadline) {
+        bool all_stopped = true;
+        for (const auto &service : journal.services) {
+            if (service_state(options, service.name, profile.timeout_ms) ==
+                "stopped") {
+                continue;
+            }
+            all_stopped = false;
+            settled_since.reset();
+            if (!set_service(options, "stop", service.name, "stopped",
+                             profile.timeout_ms, error)) {
+                return false;
+            }
+        }
+
+        const auto now = std::chrono::steady_clock::now();
+        if (all_stopped) {
+            if (!settled_since) settled_since = now;
+            if (now - *settled_since >= settle_time) return true;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    *error = "audio services did not remain stopped";
+    return false;
+}
+
 [[nodiscard]] bool wait_for_unowned(const Options &options,
                                     const Profile &profile,
                                     std::string *error) {
@@ -654,6 +689,11 @@ private:
         previous.phase != "none") {
         if (previous.phase == "claimed" && previous.boot_id == boot_id(options) &&
             previous.profile_hash == profile.hash) {
+            if (access(claim_marker_path(options).c_str(), F_OK) != 0 &&
+                !write_claim_marker(options, previous, &error)) {
+                std::cerr << "cannot republish guest audio claim marker\n";
+                return 1;
+            }
             std::cout << "already claimed\n";
             return 0;
         }
@@ -692,18 +732,14 @@ private:
         std::cerr << "cannot advance audio journal: " << error << '\n';
         return 1;
     }
-    for (const auto &service : journal.services) {
-        if (service.state != "running" && service.state != "restarting") continue;
-        if (!set_service(options, "stop", service.name, "stopped",
-                         profile.timeout_ms, &error)) {
-            const std::string original_error = error;
-            journal.error = original_error;
-            const bool restored = rollback_services(
-                options, profile, &journal, original_error, &error);
-            std::cerr << "audio quiesce failed: " << original_error << '\n';
-            if (!restored) std::cerr << "rollback also failed: " << error << '\n';
-            return 1;
-        }
+    if (!quiesce_services(options, profile, journal, &error)) {
+        const std::string original_error = error;
+        journal.error = original_error;
+        const bool restored = rollback_services(
+            options, profile, &journal, original_error, &error);
+        std::cerr << "audio quiesce failed: " << original_error << '\n';
+        if (!restored) std::cerr << "rollback also failed: " << error << '\n';
+        return 1;
     }
     const CommandResult probe = run_command(
         options.probe, {"--root", options.probe_root, "--require-unowned"},

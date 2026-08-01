@@ -38,6 +38,12 @@ scan() {
     for f in "$CTRL"/*; do
         [ -e "$f" ] || continue
         cmd=${f##*/}
+        # Persistent protocol state shares this bind-mounted directory with
+        # legacy one-shot commands. Never unlink the authenticated RPC socket
+        # or the journalled audio ownership marker.
+        case "$cmd" in
+            detd.sock|audio-claimed) continue ;;
+        esac
         rm -f "$f" 2>/dev/null
         case "$cmd" in
             exit)

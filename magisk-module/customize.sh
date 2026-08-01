@@ -13,13 +13,13 @@ mkdir -p "$STAGE/bin" "$STAGE/guest-tools" "$DET/etc" "$DET/log" "$DET/run" "$DE
 trap 'rm -rf "$STAGE"' EXIT
 [ ! -e "$TARGET" ] || abort "! payload version $VERSION is already staged"
 
-for f in evgrab detd detctl det-audio-probe det-audio-owner device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-start desktop-on desktop-off run-transition external-presenter native-plasma native-kms-gate native-restore det-hostagent det-color-compat cycle-stress.sh; do
+for f in evgrab detd detctl det-audio-probe det-audio-owner det-audio-route det-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-start desktop-on desktop-off run-transition external-presenter native-plasma native-kms-gate native-restore det-hostagent det-color-compat cycle-stress.sh; do
     [ -f "$MODPATH/tools/$f" ] || abort "! missing $f in zip"
     cp -f "$MODPATH/tools/$f" "$STAGE/bin/$f"
     chmod 0755 "$STAGE/bin/$f"
 done
 cp -f "$MODPATH/tools/lxc-config-base" "$STAGE/lxc-config-base"
-for f in det-guest-agent det-audio-probe det-audio-session; do
+for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke; do
   if [ -f "$MODPATH/guest-tools/$f" ]; then
     cp -f "$MODPATH/guest-tools/$f" "$STAGE/guest-tools/$f"
     chmod 0755 "$STAGE/guest-tools/$f"
@@ -29,6 +29,11 @@ for f in det-guest-agent det-audio-probe det-audio-session; do
     fi
   fi
 done
+if [ -f "$MODPATH/guest-tools/90-determination-direct.conf" ]; then
+    cp -f "$MODPATH/guest-tools/90-determination-direct.conf" \
+        "$STAGE/guest-tools/90-determination-direct.conf"
+    chmod 0644 "$STAGE/guest-tools/90-determination-direct.conf"
+fi
 
 # Verify the complete staged set before one atomic pointer change. Keep the
 # prior target intact for recovery; runtime paths resolve through current/.
@@ -80,6 +85,13 @@ if [ -n "$AUDIO_PROFILE_ID" ] && \
     cp -f "$MODPATH/audio-profiles/$AUDIO_PROFILE_ID.conf" "$DET/etc/audio-owner.conf"
     chmod 0640 "$DET/etc/audio-owner.conf"
     ui_print "- Direct audio ownership profile: $AUDIO_PROFILE_ID (manual gate only)"
+fi
+if [ "$AUDIO_PROFILE_ID" = guacamoleb ] && \
+   [ -f "$DET/guest-tools/90-determination-direct.conf" ] && \
+   [ -d "$DET/guest/etc/pipewire/pipewire.conf.d" ]; then
+    cp -f "$DET/guest-tools/90-determination-direct.conf" \
+        "$DET/guest/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
+    chmod 0644 "$DET/guest/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
 fi
 
 # Keep the payload out of the mounted module dir.

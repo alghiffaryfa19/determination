@@ -1,0 +1,56 @@
+#!/bin/sh
+# Inspect or play through the claimed direct-ALSA PipeWire graph.
+set -eu
+
+if [ "$(id -u)" = 0 ]; then
+    install -d -o 1000 -g 1000 -m 0700 /run/user/1000
+    exec /usr/sbin/runuser -u melissa -- /usr/bin/env \
+        HOME=/home/melissa USER=melissa LOGNAME=melissa \
+        PATH=/usr/local/bin:/usr/bin:/bin \
+        XDG_RUNTIME_DIR=/run/user/1000 \
+        /usr/local/bin/det-pipewire-smoke "$@"
+fi
+
+MODE=${1:-inspect}
+TONE=${2:-/root/determination-audio-tone.wav}
+SESSION=/usr/local/bin/det-audio-session
+session_pid=
+
+[ -f /mnt/det-control/audio-claimed ] || {
+    echo "guest cannot see audio-claimed" >&2
+    ls -la /mnt/det-control >&2 || true
+    exit 1
+}
+
+cleanup() {
+    trap - EXIT INT TERM
+    [ -z "$session_pid" ] || kill -TERM "$session_pid" 2>/dev/null || true
+    [ -z "$session_pid" ] || wait "$session_pid" 2>/dev/null || true
+}
+trap cleanup EXIT INT TERM
+
+"$SESSION" &
+session_pid=$!
+i=0
+while [ ! -S "$XDG_RUNTIME_DIR/pipewire-0" ]; do
+    i=$((i + 1))
+    [ "$i" -lt 80 ] || {
+        echo "PipeWire socket did not appear" >&2
+        sed -n '1,160p' "$XDG_RUNTIME_DIR/determination-audio.log" >&2 || true
+        exit 1
+    }
+    sleep 0.1
+done
+
+# Give WirePlumber time to enumerate all ALSA nodes after PipeWire appears.
+sleep 1
+wpctl status -n
+
+case "$MODE" in
+    inspect) ;;
+    play)
+        [ -f "$TONE" ] || { echo "missing guest tone: $TONE" >&2; exit 2; }
+        pw-play "$TONE"
+        ;;
+    *) echo "usage: det-pipewire-smoke [inspect|play] [TONE]" >&2; exit 2;;
+esac

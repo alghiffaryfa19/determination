@@ -32,6 +32,10 @@ rollback() {
         lc_pid_signal suppressor TERM "$generation"
         lc_pid_signal ss-freezer TERM "$generation"
         lc_pid_signal evgrab TERM "$generation"
+        if [ -x "$DET/bin/det-audio-route" ] &&
+           [ -f "$DET/run/audio-route.state" ]; then
+            "$DET/bin/det-audio-route" restore || true
+        fi
         start surfaceflinger 2>/dev/null || true
         lc_state_write RECOVERY "$generation" rollback failed || true
     fi
@@ -125,6 +129,16 @@ sleep 1
 # display recovery always wins if the renderer is absent or broken.
 "$DET/bin/run-transition" desktop ||
     echo "WARN: native desktop transition skipped/failed rc=$? (see log/transition.log)"
+
+# 4d. Claim the internal codec and apply the exact guacamoleb speaker route.
+# The guest session below starts PipeWire only while the owner's marker exists.
+# Audio failure is non-fatal to display handoff and remains recoverable through
+# the route and ownership journals.
+if [ -x "$DET/bin/det-audio-route" ] &&
+   [ -f "$DET/etc/audio-owner.conf" ]; then
+    "$DET/bin/det-audio-route" claim ||
+        echo "WARN: direct audio claim failed; desktop continues muted"
+fi
 
 # 5. THE REAL COMPOSITOR (2026-07-06): phoc 0.47 (droidian group/102) on the
 #    droidian wlroots hwcomposer backend, built in-guest against upstream

@@ -25,13 +25,22 @@ printf '%s\n' \
 printf '%s\n' \
     '#!/bin/sh' \
     'name=${1#init.svc.}' \
-    'cat "'"$FIXTURE"'/services/$name"' > "$FIXTURE/getprop"
+    'state=$(cat "'"$FIXTURE"'/services/$name")' \
+    'if [ "$name" = vendor.audio-hal ] && [ -f "'"$FIXTURE"'/hal-respawn-pending" ]; then' \
+    '    rm -f "'"$FIXTURE"'/hal-respawn-pending"' \
+    '    printf "running\\n" > "'"$FIXTURE"'/services/$name"' \
+    'fi' \
+    'printf "%s\\n" "$state"' > "$FIXTURE/getprop"
 printf '%s\n' \
     '#!/bin/sh' \
     'verb=${1#ctl.}' \
     'name=$2' \
     'case "$verb" in stop) state=stopped ;; start) state=running ;; *) exit 2 ;; esac' \
-    'printf "%s\\n" "$state" > "'"$FIXTURE"'/services/$name"' > "$FIXTURE/setprop"
+    'printf "%s\\n" "$state" > "'"$FIXTURE"'/services/$name"' \
+    'if [ "$verb" = stop ] && [ "$name" = vendor.audio-hal ] && [ ! -f "'"$FIXTURE"'/hal-respawned" ]; then' \
+    '    : > "'"$FIXTURE"'/hal-respawned"' \
+    '    : > "'"$FIXTURE"'/hal-respawn-pending"' \
+    'fi' > "$FIXTURE/setprop"
 chmod +x "$FIXTURE/getprop" "$FIXTURE/setprop"
 
 COMMON="--root $FIXTURE/det --profile $FIXTURE/det/etc/audio-owner.conf --probe $FIXTURE/det/bin/det-audio-probe --probe-root $FIXTURE/root --getprop $FIXTURE/getprop --setprop $FIXTURE/setprop"

@@ -15,18 +15,12 @@ install -d /etc/pipewire/pipewire.conf.d /usr/local/bin
 if [ -f "$HERE/det-audio-session" ]; then
     install -m 0755 "$HERE/det-audio-session" /usr/local/bin/det-audio-session
 fi
-
-cat > /etc/pipewire/pipewire.conf.d/90-determination-direct.conf <<'EOF'
-# Direct phone hardware runs at the Qualcomm stack's native 48 kHz. These are
-# bounded starting values, not a latency claim; on-device xruns decide tuning.
-context.properties = {
-    default.clock.rate          = 48000
-    default.clock.allowed-rates = [ 48000 ]
-    default.clock.quantum       = 256
-    default.clock.min-quantum   = 128
-    default.clock.max-quantum   = 1024
+[ -f "$HERE/90-determination-direct.conf" ] || {
+    echo "missing $HERE/90-determination-direct.conf" >&2
+    exit 1
 }
-EOF
+install -m 0644 "$HERE/90-determination-direct.conf" \
+    /etc/pipewire/pipewire.conf.d/90-determination-direct.conf
 
 cat > /etc/profile.d/determination-audio.sh <<'EOF'
 # Clients may negotiate larger buffers; this requests a bounded 5.3 ms quantum.

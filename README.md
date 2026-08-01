@@ -86,3 +86,54 @@ det motd-setup                   # refresh the guest's dynamic login banner
 Pass an existing public key to `det ssh-setup` if preferred. Set
 its matching private key in `~/.ssh/config.d/determination` when it is not the
 default dedicated `~/.ssh/determination_ed25519` key.
+
+## Status
+
+- [x] Repo scaffolding, recon script, kernel fragment, Magisk module, guest
+      builder, toggle scripts, evgrab
+- [x] Recon on real device over wireless adb → `docs/recon-findings.md`
+      (crDroid 12.10/A16, HIDL composer 2.4, gralloc4, binderfs present,
+      DP-alt works)
+- [x] Kernel built (crDroid 16.0 tree + running config + fragment, 3m13s),
+      `boot/determination-boot.img` repacked from the dumped boot_b and verified
+- [x] Module zip packaged with static aarch64 evgrab; `./det` host helper
+- [x] Cable-free install path: `usb-install/` action zips + `./det publish`
+      (flash via Magisk app + `dd`; rescue from a *bootloop* still needs a cable)
+- [x] **FLASHED AND BOOTING** (2026-07-02, via the USB-drive path): kernel
+      `4.14.357-perf-g96adfa8256dc` live on device, PID/USER/IPC_NS confirmed.
+      WiFi initially exposed a `qca_cld3_wlan.ko` vermagic mismatch; the current
+      kernel build carries the matching module directly, so the old Magisk WLAN
+      overlay has been retired. Full hardware smoke test green. Determination
+      module installed. Milestone 1 done.
+- [x] Guest rootfs + libhybris smoke test on guacamoleb (2026-07-04, TLS wall
+      cleared with upstream libhybris; `test_hwcomposer` GLES 3.2 on the panel)
+- [x] wlroots on the panel: phoc + phosh + squeekboard live, touch-verified
+      (2026-07-06/07); GPU app buffers zero-copy path working (2026-07-10)
+- [x] Toggle round trip cable-free: companion app Enter, guest launchers /
+      phosh power menu Exit, verified on-device (2026-07-11) : milestone 4 done
+      (QS tile confirmed)
+- [x] Milestone 6: Zygisk hook on system_server's SF-death handling :
+      verified on device 2026-07-11: system_server stable, WiFi stays up,
+      guest networking alive throughout desktop mode
+- [x] Milestone 5 phase 1: native graphics/KMS path proven (2026-07-13/14) :
+      Turnip on KGSL, minigbm allocation, dmabuf→Vulkan import, raw DSI KMS
+      scanout, and Plasma Mobile under KWin with GPU compositing + touch.
+      This is retained as an explicit native-Mesa experiment, not the portable
+      product renderer.
+- [ ] Compatibility KWin path: vendor EGL/GLES through libhybris, Android
+      gralloc allocation, and minigbm as the compositor-facing GBM layer. The
+      first shared-buffer interop gate passed on-device (2026-07-19): vendor
+      Adreno rendered through a reconstructed full native handle, pixel readback
+      through the original allocation matched, and minigbm imported/re-exported
+      its pixel dma-buf. The display-safe 1080x2340 benchmark completes four
+      fullscreen textured/blended layers in 4.263 ms mean / 4.625 ms p99;
+      full-handle and minigbm setup cost 8 us and 92 us mean respectively.
+      Direct KWin integration, authoritative plane metadata, presentation, and
+      sync-fence transport remain.
+- [ ] Milestone 5 phase 2: concurrent external convergence : Android/SF keeps
+      the panel while a guest-rendered dmabuf is presented on DP-alt
+- [ ] Direct audio : the internal-speaker alpha is hardware-proven on
+      `guacamoleb` (2026-08-02): journalled Android ownership, direct ALSA and
+      PipeWire playback, normal desktop lifecycle integration, and exact
+      mixer/service restoration pass on-device. Volume/mute, headset, DP/USB,
+      suspend/cable/crash stress, and latency/xrun qualification remain.

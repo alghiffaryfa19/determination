@@ -67,12 +67,15 @@ cp ../tools/evgrab/evgrab \
    ../toggle/run-transition ../toggle/external-presenter \
    ../toggle/native-plasma ../toggle/native-kms-gate ../toggle/native-restore \
    ../toggle/det-hostagent ../toggle/det-color-compat \
-   ../toggle/cycle-stress.sh "$WORK/tools/"
+   ../toggle/cycle-stress.sh ../audio/det-audio-route ../audio/det-audio-smoke \
+   "$WORK/tools/"
 cp ../device-profiles/*.conf "$WORK/device-profiles/"
 cp ../audio/profiles/*.conf "$WORK/audio-profiles/"
 cp "$DET_GUEST_AGENT" "$WORK/guest-tools/det-guest-agent"
 cp "$DET_AUDIO_GUEST" "$WORK/guest-tools/det-audio-probe"
 cp ../guest/det-audio-session "$WORK/guest-tools/det-audio-session"
+cp ../guest/det-pipewire-smoke "$WORK/guest-tools/det-pipewire-smoke"
+cp ../guest/90-determination-direct.conf "$WORK/guest-tools/90-determination-direct.conf"
 cp ../guest/lxc/config "$WORK/tools/lxc-config-base"
 cp "$ZYGISK_64" "$WORK/zygisk/arm64-v8a.so"
 cp "$ZYGISK_32" "$WORK/zygisk/armeabi-v7a.so"
