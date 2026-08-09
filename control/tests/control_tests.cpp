@@ -251,7 +251,11 @@ void partial_body_and_stalled_reader()
     PacketHeader header;
     header.operation = static_cast<std::uint32_t>(Operation::Ping);
     header.payload_size = 8;
-    CHECK(send(pair[0], &header, sizeof(header), MSG_NOSIGNAL) ==
+    iovec partial_vector{.iov_base = &header, .iov_len = sizeof(header)};
+    msghdr partial_message{};
+    partial_message.msg_iov = &partial_vector;
+    partial_message.msg_iovlen = 1;
+    CHECK(sendmsg(pair[0], &partial_message, MSG_NOSIGNAL) ==
           static_cast<ssize_t>(sizeof(header)));
     const ReceiveResult partial = receive_packet(pair[1], 100);
     CHECK(!partial.ok);

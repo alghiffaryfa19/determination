@@ -13,22 +13,59 @@ mkdir -p "$STAGE/bin" "$STAGE/guest-tools" "$DET/etc" "$DET/log" "$DET/run" "$DE
 trap 'rm -rf "$STAGE"' EXIT
 [ ! -e "$TARGET" ] || abort "! payload version $VERSION is already staged"
 
-for f in evgrab detd detctl det-audio-probe det-audio-owner det-audio-route det-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-start desktop-on desktop-off run-transition external-presenter native-plasma native-kms-gate native-restore det-hostagent det-color-compat cycle-stress.sh; do
+# Existing installs keep the proven Debian rootfs exactly where it is. The
+# active pointer is the only path new multi-distro code writes through.
+if [ -d "$DET/guest" ] && [ ! -e "$DET/active-guest" ]; then
+    ln -s guest "$DET/active-guest.new" && mv -f "$DET/active-guest.new" "$DET/active-guest" \
+        || abort "! cannot create active guest pointer"
+fi
+GUEST_ROOT=$(readlink -f "$DET/active-guest" 2>/dev/null)
+[ -n "$GUEST_ROOT" ] || GUEST_ROOT="$DET/guest"
+
+for f in evgrab det-input-forwarder detd detctl det-audio-probe det-audio-owner det-audio-route det-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro guest-start desktop-on desktop-off run-transition external-presenter external-input native-plasma native-kms-gate native-restore det-hostagent det-color-compat cycle-stress.sh; do
     [ -f "$MODPATH/tools/$f" ] || abort "! missing $f in zip"
     cp -f "$MODPATH/tools/$f" "$STAGE/bin/$f"
     chmod 0755 "$STAGE/bin/$f"
 done
 cp -f "$MODPATH/tools/lxc-config-base" "$STAGE/lxc-config-base"
-for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke; do
+for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke det-input-actions det-media-action det-connectivity det-connectivity-menu det-platform; do
   if [ -f "$MODPATH/guest-tools/$f" ]; then
     cp -f "$MODPATH/guest-tools/$f" "$STAGE/guest-tools/$f"
     chmod 0755 "$STAGE/guest-tools/$f"
-    if [ -d "$DET/guest/usr/local/bin" ]; then
-        cp -f "$MODPATH/guest-tools/$f" "$DET/guest/usr/local/bin/$f"
-        chmod 0755 "$DET/guest/usr/local/bin/$f"
+    if [ -d "$GUEST_ROOT/usr/local/bin" ]; then
+        cp -f "$MODPATH/guest-tools/$f" "$GUEST_ROOT/usr/local/bin/$f"
+        chmod 0755 "$GUEST_ROOT/usr/local/bin/$f"
     fi
   fi
 done
+if [ -f "$MODPATH/guest-tools/det-input-udevdb" ]; then
+    cp -f "$MODPATH/guest-tools/det-input-udevdb" "$STAGE/guest-tools/det-input-udevdb"
+    chmod 0755 "$STAGE/guest-tools/det-input-udevdb"
+    if [ -d "$GUEST_ROOT/usr/local/sbin" ]; then
+        cp -f "$MODPATH/guest-tools/det-input-udevdb" "$GUEST_ROOT/usr/local/sbin/det-input-udevdb"
+        chmod 0755 "$GUEST_ROOT/usr/local/sbin/det-input-udevdb"
+    fi
+fi
+if [ -f "$MODPATH/guest-tools/determination-connectivity.desktop" ]; then
+    cp -f "$MODPATH/guest-tools/determination-connectivity.desktop" \
+        "$STAGE/guest-tools/determination-connectivity.desktop"
+    chmod 0644 "$STAGE/guest-tools/determination-connectivity.desktop"
+    if [ -d "$GUEST_ROOT/usr/share/applications" ]; then
+        cp -f "$MODPATH/guest-tools/determination-connectivity.desktop" \
+            "$GUEST_ROOT/usr/share/applications/determination-connectivity.desktop"
+        chmod 0644 "$GUEST_ROOT/usr/share/applications/determination-connectivity.desktop"
+    fi
+fi
+if [ -f "$MODPATH/guest-tools/determination-input-proxy.desktop" ]; then
+    cp -f "$MODPATH/guest-tools/determination-input-proxy.desktop" \
+        "$STAGE/guest-tools/determination-input-proxy.desktop"
+    chmod 0644 "$STAGE/guest-tools/determination-input-proxy.desktop"
+    if [ -d "$GUEST_ROOT/usr/share/applications" ]; then
+        cp -f "$MODPATH/guest-tools/determination-input-proxy.desktop" \
+            "$GUEST_ROOT/usr/share/applications/determination-input-proxy.desktop"
+        chmod 0644 "$GUEST_ROOT/usr/share/applications/determination-input-proxy.desktop"
+    fi
+fi
 if [ -f "$MODPATH/guest-tools/90-determination-direct.conf" ]; then
     cp -f "$MODPATH/guest-tools/90-determination-direct.conf" \
         "$STAGE/guest-tools/90-determination-direct.conf"
@@ -88,10 +125,10 @@ if [ -n "$AUDIO_PROFILE_ID" ] && \
 fi
 if [ "$AUDIO_PROFILE_ID" = guacamoleb ] && \
    [ -f "$DET/guest-tools/90-determination-direct.conf" ] && \
-   [ -d "$DET/guest/etc/pipewire/pipewire.conf.d" ]; then
+   [ -d "$GUEST_ROOT/etc/pipewire/pipewire.conf.d" ]; then
     cp -f "$DET/guest-tools/90-determination-direct.conf" \
-        "$DET/guest/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
-    chmod 0644 "$DET/guest/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
+        "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
+    chmod 0644 "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
 fi
 
 # Keep the payload out of the mounted module dir.
@@ -108,4 +145,4 @@ elif ! zcat /proc/config.gz 2>/dev/null | grep -q '^CONFIG_VT=y'; then
 fi
 
 ui_print "- Toolkit installed to $DET/bin"
-ui_print "- Next: push Debian rootfs + static lxc, then $DET/bin/desktop-on"
+ui_print "- Next: install a guest rootfs + static lxc, then $DET/bin/desktop-on"

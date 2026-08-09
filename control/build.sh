@@ -37,7 +37,8 @@ build_guest() {
         -DCMAKE_BUILD_TYPE=MinSizeRel \
         -DCMAKE_SYSTEM_NAME=Linux \
         -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
-        -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++
+        -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+        -DDET_STATIC_GUEST=ON
     cmake --build "$CONTROL/build/guest-arm64" --target det-guest-agent
 }
 

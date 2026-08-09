@@ -14,9 +14,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Memory
 import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -24,6 +26,9 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -40,16 +45,18 @@ import androidx.compose.ui.unit.dp
 import com.determination.companion.BuildConfig
 import com.determination.companion.DetViewModel
 import com.determination.companion.RootState
+import com.determination.companion.OnlineArtifact
+import com.determination.companion.UpdateArtifactKind
+import com.determination.companion.ArtifactSupport
 
 @Composable
 fun InstallScreen(
     vm: DetViewModel,
     wide: Boolean,
+    onOpenInstaller: () -> Unit,
     modifier: Modifier = Modifier,
     bottomPad: Dp = 0.dp,
 ) {
-    var confirmFlash by remember { mutableStateOf<String?>(null) }
-    var confirmFlashArmed by remember { mutableStateOf(false) }
     val inv = vm.inventory
     val busy = vm.busy != null
     val rootOk = vm.rootState == RootState.GRANTED
@@ -61,17 +68,42 @@ fun InstallScreen(
             .padding(bottom = 24.dp + bottomPad),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
+        SectionLabel("Guided setup")
+        GlassCard {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("New installation", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Turn a rooted Android phone into a complete Determination system, from compatibility checks to your chosen Linux desktop.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Button(onClick = onOpenInstaller, modifier = Modifier.fillMaxWidth()) {
+                    Text("Open guided installer")
+                }
+            }
+        }
         SectionLabel("This device")
         if (wide) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column(Modifier.weight(1f)) { InventoryCard(inv) }
-                Column(Modifier.weight(1f)) { ArtifactsSection(vm, rootOk, busy) { confirmFlash = it } }
+                Column(Modifier.weight(1f)) { OnlineUpdatesSection(vm, rootOk, busy) }
             }
         } else {
             InventoryCard(inv)
-            ArtifactsSection(vm, rootOk, busy) { confirmFlash = it }
+            OnlineUpdatesSection(vm, rootOk, busy)
         }
     }
+}
+
+@Composable
+fun LocalUpdatesPanel(vm: DetViewModel) {
+    var confirmFlash by remember { mutableStateOf<String?>(null) }
+    var confirmFlashArmed by remember { mutableStateOf(false) }
+    val inv = vm.inventory
+    val busy = vm.busy != null
+    val rootOk = vm.rootState == RootState.GRANTED
+
+    ArtifactsSection(vm, rootOk, busy) { confirmFlash = it }
 
     confirmFlash?.let { path ->
         AlertDialog(
@@ -113,6 +145,267 @@ fun InstallScreen(
 }
 
 @Composable
+private fun OnlineUpdatesSection(vm: DetViewModel, rootOk: Boolean, busy: Boolean) {
+    val release = vm.onlineRelease
+    val deviceIds = vm.inventory["device_ids"].csvSet() + listOfNotNull(vm.inventory["device"])
+    val abis = vm.inventory["abis"].csvSet() + listOfNotNull(vm.inventory["abi"])
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionLabel("Online updates")
+        GlassCard {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (release == null) {
+                    Text(
+                        "Fetch a small release manifest, then download verified artifacts directly. No file juggling required.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(
+                        onClick = vm::checkOnlineUpdates,
+                        enabled = rootOk && !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (vm.busy == "online-check") "Checking…" else "Check online")
+                    }
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.CloudDownload, null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                "v${release.version} “${release.codename}”",
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            Text(
+                                "${release.channel} · build ${release.versionCode}" +
+                                    release.publishedAt.takeIf { it.isNotBlank() }?.let { " · $it" }.orEmpty(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        TextButton(onClick = vm::checkOnlineUpdates, enabled = !busy) { Text("Refresh") }
+                    }
+                    release.artifacts.forEach { artifact ->
+                        OnlineArtifactRow(
+                            artifact = artifact,
+                            compatible = artifact.supports(
+                                deviceIds,
+                                abis,
+                                vm.inventory["fingerprint"].orEmpty(),
+                            ),
+                            busy = busy,
+                            onInstall = { vm.downloadOnlineArtifact(artifact) },
+                        )
+                    }
+                }
+                vm.onlineError?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun String?.csvSet(): Set<String> = this
+    ?.split(',')
+    ?.map { it.trim() }
+    ?.filter { it.isNotBlank() }
+    ?.toSet()
+    .orEmpty()
+
+@Composable
+private fun GuidedInstallerSection(vm: DetViewModel, rootOk: Boolean, busy: Boolean) {
+    val release = vm.onlineRelease ?: return
+    val deviceIds = vm.inventory["device_ids"].csvSet() + listOfNotNull(vm.inventory["device"])
+    val abis = vm.inventory["abis"].csvSet() + listOfNotNull(vm.inventory["abi"])
+    val fingerprint = vm.inventory["fingerprint"].orEmpty()
+    val rootfs = release.artifacts.filter {
+        it.kind == UpdateArtifactKind.ROOTFS && it.distro.isNotBlank() &&
+            it.supports(deviceIds, abis, fingerprint)
+    }
+    val selected = rootfs.firstOrNull { it.distro == vm.installerDistro }
+    val complete = release.artifacts.any {
+        it.kind == UpdateArtifactKind.MODULE && it.supports(deviceIds, abis, fingerprint)
+    } && release.artifacts.any {
+        it.kind == UpdateArtifactKind.RUNTIME && it.supports(deviceIds, abis, fingerprint)
+    } && selected != null && release.artifacts.any {
+        it.kind == UpdateArtifactKind.BOOT && it.supports(deviceIds, abis, fingerprint)
+    }
+    var confirmExperimental by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionLabel("Guided installation")
+        GlassCard {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(
+                    "From rooted Android to a bootable Linux guest. The installer verifies every download, " +
+                        "keeps the current Magisk ramdisk, backs up boot, and writes the boot partition last.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (vm.installerDryRun) {
+                    Text(
+                        "VERIFICATION MODE · Every artifact and recovery step will be proven against this phone. " +
+                            "The installed system and boot partition stay untouched.",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+
+                Text("Choose a distro", style = MaterialTheme.typography.titleSmall)
+                rootfs.forEach { artifact ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(
+                            selected = vm.installerDistro == artifact.distro,
+                            onClick = { vm.selectInstallerDistro(artifact.distro) },
+                            enabled = !busy,
+                        )
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                when (artifact.distro) {
+                                    "debian" -> "Debian + Phosh"
+                                    "arch" -> "Arch Linux ARM"
+                                    "alpine" -> "Alpine Linux"
+                                    else -> artifact.distro
+                                },
+                                style = MaterialTheme.typography.titleSmall,
+                            )
+                            Text(
+                                artifact.description.ifBlank {
+                                    if (artifact.support == ArtifactSupport.QUALIFIED) "Device-qualified"
+                                    else "Experimental"
+                                },
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (artifact.support == ArtifactSupport.EXPERIMENTAL)
+                                    MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+                if (rootfs.isEmpty()) {
+                    Text(
+                        "This release has no compatible guest images.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+
+                OutlinedTextField(
+                    value = vm.installerHostname,
+                    onValueChange = vm::updateInstallerHostname,
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !busy,
+                    singleLine = true,
+                    label = { Text("Linux hostname") },
+                    supportingText = { Text("Shown on the network and in the terminal") },
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Stop guest after leaving Linux", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "Saves RAM and background wakeups; the next launch takes longer.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = vm.installerStopGuestOnExit,
+                        onCheckedChange = vm::updateInstallerStopGuestOnExit,
+                        enabled = !busy,
+                    )
+                }
+
+                vm.installerStep?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                }
+                Button(
+                    onClick = {
+                        if (selected?.support == ArtifactSupport.EXPERIMENTAL) confirmExperimental = true
+                        else vm.installSelectedRelease()
+                    },
+                    enabled = rootOk && !busy && complete && vm.installerHostname.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        when {
+                            vm.busy == "install-all" && vm.installerDryRun -> "Running checks…"
+                            vm.busy == "install-all" -> "Installing…"
+                            vm.installerDryRun -> "Run full safety verification"
+                            else -> "Install Determination"
+                        },
+                    )
+                }
+                if (!complete) {
+                    Text(
+                        "This manifest is update-only or does not match the exact device and Android build. Installation is blocked.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        }
+    }
+
+    if (confirmExperimental) {
+        AlertDialog(
+            onDismissRequest = { confirmExperimental = false },
+            icon = { Icon(Icons.Rounded.Warning, null) },
+            title = { Text(if (vm.installerDryRun) "Check experimental distro?" else "Install experimental distro?") },
+            text = {
+                Text(
+                    "${selected?.description.orEmpty()} The archive and boot path are installable, but graphics, input, audio, and recovery have not passed the full device gate.",
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    confirmExperimental = false
+                    vm.installSelectedRelease(allowExperimental = true)
+                }) { Text(if (vm.installerDryRun) "Run checks" else "Install experiment") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmExperimental = false }) { Text("Cancel") }
+            },
+        )
+    }
+}
+
+@Composable
+private fun OnlineArtifactRow(
+    artifact: OnlineArtifact,
+    compatible: Boolean,
+    busy: Boolean,
+    onInstall: () -> Unit,
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(artifact.name, style = MaterialTheme.typography.titleSmall)
+            val sizeMiB = artifact.size.toDouble() / (1024.0 * 1024.0)
+            Text(
+                "${artifact.kind.wireName} · ${"%.1f".format(sizeMiB)} MiB" +
+                    if (compatible) " · compatible" else " · not for this device",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (compatible) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.error,
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        FilledTonalButton(enabled = compatible && !busy, onClick = onInstall) {
+            Text(
+                when (artifact.kind) {
+                    UpdateArtifactKind.BOOT, UpdateArtifactKind.ROOTFS -> "Download"
+                    else -> "Install"
+                },
+            )
+        }
+    }
+}
+
+@Composable
 private fun InventoryCard(inv: Map<String, String>) {
     val expectedModuleVersion = "v${BuildConfig.VERSION_NAME}"
     val moduleVersion = inv["module_ver"]?.takeIf { it.isNotBlank() }
@@ -142,7 +435,7 @@ private fun InventoryCard(inv: Map<String, String>) {
             )
             InventoryRow(
                 Icons.Rounded.Storage, "Guest rootfs",
-                inv["guest"]?.takeIf { it.isNotBlank() }?.let { "Debian $it" } ?: "not found",
+                inv["guest"]?.takeIf { it.isNotBlank() } ?: "not found",
                 ok = !inv["guest"].isNullOrBlank(),
                 okText = "present", badText = "missing",
             )
@@ -202,11 +495,8 @@ private fun ArtifactsSection(
     onFlash: (String) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionLabel("Updates found on device")
         Text(
-            "Drop artifacts into Download or /data/local/tmp: module zips " +
-                "(determination-magisk-*.zip), boot images (*.img), or a companion APK. " +
-                "Note: /sdcard is unreachable while in desktop mode : stage from phone mode.",
+            "Online downloads appear here. Manual files can also be staged in Download or /data/local/tmp while in phone mode.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

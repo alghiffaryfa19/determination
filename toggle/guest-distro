@@ -1,0 +1,297 @@
+#!/system/bin/sh
+# Manage independently installed guest rootfs slots.
+# Debian remains at the proven legacy path; active-guest is a controlled pointer
+# changed only while the container is stopped.
+
+set -u
+DET=${DET:-/data/determination}
+LXC=${DET_LXC_BIN:-$DET/lxc/bin}
+STATE="$DET/etc/guest-distro"
+ACTIVE="$DET/active-guest"
+
+valid_id() {
+    case "$1" in debian|arch|alpine) return 0 ;; *) return 1 ;; esac
+}
+
+slot_root() {
+    case "$1" in
+        debian) echo "$DET/guest" ;;
+        arch|alpine) echo "$DET/guests/$1/rootfs" ;;
+        *) return 2 ;;
+    esac
+}
+
+slot_relative() {
+    case "$1" in
+        debian) echo guest ;;
+        arch|alpine) echo "guests/$1/rootfs" ;;
+        *) return 2 ;;
+    esac
+}
+
+manifest_value() {
+    root=$1 key=$2
+    sed -n "s/^$key=//p" "$root/etc/determination-profile" 2>/dev/null | head -n 1
+}
+
+slot_installed() {
+    root=$(slot_root "$1") || return 1
+    [ -x "$root/sbin/init" ] || [ -L "$root/sbin/init" ] || \
+        [ -x "$root/bin/init" ] || [ -L "$root/bin/init" ] || return 1
+    if [ "$1" = debian ] && [ ! -f "$root/etc/determination-profile" ]; then
+        [ -r "$root/etc/debian_version" ]
+        return
+    fi
+    [ "$(manifest_value "$root" ID)" = "$1" ]
+}
+
+slot_ready() {
+    [ "$1" = debian ] && return 0
+    [ -e "$(slot_root "$1")/etc/determination-ready" ]
+}
+
+current_id() {
+    id=$(sed -n 's/^active=//p' "$STATE" 2>/dev/null | tail -n 1)
+    if valid_id "$id" && slot_installed "$id"; then
+        echo "$id"
+        return
+    fi
+    if [ -L "$ACTIVE" ]; then
+        root=$(readlink -f "$ACTIVE" 2>/dev/null)
+        id=$(manifest_value "$root" ID)
+        if valid_id "$id"; then echo "$id"; return; fi
+    fi
+    echo debian
+}
+
+write_state() {
+    id=$1
+    mkdir -p "$DET/etc"
+    tmp="$STATE.new.$$"
+    {
+        echo "active=$id"
+        echo "root=$(slot_root "$id")"
+        echo "changed=$(date +%s)"
+    } > "$tmp"
+    chmod 0600 "$tmp"
+    mv -f "$tmp" "$STATE"
+}
+
+point_active() {
+    id=$1
+    relative=$(slot_relative "$id") || return 1
+    mkdir -p "$DET/guests" "$DET/etc"
+    tmp="$ACTIVE.new.$$"
+    rm -f "$tmp"
+    ln -s "$relative" "$tmp" || return 1
+    # Android toybox mv has no portable -T; an existing symlink to a directory
+    # would otherwise receive the new link as a child. The container is stopped
+    # and lifecycle lockout forbids desktop mode throughout this short replace.
+    [ ! -L "$ACTIVE" ] || rm -f "$ACTIVE"
+    [ ! -e "$ACTIVE" ] || { echo "active guest pointer is not a symlink" >&2; return 1; }
+    mv "$tmp" "$ACTIVE" || return 1
+    write_state "$id"
+}
+
+ensure_active() {
+    id=$(current_id)
+    slot_installed "$id" || { echo "FATAL: selected guest is missing: $id" >&2; return 1; }
+    if [ ! -L "$ACTIVE" ] || [ "$(readlink -f "$ACTIVE" 2>/dev/null)" != "$(slot_root "$id")" ]; then
+        point_active "$id"
+    fi
+}
+
+guest_running() {
+    "$LXC/lxc-info" -P "$DET" -n guest 2>/dev/null | grep -q RUNNING
+}
+
+stop_guest() {
+    guest_running || return 0
+    "$LXC/lxc-stop" -P "$DET" -n guest -t 20 >/dev/null 2>&1
+}
+
+start_guest() {
+    "$DET/bin/guest-start" >/dev/null 2>&1 || return 1
+    guest_running || return 1
+    "$LXC/lxc-attach" -P "$DET" -n guest -- /bin/sh -c \
+        'test -r /etc/os-release && test -x /bin/sh' >/dev/null 2>&1
+}
+
+show_one() {
+    id=$1
+    if slot_installed "$id"; then
+        root=$(slot_root "$id")
+        name=$(manifest_value "$root" NAME)
+        [ -n "$name" ] || name='Debian (legacy)'
+        slot_ready "$id" && ready=ready || ready=needs-provision
+        [ "$id" = "$(current_id)" ] && active=active || active=inactive
+        printf '%s|installed|%s|%s|%s\n' "$id" "$active" "$ready" "$name"
+    else
+        printf '%s|absent|inactive|not-ready|%s\n' "$id" \
+            "$(case "$id" in debian) echo Debian;; arch) echo 'Arch Linux ARM';; alpine) echo 'Alpine Linux';; esac)"
+    fi
+}
+
+install_slot() {
+    id=$1 archive=$2
+    valid_id "$id" || { echo "unsupported guest: $id" >&2; return 2; }
+    [ -r "$archive" ] || { echo "archive not readable: $archive" >&2; return 1; }
+    root=$(slot_root "$id") || return 1
+    if [ -e "$root" ]; then
+        if [ "$id" = debian ] && [ -d "$root" ] && \
+           [ -z "$(find "$root" -mindepth 1 ! -name config -print -quit 2>/dev/null)" ]; then
+            : # Fresh non-Debian installs still need $DET/guest/config for LXC.
+        else
+            echo "slot already installed: $id" >&2
+            return 1
+        fi
+    fi
+
+    # Refuse absolute paths and parent traversal before extracting as root.
+    # Portable profiles carry Determination metadata; the qualified Debian
+    # archive predates that contract and is identified by os-release instead.
+    bad=0 found_identity=0
+    list="$DET/guests/.archive-$id-$$.list"
+    mkdir -p "$DET/guests"
+    tar -tzf "$archive" > "$list" 2>/dev/null || { rm -f "$list"; return 1; }
+    while IFS= read -r entry; do
+        case "$entry" in
+            /*|../*|*/../*|*/..) bad=1 ;;
+            ./etc/determination-profile|etc/determination-profile) [ "$id" != debian ] && found_identity=1 ;;
+            ./etc/os-release|etc/os-release) [ "$id" = debian ] && found_identity=1 ;;
+        esac
+    done < "$list"
+    rm -f "$list"
+    [ "$bad" -eq 0 ] && [ "$found_identity" -eq 1 ] || {
+        echo "unsafe or invalid Determination rootfs archive" >&2
+        return 1
+    }
+
+    stage="$DET/guests/.install-$id-$$"
+    stage_root="$stage/rootfs"
+    mkdir -p "$stage_root" || return 1
+    if ! tar -xzf "$archive" -C "$stage_root"; then
+        rm -rf "$stage"
+        return 1
+    fi
+    if [ "$id" = debian ]; then
+        os_id=$(sed -n 's/^ID=//p' "$stage_root/etc/os-release" 2>/dev/null | tr -d '"' | head -n 1)
+        [ "$os_id" = debian ] || {
+            echo "archive is not a Debian rootfs" >&2; rm -rf "$stage"; return 1;
+        }
+        [ -r "$stage_root/etc/debian_version" ] || {
+            echo "Debian rootfs has no debian_version" >&2; rm -rf "$stage"; return 1;
+        }
+    else
+        [ "$(manifest_value "$stage_root" ID)" = "$id" ] || {
+            echo "archive profile does not match requested slot $id" >&2
+            rm -rf "$stage"
+            return 1
+        }
+    fi
+    [ -x "$stage_root/sbin/init" ] || [ -L "$stage_root/sbin/init" ] || \
+        [ -x "$stage_root/bin/init" ] || [ -L "$stage_root/bin/init" ] || {
+            echo "rootfs has no init" >&2; rm -rf "$stage"; return 1;
+        }
+    if [ "$id" = debian ]; then
+        if [ -f "$DET/guest/config" ]; then
+            cp -f "$DET/guest/config" "$stage_root/config" || { rm -rf "$stage"; return 1; }
+            rm -f "$DET/guest/config"
+            rmdir "$DET/guest" 2>/dev/null || {
+                echo "refusing to replace non-empty Debian slot" >&2; rm -rf "$stage"; return 1;
+            }
+        fi
+        mv "$stage_root" "$DET/guest" || { rm -rf "$stage"; return 1; }
+        rmdir "$stage" 2>/dev/null || true
+    else
+        mv "$stage" "$DET/guests/$id" || { rm -rf "$stage"; return 1; }
+    fi
+    echo "installed $id at $(slot_root "$id")"
+}
+
+activate_slot() {
+    target=$1
+    valid_id "$target" || { echo "unsupported guest: $target" >&2; return 2; }
+    slot_installed "$target" || { echo "guest is not installed: $target" >&2; return 1; }
+    [ ! -f "$DET/run/desktop-mode" ] || {
+        echo "refusing distro activation while desktop mode owns the display" >&2
+        return 1
+    }
+    stop_guest || { echo "could not stop active guest" >&2; return 1; }
+    point_active "$target" || return 1
+    echo "active guest staged for next boot: $target"
+}
+
+select_slot() {
+    target=$1
+    valid_id "$target" || { echo "unsupported guest: $target" >&2; return 2; }
+    slot_installed "$target" || { echo "guest is not installed: $target" >&2; return 1; }
+    [ ! -f "$DET/run/desktop-mode" ] || {
+        echo "refusing distro switch while desktop mode owns the display" >&2
+        return 1
+    }
+    previous=$(current_id)
+    [ "$target" != "$previous" ] || { ensure_active; echo "$target already active"; return 0; }
+    stop_guest || { echo "could not stop active guest" >&2; return 1; }
+    point_active "$target" || return 1
+    if start_guest; then
+        if slot_ready "$target"; then
+            echo "active guest: $target"
+        else
+            echo "active guest: $target (base boots; run guest-distro provision)"
+        fi
+        return 0
+    fi
+
+    echo "new guest failed its boot health gate; rolling back to $previous" >&2
+    stop_guest >/dev/null 2>&1 || true
+    point_active "$previous" || return 1
+    start_guest >/dev/null 2>&1 || echo "WARNING: previous guest also failed to restart" >&2
+    return 1
+}
+
+provision_active() {
+    ensure_active || return 1
+    id=$(current_id)
+    root=$(slot_root "$id")
+    [ "$id" != debian ] || { echo "legacy Debian is already provisioned by its existing setup flow"; return 0; }
+    [ -x "$root/root/determination-firstboot" ] || {
+        echo "firstboot provisioner missing from $id" >&2; return 1;
+    }
+    guest_running || start_guest || return 1
+    "$LXC/lxc-attach" -P "$DET" -n guest -- /bin/sh /root/determination-firstboot
+}
+
+cmd=${1:-status}
+case "$cmd" in
+    ensure) ensure_active ;;
+    root) ensure_active >/dev/null && readlink -f "$ACTIVE" ;;
+    active) current_id ;;
+    list) for id in debian arch alpine; do show_one "$id"; done ;;
+    status)
+        ensure_active || exit 1
+        id=$(current_id)
+        root=$(readlink -f "$ACTIVE")
+        echo "active=$id"
+        echo "root=$root"
+        echo "ready=$(slot_ready "$id" && echo yes || echo no)"
+        echo "running=$(guest_running && echo yes || echo no)"
+        ;;
+    install)
+        [ "$#" -eq 3 ] || { echo "usage: guest-distro install debian|arch|alpine ARCHIVE" >&2; exit 2; }
+        install_slot "$2" "$3"
+        ;;
+    activate)
+        [ "$#" -eq 2 ] || { echo "usage: guest-distro activate debian|arch|alpine" >&2; exit 2; }
+        activate_slot "$2"
+        ;;
+    select|switch)
+        [ "$#" -eq 2 ] || { echo "usage: guest-distro select debian|arch|alpine" >&2; exit 2; }
+        select_slot "$2"
+        ;;
+    provision) provision_active ;;
+    *)
+        echo "usage: guest-distro list|status|active|root|install|activate|select|provision" >&2
+        exit 2
+        ;;
+esac

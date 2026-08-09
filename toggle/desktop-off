@@ -26,6 +26,8 @@ trap finish EXIT HUP INT TERM
 # 1. Kill the suppressor before restarting SF, or it'll fight us.
 rm -f "$DET/run/desktop-mode"
 lc_pid_signal suppressor TERM "$signal_generation"
+"$DET/bin/external-input" stop >/dev/null 2>&1 || true
+lc_state_write EXITING "$generation" android-owner running
 
 # 1b. Kill the frozen system_server so init/zygote respawns it fresh. Its
 #     display thread is still blocked in the BLAST txn to the stopped SF ---
@@ -35,12 +37,32 @@ lc_pid_signal ss-freezer TERM "$signal_generation"
 sspid=$(pidof system_server 2>/dev/null)
 [ -n "$sspid" ] && kill -KILL "$sspid" 2>/dev/null
 
+# 1c. Health-HAL keeper (bootanim loop of doom, 2026-08-03): vendor.lineage_health
+#     is a *lazy* AIDL HAL. With system_server SIGSTOP-frozen for the whole
+#     desktop session it idles out and unregisters; crDroid's servicemanager
+#     cannot lazy-restart it, so the respawned system_server blocks FOREVER in
+#     ChargingControlController waiting for IChargingControl, Watchdog kills it,
+#     it respawns into the same wedge, and nothing ever draws over bootanim's
+#     final frame. Re-assert the HAL now and keep re-starting it for the ss
+#     boot window. setsid-detached or it dies with the adb session (same reason
+#     as the bootanim keeper below).
+if [ "$(getprop sys.boot_completed)" = "1" ]; then
+    setsid sh -c '
+        end=$(( $(date +%s) + 120 ))
+        while [ "$(date +%s)" -lt "$end" ]; do
+            [ "$(getprop init.svc.vendor.lineage_health)" = "running" ] || start vendor.lineage_health
+            sleep 2
+        done
+    ' </dev/null >/dev/null 2>&1 &
+fi
+
 # 2. Guest compositor must release the composer client *cleanly* --- killing it
 #    mid-frame is how the HAL state machine wedges (spec risk register).
 #    Clients first (phosh session, then any bare foot), then phoc (SIGTERM:
 #    wlroots runs its display destroy). phoc's death also closes the evdev
 #    fds, which releases the guest's EVIOCGRABs (§4) --- Android input is
 #    live from that moment even though SF is still coming back.
+lc_state_write EXITING "$generation" compositor running
 "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c \
     'pkill -TERM phosh; pkill -TERM squeekboard; pkill -TERM foot; true' 2>/dev/null
 # Guest pids are visible from the host pid ns (host root, init ns), so poll
@@ -74,6 +96,7 @@ sleep 0.5
 # claim, wait for PipeWire to release every ALSA fd, then restore only the
 # Android owners recorded in the journal. Display recovery continues if audio
 # restore fails, but doctor will keep reporting the failed audio phase.
+lc_state_write EXITING "$generation" audio running
 if [ -x "$DET/bin/det-audio-route" ] && \
    [ -f "$DET/run/audio-route.state" ]; then
     "$DET/bin/det-audio-route" restore ||
@@ -91,6 +114,7 @@ elif [ -x "$DET/bin/det-audio-owner" ] && \
 fi
 
 # 3. Restart SF; verify panel re-init (no dead/black transition).
+lc_state_write EXITING "$generation" surfaceflinger running
 start surfaceflinger
 i=0
 until [ "$(getprop init.svc.surfaceflinger)" = "running" ]; do
@@ -104,6 +128,7 @@ done
 # Tell it to exit ourselves; only when boot is genuinely complete, so a
 # real first boot is never cut short. SF sets service.bootanim.exit=0 as
 # it starts, so wait until bootanim is actually up before signalling.
+lc_state_write EXITING "$generation" android-ui running
 if [ "$(getprop sys.boot_completed)" = "1" ]; then
     i=0
     while [ $i -lt 20 ]; do
@@ -121,11 +146,29 @@ if [ "$(getprop sys.boot_completed)" = "1" ]; then
         [ "$(getprop init.svc.bootanim)" = "running" ] && stop bootanim && echo "bootanim would not exit --- stopped it"
         echo "boot animation cleared"
     fi
+    # Bootanim keeper (60s): the one-shot dance alone RACES here (2026-07-13
+    # x2, loop-of-doom 2026-07-14) --- bootanim can start after the wait window,
+    # and SF resets service.bootanim.exit=0 when it launches it. Re-assert the
+    # exit signal (and hard-stop as a last resort) for a minute. setsid-detached
+    # or it dies with the adb session and the animation returns.
+    setsid sh -c '
+        end=$(( $(date +%s) + 60 ))
+        while [ "$(date +%s)" -lt "$end" ]; do
+            if [ "$(getprop init.svc.bootanim)" = "running" ]; then
+                setprop service.bootanim.exit 1
+                setprop service.bootanim.progress 1
+                sleep 3
+                [ "$(getprop init.svc.bootanim)" = "running" ] && stop bootanim
+            fi
+            sleep 1
+        done
+    ' </dev/null >/dev/null 2>&1 &
 fi
 
 # 4. Release the input grab last, once Android UI is back to receive events.
 #    Usually a no-op since §4: desktop-on already killed evgrab at the
 #    guest handoff (the guest's own grabs died with phoc in step 2).
+lc_state_write EXITING "$generation" input running
 lc_pid_signal evgrab TERM "$signal_generation"
 rm -f "$DET/run/evgrab.legacy.pid"
 lc_state_write PHONE "$generation" complete committed

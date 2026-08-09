@@ -30,9 +30,17 @@ mkdir -p /tmp        # config.guess needs a writable one.
 # Build deps. android-headers-30 provides the pkg-config 'android-headers'
 # module and hardware/hwcomposer2.h (gates the hwc2 path). Newer header
 # packages don't exist in the repo; 30 is fine, the A16 support is runtime.
-DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    git build-essential automake libtool pkg-config \
-    android-headers-30 libwayland-dev wayland-protocols libwayland-egl-backend-dev
+if command -v det-platform >/dev/null 2>&1; then
+    det-platform package-refresh
+    det-platform deps libhybris
+    if ! pkg-config --exists 'android-headers >= 9.0.0'; then
+        "$(dirname "$0")/install-android-headers.sh"
+    fi
+else
+    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+        git build-essential automake libtool pkg-config \
+        android-headers-30 libwayland-dev wayland-protocols libwayland-egl-backend-dev
+fi
 
 mkdir -p "$(dirname "$SRC")"
 [ -d "$SRC/.git" ] || git clone --depth 1 "$LIBHYBRIS_REPO" "$SRC"
@@ -48,7 +56,8 @@ mkdir -p "$(dirname "$SRC")"
 # libc.so (offset 0x83b28 on this ROM). Also hook the *_l family: hooked
 # newlocale() hands out GLIBC locale_t objects, so bionic's *_l consumers
 # would misinterpret them; and the mb/wc conversions libc++ facets use.
-if ! grep -q "__ctype_get_mb_cur_max" "$SRC/hybris/common/hooks.c"; then
+HOST_LIBC=$(det-platform libc 2>/dev/null || echo glibc)
+if [ "$HOST_LIBC" = glibc ] && ! grep -q "__ctype_get_mb_cur_max" "$SRC/hybris/common/hooks.c"; then
     git -C "$SRC" apply <<'HOOKPATCH'
 diff --git a/hybris/common/hooks.c b/hybris/common/hooks.c
 --- a/hybris/common/hooks.c
@@ -109,6 +118,7 @@ diff --git a/hybris/common/hooks.c b/hybris/common/hooks.c
      HOOK_DIRECT(mmap),
 HOOKPATCH
 fi
+[ "$HOST_LIBC" != musl ] || echo "musl host: skipping the glibc locale_t/TLS hook set"
 
 # test_hwcomposer is Determination's TEMP §4 render placeholder: toggle/desktop-on
 # runs it as the stand-in "compositor" until sway/phoc lands. Upstream's demo
@@ -134,11 +144,30 @@ HYBRIS_IMPLEMENT_FUNCTION2(hwc2, hwc2_error_t, hwc2_compat_display_set_brightnes
                            hwc2_compat_display_t*, float);\
 ' "$SRC/hybris/hwc2/hwc2.c"
 fi
+if ! grep -q "hwc2_compat_display_get_configs" "$SRC/hybris/hwc2/hwc2.c"; then
+    sed -i '/HYBRIS_IMPLEMENT_FUNCTION3(hwc2, hwc2_error_t, hwc2_compat_display_validate,/i\
+HYBRIS_IMPLEMENT_FUNCTION3(hwc2, int32_t, hwc2_compat_display_get_configs,\
+                           hwc2_compat_display_t*, HWC2DisplayConfig*, int32_t);\
+HYBRIS_IMPLEMENT_FUNCTION2(hwc2, hwc2_error_t, hwc2_compat_display_set_active_config,\
+                           hwc2_compat_display_t*, hwc2_config_t);\
+' "$SRC/hybris/hwc2/hwc2.c"
+fi
 if ! grep -q "hwc2_compat_display_set_brightness" \
         "$SRC/hybris/include/hybris/hwc2/hwc2_compatibility_layer.h"; then
     sed -i '/hwc2_error_t hwc2_compat_display_validate(hwc2_compat_display_t\* display,/i\
     hwc2_error_t hwc2_compat_display_set_brightness(hwc2_compat_display_t* display,\
                                             float brightness);\
+' "$SRC/hybris/include/hybris/hwc2/hwc2_compatibility_layer.h"
+fi
+if ! grep -q "hwc2_compat_display_get_configs" \
+        "$SRC/hybris/include/hybris/hwc2/hwc2_compatibility_layer.h"; then
+    sed -i '/hwc2_error_t hwc2_compat_display_validate(hwc2_compat_display_t\* display,/i\
+    int32_t hwc2_compat_display_get_configs(hwc2_compat_display_t* display,\
+                                            HWC2DisplayConfig* configs,\
+                                            int32_t capacity);\
+    hwc2_error_t hwc2_compat_display_set_active_config(\
+                                            hwc2_compat_display_t* display,\
+                                            hwc2_config_t config);\
 ' "$SRC/hybris/include/hybris/hwc2/hwc2_compatibility_layer.h"
 fi
 if ! grep -q "hwc2_compat_display_set_brightness" "$SRC/hybris/tests/test_common.cpp"; then
@@ -421,7 +450,7 @@ cd "$SRC/hybris"
 # linker that can't load the device's 64-bit bionic (gives /system/lib paths
 # instead of lib64).
 [ -f Makefile ] || ./configure \
-    --build=aarch64-linux-gnu --enable-arch=arm64 \
+    --build="$(./config.guess)" --enable-arch=arm64 \
     --with-android-headers=/usr/include/android \
     --with-default-egl-platform=hwcomposer \
     --enable-wayland --enable-adreno-quirks --enable-experimental
@@ -441,7 +470,7 @@ cp "$SRC/hybris/include/hybris/hwc2/hwc2_compatibility_layer.h" \
 ldconfig || true
 
 cat <<'NOTE'
-libhybris (glibc side) built and installed to /usr/local.
+libhybris (host-libc side) built and installed to /usr/local.
 Run hybris programs with:
   LD_LIBRARY_PATH=/usr/local/lib
   HYBRIS_LD_LIBRARY_PATH=/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic

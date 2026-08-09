@@ -94,7 +94,23 @@ chmod +x "$R/root/firstboot.sh"
 # Direct audio is dormant until the host ownership journal publishes its claim.
 install -d "$R/usr/local/bin"
 install -m 0755 "$HERE/det-audio-session" "$R/usr/local/bin/det-audio-session"
+install -m 0755 "$HERE/det-input-actions" "$R/usr/local/bin/det-input-actions"
+install -m 0755 "$HERE/det-media-action" "$R/usr/local/bin/det-media-action"
+install -m 0755 "$HERE/det-connectivity" "$R/usr/local/bin/det-connectivity"
+install -m 0755 "$HERE/det-connectivity-menu" "$R/usr/local/bin/det-connectivity-menu"
+install -m 0755 "$HERE/det-input-udevdb" "$R/usr/local/sbin/det-input-udevdb"
+install -D -m 0644 "$HERE/determination-connectivity.desktop" \
+    "$R/usr/share/applications/determination-connectivity.desktop"
+install -D -m 0644 "$HERE/determination-input-proxy.desktop" \
+    "$R/usr/share/applications/determination-input-proxy.desktop"
 install -m 0755 "$HERE/setup-audio.sh" "$R/root/setup-audio.sh"
 install -m 0644 "$HERE/90-determination-direct.conf" \
     "$R/root/90-determination-direct.conf"
 chroot "$R" /root/setup-audio.sh --configure-only
+
+# The internal display is physically a phone even though Firefox is the Debian
+# desktop build. Let sites select their mobile UI and force Firefox touch/APZ
+# paths on. The prefs remain user-overridable through about:config.
+install -d "$R/usr/lib/firefox-esr/browser/defaults/preferences"
+install -m 0644 "$HERE/determination-firefox.js" \
+    "$R/usr/lib/firefox-esr/browser/defaults/preferences/determination.js"

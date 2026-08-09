@@ -6,8 +6,10 @@
 #include <android/native_window_jni.h>
 #include <android/rect.h>
 #include <android/surface_control.h>
+#include <linux/input-event-codes.h>
 
 #include <atomic>
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
 #include <cstdint>
@@ -22,6 +24,7 @@
 #include <utility>
 
 #include <fcntl.h>
+#include <poll.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
@@ -30,6 +33,7 @@
 
 #include "presenter-protocol.h"
 #include "presenter-policy.h"
+#include "input-forward-protocol.h"
 
 namespace {
 
@@ -281,8 +285,13 @@ public:
             m_window = nullptr;
             throw std::runtime_error("ASurfaceControl_createFromWindow failed");
         }
+        const size_t slash = m_socketPath.rfind('/');
+        m_touchSocketPath = slash == std::string::npos
+            ? "touch.sock"
+            : m_socketPath.substr(0, slash + 1) + "touch.sock";
         m_running.store(true);
         m_thread = std::thread([this] { serve(); });
+        m_touchThread = std::thread([this] { serveTouch(); });
     }
 
     ~Presenter()
@@ -297,10 +306,25 @@ public:
         if (client >= 0) {
             shutdown(client, SHUT_RDWR);
         }
+        const int touchServer = m_touchServer.exchange(-1);
+        if (touchServer >= 0) {
+            shutdown(touchServer, SHUT_RDWR);
+            close(touchServer);
+        }
+        {
+            std::lock_guard lock(m_touchMutex);
+            if (m_touchClient >= 0) {
+                shutdown(m_touchClient, SHUT_RDWR);
+            }
+        }
         if (m_thread.joinable()) {
             m_thread.join();
         }
+        if (m_touchThread.joinable()) {
+            m_touchThread.join();
+        }
         unlink(m_socketPath.c_str());
+        unlink(m_touchSocketPath.c_str());
         surfaceApi().releaseSurface(m_surface);
         ANativeWindow_release(m_window);
     }
@@ -311,7 +335,155 @@ public:
         m_height.store(height);
     }
 
+    bool touch(int action, int pointerId, float x, float y,
+               int width, int height)
+    {
+        if (pointerId < 0 || pointerId >= 32 || width <= 0 || height <= 0)
+            return false;
+        const int slot = pointerId;
+        const int maximumX = width - 1;
+        const int maximumY = height - 1;
+        const int positionX = std::clamp(static_cast<int>(x), 0, maximumX);
+        const int positionY = std::clamp(static_cast<int>(y), 0, maximumY);
+        bool ok = true;
+        if (action == 0 || action == 5) { // ACTION_DOWN / ACTION_POINTER_DOWN
+            ok = sendTouchEvent(EV_ABS, ABS_MT_SLOT, slot, 0, 31) &&
+                 sendTouchEvent(EV_ABS, ABS_MT_TRACKING_ID, pointerId,
+                                0, 65535) &&
+                 sendTouchEvent(EV_ABS, ABS_MT_POSITION_X, positionX,
+                                0, maximumX) &&
+                 sendTouchEvent(EV_ABS, ABS_MT_POSITION_Y, positionY,
+                                0, maximumY);
+        } else if (action == 2) { // ACTION_MOVE
+            ok = sendTouchEvent(EV_ABS, ABS_MT_SLOT, slot, 0, 31) &&
+                 sendTouchEvent(EV_ABS, ABS_MT_POSITION_X, positionX,
+                                0, maximumX) &&
+                 sendTouchEvent(EV_ABS, ABS_MT_POSITION_Y, positionY,
+                                0, maximumY);
+        } else if (action == 1 || action == 6) { // ACTION_UP / POINTER_UP
+            ok = sendTouchEvent(EV_ABS, ABS_MT_SLOT, slot, 0, 31) &&
+                 sendTouchEvent(EV_ABS, ABS_MT_TRACKING_ID, -1, 0, 65535);
+        } else if (action == 3) { // ACTION_CANCEL
+            return sendTouchEvent(EV_SYN, SYN_DROPPED, 0, 0, 0);
+        } else {
+            return false;
+        }
+        return ok && sendTouchEvent(EV_SYN, SYN_REPORT, 0, 0, 0);
+    }
+
+    bool input(uint16_t type, uint16_t code, int32_t value,
+               int32_t minimum, int32_t maximum, uint32_t sourceFlags)
+    {
+        if (type > EV_MAX || sourceFlags & ~(DET_INPUT_SOURCE_ABSOLUTE |
+            DET_INPUT_SOURCE_DIRECT | DET_INPUT_SOURCE_MULTITOUCH)) {
+            return false;
+        }
+        return sendInputEvent(type, code, value, minimum, maximum, sourceFlags);
+    }
+
 private:
+    bool sendTouchEvent(uint16_t type, uint16_t code, int32_t value,
+                        int32_t minimum, int32_t maximum)
+    {
+        return sendInputEvent(
+            type, code, value, minimum, maximum,
+            DET_INPUT_SOURCE_ABSOLUTE | DET_INPUT_SOURCE_DIRECT |
+                DET_INPUT_SOURCE_MULTITOUCH);
+    }
+
+    bool sendInputEvent(uint16_t type, uint16_t code, int32_t value,
+                        int32_t minimum, int32_t maximum,
+                        uint32_t sourceFlags)
+    {
+        det_input_forward_packet packet{};
+        packet.magic = DET_INPUT_FORWARD_MAGIC;
+        packet.version = DET_INPUT_FORWARD_VERSION;
+        packet.size = sizeof(packet);
+        packet.source_id = DET_INPUT_ANDROID_TOUCH_SOURCE_ID;
+        packet.type = type;
+        packet.code = code;
+        packet.value = value;
+        packet.minimum = minimum;
+        packet.maximum = maximum;
+        packet.source_flags = sourceFlags;
+
+        std::lock_guard lock(m_touchMutex);
+        if (m_touchClient < 0)
+            return false;
+        if (send(m_touchClient, &packet, sizeof(packet), MSG_NOSIGNAL) ==
+            static_cast<ssize_t>(sizeof(packet)))
+            return true;
+        shutdown(m_touchClient, SHUT_RDWR);
+        return false;
+    }
+
+    void serveTouch()
+    {
+        if (m_touchSocketPath.size() >= sizeof(sockaddr_un::sun_path)) {
+            DET_LOGE("touch socket path too long: %s", m_touchSocketPath.c_str());
+            return;
+        }
+        unlink(m_touchSocketPath.c_str());
+        const int server = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
+        if (server < 0)
+            return;
+        m_touchServer.store(server);
+        sockaddr_un address{};
+        address.sun_family = AF_UNIX;
+        std::memcpy(address.sun_path, m_touchSocketPath.c_str(),
+                    m_touchSocketPath.size() + 1);
+        if (bind(server, reinterpret_cast<sockaddr *>(&address),
+                 sizeof(address)) != 0 ||
+            chmod(m_touchSocketPath.c_str(), 0666) != 0 ||
+            listen(server, 1) != 0) {
+            DET_LOGE("touch bind/listen failed: %s", std::strerror(errno));
+            return;
+        }
+        DET_LOGI("touch input listening on %s", m_touchSocketPath.c_str());
+
+        while (m_running.load()) {
+            const int client = accept4(server, nullptr, nullptr, SOCK_CLOEXEC);
+            if (client < 0) {
+                if (m_running.load())
+                    DET_LOGW("touch accept failed: %s", std::strerror(errno));
+                continue;
+            }
+            ucred credential{};
+            socklen_t credentialSize = sizeof(credential);
+            if (getsockopt(client, SOL_SOCKET, SO_PEERCRED, &credential,
+                           &credentialSize) != 0 ||
+                (credential.uid != 0 && credential.uid != 1000)) {
+                DET_LOGW("rejected touch peer uid=%u", credential.uid);
+                close(client);
+                continue;
+            }
+            {
+                std::lock_guard lock(m_touchMutex);
+                m_touchClient = client;
+            }
+            DET_LOGI("guest touch proxy connected");
+            /* POLLHUP/POLLERR are output-only poll flags. Ask for readable
+             * state and Linux will still report peer shutdown; requesting
+             * HUP as an input event caused a hot reconnect loop on Android. */
+            pollfd item{.fd = client, .events = POLLIN, .revents = 0};
+            while (m_running.load()) {
+                const int ready = poll(&item, 1, 500);
+                if (ready < 0 && errno == EINTR)
+                    continue;
+                if (ready < 0 || (ready > 0 &&
+                    (item.revents & (POLLHUP | POLLERR | POLLNVAL))))
+                    break;
+            }
+            {
+                std::lock_guard lock(m_touchMutex);
+                if (m_touchClient == client)
+                    m_touchClient = -1;
+            }
+            close(client);
+            DET_LOGI("guest touch proxy disconnected");
+        }
+    }
+
     void serve()
     {
         if (m_socketPath.size() >= sizeof(sockaddr_un::sun_path)) {
@@ -510,14 +682,19 @@ private:
     }
 
     std::string m_socketPath;
+    std::string m_touchSocketPath;
     ANativeWindow *m_window = nullptr;
     ASurfaceControl *m_surface = nullptr;
     std::atomic<bool> m_running{false};
     std::atomic<int> m_server{-1};
     std::atomic<int> m_client{-1};
+    std::atomic<int> m_touchServer{-1};
+    int m_touchClient = -1;
+    std::mutex m_touchMutex;
     std::atomic<int> m_width;
     std::atomic<int> m_height;
     std::thread m_thread;
+    std::thread m_touchThread;
 };
 
 std::mutex gPresenterMutex;
@@ -556,6 +733,31 @@ Java_com_determination_companion_NativePresenter_nativeResize(
     if (gPresenter) {
         gPresenter->resize(width, height);
     }
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_determination_companion_NativePresenter_nativeTouch(
+    JNIEnv *, jobject, jint action, jint pointerId, jfloat x, jfloat y,
+    jint width, jint height)
+{
+    std::lock_guard lock(gPresenterMutex);
+    return gPresenter &&
+            gPresenter->touch(action, pointerId, x, y, width, height)
+        ? JNI_TRUE
+        : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_determination_companion_NativePresenter_nativeInput(
+    JNIEnv *, jobject, jint type, jint code, jint value, jint minimum,
+    jint maximum, jint sourceFlags)
+{
+    std::lock_guard lock(gPresenterMutex);
+    return gPresenter && gPresenter->input(
+            static_cast<uint16_t>(type), static_cast<uint16_t>(code), value,
+            minimum, maximum, static_cast<uint32_t>(sourceFlags))
+        ? JNI_TRUE
+        : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT void JNICALL

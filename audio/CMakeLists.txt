@@ -10,6 +10,9 @@ target_compile_options(det-audio-probe PRIVATE
     -Wall -Wextra -Wpedantic -Werror
     -ffunction-sections -fdata-sections)
 target_link_options(det-audio-probe PRIVATE -Wl,--gc-sections)
+if(DET_STATIC_GUEST)
+    target_link_options(det-audio-probe PRIVATE -static)
+endif()
 
 install(TARGETS det-audio-probe RUNTIME DESTINATION bin)
 

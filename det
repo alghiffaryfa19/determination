@@ -8,6 +8,7 @@
 #   det shell [cmd...]    root shell (Magisk su) on the phone
 #   det guest [cmd...]    shell inside the LXC guest AS melissa (bash -l if no cmd)
 #   det guest-root [cmd]  root shell inside the guest (admin escape hatch)
+#   det distro CMD        list/status/install/select/provision guest rootfs slots
 #   det passwd            set melissa's guest password (needed before sudo works)
 #   det ssh-setup [key]   install sshd + authorize key (default: dedicated key)
 #   det motd-setup        install/refresh the guest login MOTD
@@ -78,7 +79,7 @@ ensure() {
 install_guest_motd() {
     G=/data/determination
     adb push guest/setup-motd.sh /data/local/tmp/determination-setup-motd.sh >/dev/null
-    if ! adb shell "su -c 'cp /data/local/tmp/determination-setup-motd.sh $G/guest/root/setup-motd.sh && chmod 0700 $G/guest/root/setup-motd.sh && $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh /root/setup-motd.sh \"$DET_VERSION\" \"$DET_CODENAME\"'"; then
+    if ! adb shell "su -c 'cp /data/local/tmp/determination-setup-motd.sh $G/active-guest/root/setup-motd.sh && chmod 0700 $G/active-guest/root/setup-motd.sh && $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh /root/setup-motd.sh \"$DET_VERSION\" \"$DET_CODENAME\"'"; then
         adb shell "su -c 'rm -f /data/local/tmp/determination-setup-motd.sh'" >/dev/null
         echo 'det: guest MOTD setup failed' >&2
         return 1
@@ -109,14 +110,13 @@ guest)
     ensure; shift
     G=/data/determination
     # Attach as the unprivileged guest user melissa (root shell: det guest-root).
-    # runuser -l reads /etc/group, so melissa keeps her supplementary groups
-    # (video/android_input/…) - lxc-attach --uid would drop them. Absolute path:
-    # lxc-attach hands a minimal PATH that omits /usr/sbin.
+    # det-platform chooses the distro's supplementary-group-safe launcher.
+    # lxc-attach --uid is deliberately avoided because it drops android_input.
     # The whole su -c argument must be ONE quoted string (see AGENTS.md).
     if [ $# -gt 0 ]; then
-        adb shell "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/sbin/runuser -l melissa -c \"$*\"'"
+        adb shell "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/local/bin/det-platform run-user melissa /bin/sh -lc \"$*\"'"
     else
-        adb shell -t "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/sbin/runuser -l melissa'"
+        adb shell -t "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/local/bin/det-platform run-user melissa /bin/sh -l'"
     fi ;;
 guest-root)
     ensure; shift
@@ -125,7 +125,7 @@ guest-root)
     if [ $# -gt 0 ]; then
         adb shell "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh -lc \"$*\"'"
     else
-        adb shell -t "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /bin/bash -l'"
+        adb shell -t "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh -l'"
     fi ;;
 passwd)
     ensure
@@ -171,7 +171,7 @@ ssh-setup)
     install_guest_motd
     adb push guest/setup-ssh.sh /data/local/tmp/determination-setup-ssh.sh >/dev/null
     adb push "$key_file" /data/local/tmp/determination-authorized-key.pub >/dev/null
-    if ! adb shell "su -c 'cp /data/local/tmp/determination-setup-ssh.sh $G/guest/root/setup-ssh.sh && cp /data/local/tmp/determination-authorized-key.pub $G/guest/root/authorized-key.pub && chmod 0700 $G/guest/root/setup-ssh.sh && $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh /root/setup-ssh.sh /root/authorized-key.pub'"; then
+    if ! adb shell "su -c 'cp /data/local/tmp/determination-setup-ssh.sh $G/active-guest/root/setup-ssh.sh && cp /data/local/tmp/determination-authorized-key.pub $G/active-guest/root/authorized-key.pub && chmod 0700 $G/active-guest/root/setup-ssh.sh && $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh /root/setup-ssh.sh /root/authorized-key.pub'"; then
         adb shell "su -c 'rm -f /data/local/tmp/determination-setup-ssh.sh /data/local/tmp/determination-authorized-key.pub'" >/dev/null
         echo 'det: guest SSH setup failed' >&2
         exit 1
@@ -250,6 +250,34 @@ linux-first)
             adb shell "su -c '/data/determination/bin/boot-profile apply'" ;;
         *) echo "usage: det linux-first status|enable|disable|apply" >&2; exit 2 ;;
     esac ;;
+distro)
+    ensure
+    action=${2:-status}
+    G=/data/determination
+    case "$action" in
+        list|status)
+            adb shell "su -c '$G/bin/guest-distro $action'" ;;
+        select|switch)
+            id=${3:-}
+            case "$id" in debian|arch|alpine) ;; *) echo "usage: det distro select debian|arch|alpine" >&2; exit 2 ;; esac
+            adb shell "su -c '$G/bin/guest-distro select $id'" ;;
+        provision)
+            adb shell "su -c '$G/bin/guest-distro provision'" ;;
+        install)
+            id=${3:-}; archive=${4:-}
+            case "$id" in arch|alpine) ;; *) echo "usage: det distro install arch|alpine ROOTFS.tar.gz" >&2; exit 2 ;; esac
+            [ -r "$archive" ] || { echo "rootfs archive not readable: $archive" >&2; exit 1; }
+            remote="/data/local/tmp/determination-rootfs-$id.tar.gz"
+            adb push "$archive" "$remote"
+            if adb shell "su -c '$G/bin/guest-distro install $id $remote'"; then
+                adb shell "su -c 'rm -f $remote'" >/dev/null
+            else
+                echo "install failed; staged archive retained at $remote" >&2
+                exit 1
+            fi
+            ;;
+        *) echo "usage: det distro list|status|install|select|provision" >&2; exit 2 ;;
+    esac ;;
 log)
     ensure
     adb shell "su -c 'tail -n ${3:-60} /data/determination/log/${2:-toggle}.log'" ;;
@@ -268,6 +296,7 @@ status)
             echo "boot-profile: ${desired:-phone}"
         }
         [ -x /data/determination/bin/desktop-on ] && echo "module: installed" || echo "module: not installed"
+        [ -x /data/determination/bin/guest-distro ] && /data/determination/bin/guest-distro status 2>/dev/null | sed 's/^/guest-/'
 EOF
     ;;
 recon)
@@ -277,7 +306,7 @@ hybrid-probe)
     G=/data/determination
     adb push guest/hybris-minigbm-probe.c /data/local/tmp/hybris-minigbm-probe.c >/dev/null
     adb push guest/build-hybris-minigbm-probe.sh /data/local/tmp/build-hybris-minigbm-probe.sh >/dev/null
-    adb shell "su -c 'cp /data/local/tmp/hybris-minigbm-probe.c $G/guest/root/hybris-minigbm-probe.c; cp /data/local/tmp/build-hybris-minigbm-probe.sh $G/guest/root/build-hybris-minigbm-probe.sh; chmod 0755 $G/guest/root/build-hybris-minigbm-probe.sh; $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh /root/build-hybris-minigbm-probe.sh /root/hybris-minigbm-probe.c'" ;;
+    adb shell "su -c 'cp /data/local/tmp/hybris-minigbm-probe.c $G/active-guest/root/hybris-minigbm-probe.c; cp /data/local/tmp/build-hybris-minigbm-probe.sh $G/active-guest/root/build-hybris-minigbm-probe.sh; chmod 0755 $G/active-guest/root/build-hybris-minigbm-probe.sh; $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh /root/build-hybris-minigbm-probe.sh /root/hybris-minigbm-probe.c'" ;;
 hybrid-bench)
     ensure
     G=/data/determination
@@ -289,7 +318,7 @@ hybrid-bench)
     fi
     adb push guest/hybris-minigbm-probe.c /data/local/tmp/hybris-minigbm-probe.c >/dev/null
     adb push guest/build-hybris-minigbm-probe.sh /data/local/tmp/build-hybris-minigbm-probe.sh >/dev/null
-    adb shell "su -c 'cp /data/local/tmp/hybris-minigbm-probe.c $G/guest/root/hybris-minigbm-probe.c; cp /data/local/tmp/build-hybris-minigbm-probe.sh $G/guest/root/build-hybris-minigbm-probe.sh; chmod 0755 $G/guest/root/build-hybris-minigbm-probe.sh; $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh /root/build-hybris-minigbm-probe.sh /root/hybris-minigbm-probe.c benchmark $bench_args'" ;;
+    adb shell "su -c 'cp /data/local/tmp/hybris-minigbm-probe.c $G/active-guest/root/hybris-minigbm-probe.c; cp /data/local/tmp/build-hybris-minigbm-probe.sh $G/active-guest/root/build-hybris-minigbm-probe.sh; chmod 0755 $G/active-guest/root/build-hybris-minigbm-probe.sh; $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh /root/build-hybris-minigbm-probe.sh /root/hybris-minigbm-probe.c benchmark $bench_args'" ;;
 push-module)
     ensure
     zipf="magisk-module/determination-magisk-v$DET_VERSION.zip"

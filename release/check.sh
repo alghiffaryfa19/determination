@@ -70,12 +70,20 @@ grep -Fq 'rootProject.file("../version.properties")' companion/app/build.gradle.
 
 for DET_PACKAGER in \
     magisk-module/build-module.sh \
-    usb-install/build-usb-payload.sh
+    usb-install/build-usb-payload.sh \
+    release/build-online-bundle.sh
 do
     grep -Fq 'det_load_version' "$DET_PACKAGER" \
         && ok "$DET_PACKAGER consumes central version metadata" \
         || fail "$DET_PACKAGER does not consume central version metadata"
 done
+
+python3 -m json.tool release/update-manifest.schema.json >/dev/null \
+    && grep -Fq '"runtime"' release/update-manifest.schema.json \
+    && grep -Fq '"rootfs"' release/update-manifest.schema.json \
+    && grep -Fq '"androidBuilds"' release/update-manifest.schema.json \
+    && ok "online installer schema covers runtime, rootfs, and exact Android builds" \
+    || fail "online installer schema is invalid or incomplete"
 
 grep -Fq "$DET_RELEASE_BASE \"$DET_CODENAME\"" CHANGELOG.md \
     && ok "changelog entry exists" \
@@ -211,6 +219,8 @@ if [ "$DET_MODE" = ship ]; then
         "$DET_MODULE_ZIP" \
         companion/app/build/outputs/apk/release/app-release.apk \
         dist/usb-payload/SHA256SUMS \
+        dist/online-release/determination-update.json \
+        dist/online-release/SHA256SUMS \
         "$DET_MANIFEST"
     do
         [ -f "$DET_ARTIFACT" ] \
@@ -230,6 +240,27 @@ if [ "$DET_MODE" = ship ]; then
                 && ok "USB payload contains $DET_PAYLOAD_FILE" \
                 || fail "USB payload checksums do not reference $DET_PAYLOAD_FILE"
         done
+    fi
+
+    if [ -f dist/online-release/SHA256SUMS ]; then
+        (cd dist/online-release && sha256sum -c SHA256SUMS) \
+            && ok "online installer checksums verify" \
+            || fail "online installer checksums do not verify"
+    fi
+    if [ -f dist/online-release/determination-update.json ]; then
+        python3 -c '
+import json, sys
+p = json.load(open(sys.argv[1], encoding="utf-8"))
+types = {a.get("type") for a in p.get("artifacts", [])}
+boots = [a for a in p.get("artifacts", []) if a.get("type") == "boot"]
+debian = [a for a in p.get("artifacts", []) if a.get("type") == "rootfs" and a.get("distro") == "debian" and a.get("support") == "qualified"]
+assert p.get("schema") == 2
+assert {"module", "runtime", "rootfs", "boot", "companion"} <= types
+assert boots and all(a.get("devices") and a.get("androidBuilds") for a in boots)
+assert debian
+' dist/online-release/determination-update.json \
+            && ok "online bundle is a complete exact-build installer" \
+            || fail "online bundle is update-only, unsafe, or malformed"
     fi
 
     if [ -f companion/app/build/outputs/apk/release/app-release.apk ]; then

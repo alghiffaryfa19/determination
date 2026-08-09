@@ -59,7 +59,10 @@ fun SoftwareScreen(
             }
         }
 
-        if (wide) {
+        DistroSection(vm)
+
+        val chooseCompositor = COMPOSITORS.size > 1
+        if (wide && chooseCompositor) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     CompositorSection(vm)
@@ -69,8 +72,51 @@ fun SoftwareScreen(
                 }
             }
         } else {
-            CompositorSection(vm)
+            if (chooseCompositor) CompositorSection(vm)
             CatalogSection(vm)
+        }
+    }
+}
+
+@Composable
+private fun DistroSection(vm: DetViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionLabel("Guest distro")
+        vm.guestDistros.forEach { distro ->
+            GlassCard {
+                Row(
+                    Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = distro.active,
+                        onClick = { vm.selectGuestDistro(distro.id) },
+                        enabled = distro.installed && !distro.active && vm.busy == null,
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            distro.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            when {
+                                !distro.installed -> "Not installed"
+                                distro.ready -> "Installed · runtime provisioned"
+                                else -> "Installed · base needs provisioning"
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    if (distro.active && distro.installed && !distro.ready) {
+                        FilledTonalButton(
+                            enabled = vm.busy == null,
+                            onClick = vm::provisionGuestDistro,
+                        ) { Text("Provision") }
+                    }
+                }
+            }
         }
     }
 }

@@ -154,6 +154,33 @@ libandroid_runtime/libc/libutils/libbase/libprocessgroup from Zygisk. Hooks
 registered fine but never fired - the actual Watchdog kill path doesn't go
 through any of those GOT entries in system_server. Don't retry this angle.
 
+**Exit wedge: lazy health HAL → bootanim last frame stuck (FIXED 2026-08-03):**
+`vendor.lineage_health` is a lazy AIDL HAL. While ss is SIGSTOP-frozen through the
+desktop session it idles out and unregisters; crDroid's servicemanager can't
+lazy-restart it, so the SIGKILL-respawned system_server blocks FOREVER in
+`ChargingControlController` (waiting for `IChargingControl`) → Watchdog kill-loop
+→ nothing ever draws over bootanim's final frame (screen looks stuck on the last
+frame of the boot animation). `desktop-off` step 1c now runs a 120s
+setsid-detached keeper that re-asserts `start vendor.lineage_health` across the
+ss boot window, and step 3b gained the 60s bootanim keeper from native-restore.
+Diagnosis: `service.bootanim.exit 1` is a *symptom*, not the cause — check
+Watchdog for "Blocked in handler on main thread" + `ChargingControlController`
+before touching bootanim props.
+
+**Guest distro profiles (2026-08-09, buildable but not device-qualified):**
+Debian remains the only proven guest. The active rootfs is selected through
+`/data/determination/active-guest`; Debian keeps its compatible location at
+`/data/determination/guest`, while optional Arch Linux ARM and Alpine slots live
+under `/data/determination/guests/<id>/rootfs`. `toggle/guest-distro` owns
+install/select/provision/rollback, and refuses switching while desktop mode is
+active. `guest/det-platform` abstracts package, service, user-session and libc
+differences; `det distro ...` and the companion Software screen expose it.
+Portable rootfs builders live in `guest/build-portable-rootfs.sh`; Alpine is a
+native musl build (no `gcompat` shortcut), so glibc-specific libhybris hooks are
+skipped there. Guest helper binaries are static. Do not call Arch or Alpine
+graphically supported until they pass hwcomposer, Phoc/input, repeated Android
+restore, audio and external-display qualification on the phone.
+
 **Other known issues:**
 - phoc teardown segfaults (rc 139, cosmetic).
 - matrix flat varyings (mat3/mat4) unverified in GSK shader fix.
@@ -174,7 +201,9 @@ lxc-attach `/bin/cp` to final path.
 
 ## On-device paths
 
-- Guest rootfs: `/data/determination/guest` (no `rootfs/` subdir)
+- Active guest rootfs pointer: `/data/determination/active-guest`
+- Proven Debian rootfs: `/data/determination/guest` (no `rootfs/` subdir)
+- Optional distro slots: `/data/determination/guests/<id>/rootfs`
 - Toggle scripts deploy to: `/data/determination/bin/`
 - Control channel: `/data/determination/run/control`
 - LXC tools: `/data/determination/lxc/bin`

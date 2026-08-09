@@ -7,8 +7,10 @@ cd "$ROOT"
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
-find . -path './.git' -prune -o -type f -print | while IFS= read -r file; do
+git ls-files -co --exclude-standard | while IFS= read -r file; do
     [ -f "$file" ] || continue
+    magic=$(dd if="$file" bs=2 count=1 2>/dev/null || true)
+    [ "$magic" = '#!' ] || continue
     shebang=$(sed -n '1p' "$file" 2>/dev/null || true)
     case "$shebang" in
         '#!'*'/bash'*) bash -n "$file" ;;
@@ -21,6 +23,8 @@ python3 -m py_compile \
     website/check-site.py website/optimize-images.py
 sh recon/tests/test-classify.sh
 sh toggle/tests/lifecycle-test.sh
+sh toggle/tests/guest-distro-test.sh
+sh guest/tests/audio-session-test.sh
 python3 docs/check-links.py
 python3 artifacts/build-index.py --check
 python3 website/check-site.py

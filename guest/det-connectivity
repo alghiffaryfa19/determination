@@ -1,0 +1,61 @@
+#!/bin/sh
+# Guest-side client for Android-owned Wi-Fi/Bluetooth. This deliberately uses
+# the host control channel: the guest never takes wlan0 or the onboard HCI away
+# from Android. Commands work in phone/external-display mode. Internal mode
+# keeps cached status but rejects service calls while system_server is frozen.
+
+set -eu
+DIR=/mnt/det-control/connectivity
+mkdir -p "$DIR"
+id="$$.$(date +%s)"
+req="$DIR/req.$id"
+res="$DIR/res.$id"
+
+encode() { printf '%s' "$1" | base64 | tr -d '\n'; }
+
+op=${1:-}
+shift || true
+case "$op" in
+    wifi-status|wifi-scan|wifi-list|bt-status|bt-enable|bt-disable)
+        [ "$#" -eq 0 ] || { echo "unexpected arguments" >&2; exit 2; }
+        ;;
+    wifi-enable)
+        [ "$#" -eq 1 ] || { echo "usage: det-connectivity wifi-enable on|off" >&2; exit 2; }
+        case "$1" in on|off) ;; *) exit 2;; esac
+        ;;
+    wifi-forget)
+        [ "$#" -eq 1 ] || { echo "usage: det-connectivity wifi-forget NETWORK_ID" >&2; exit 2; }
+        case "$1" in ''|*[!0-9]*) exit 2;; esac
+        ;;
+    wifi-connect)
+        [ "$#" -ge 2 ] && [ "$#" -le 3 ] || {
+            echo "usage: det-connectivity wifi-connect SSID open|owe|wpa2|wpa3|wep [PASSPHRASE]" >&2
+            exit 2
+        }
+        case "$2" in open|owe|wpa2|wpa3|wep) ;; *) exit 2;; esac
+        ;;
+    *)
+        echo "commands: wifi-status wifi-scan wifi-list wifi-enable wifi-connect wifi-forget bt-status bt-enable bt-disable" >&2
+        exit 2
+        ;;
+esac
+
+tmp="$req.tmp"
+{
+    printf '%s\n' "$op"
+    for arg in "$@"; do encode "$arg"; printf '\n'; done
+} > "$tmp"
+chmod 0600 "$tmp"
+mv "$tmp" "$req"
+touch /mnt/det-control/connectivity-wake
+
+i=0
+while [ ! -f "$res" ]; do
+    i=$((i + 1))
+    [ "$i" -lt 200 ] || { rm -f "$req"; echo "host connectivity agent timed out" >&2; exit 124; }
+    sleep 0.1
+done
+rc=$(sed -n '1p' "$res")
+sed '1d' "$res"
+rm -f "$res"
+case "$rc" in ''|*[!0-9]*) exit 1;; *) exit "$rc";; esac

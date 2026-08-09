@@ -3,7 +3,7 @@
 set -eu
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-export DEBIAN_FRONTEND=noninteractive TMPDIR=/tmp HOME=/root
+export TMPDIR=/tmp HOME=/root
 
 VERSION=${1:-unknown}
 CODENAME=${2:-}
@@ -14,7 +14,12 @@ CODENAME=${2:-}
 # terminfo entry even basic commands such as clear fail with "unknown terminal
 # type". Install the tiny definition package once; subsequent runs are no-ops.
 if ! infocmp xterm-kitty >/dev/null 2>&1; then
-    apt-get install -y -qq --no-install-recommends kitty-terminfo
+    if [ -x /usr/local/bin/det-platform ]; then
+        det-platform package-install kitty-terminfo || true
+    else
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get install -y -qq --no-install-recommends kitty-terminfo
+    fi
 fi
 
 # The MOTD is the welcome. Do not staple Fish's tutorial greeting beneath it.
@@ -62,8 +67,12 @@ install -d -m 0755 /etc/ssh/sshd_config.d
 cat > /etc/ssh/sshd_config.d/55-determination-motd.conf <<'EOF'
 PrintLastLog no
 EOF
-/usr/sbin/sshd -t
-systemctl reload ssh 2>/dev/null || true
+sshd -t
+if [ -x /usr/local/bin/det-platform ]; then
+    det-platform service-restart ssh 2>/dev/null || true
+else
+    systemctl reload ssh 2>/dev/null || true
+fi
 
 # This is the canonical project hostname; older live rootfs images still carry
 # the pre-rename "decemberos" value.

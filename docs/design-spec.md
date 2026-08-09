@@ -66,10 +66,12 @@ design avoids ever needing that.
 
 ## 3. Guest + display acquisition
 
-Guest: Debian glibc rootfs in LXC, sharing the kernel, with `libhybris` and the
-`/vendor` blob paths bind-mounted in. Vendor EGL/GLES through libhybris is the
-product GPU interface across device families. Native Mesa drivers are optional
-diagnostics and optimisations, never the compatibility baseline.
+Guest: a Linux rootfs in LXC, sharing the kernel, with `libhybris` and the
+`/vendor` blob paths bind-mounted in. Debian/glibc is the qualified baseline;
+Arch Linux ARM/glibc and Alpine/musl are experimental userspace profiles behind
+the same guest contract. Vendor EGL/GLES through libhybris is the product GPU
+interface across device families. Native Mesa drivers are optional diagnostics
+and optimisations, never the compatibility baseline.
 
 The proven compositor binds the display through **libhybris → hwcomposer HAL**.
 For compositors whose modern backends require GBM, the target is Android

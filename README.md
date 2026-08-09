@@ -2,7 +2,7 @@
 
 Android convergence layer for Android 16
 
-Android stays PID1; a glibc Wayland desktop runs as an LXC guest
+Android stays PID1; a Wayland desktop runs as an LXC guest
 on the **same downstream vendor kernel**; `libhybris` bridges the guest to the
 bionic GPU/display blobs. Shipped as a custom `boot.img` (custom kernel +
 Magisk-patched ramdisk) plus a Zygisk module : **not a ROM**. `/system` and
@@ -28,8 +28,8 @@ Two modes:
 | `kernel/` | kconfig fragment (container enables) + fetch/build scripts for the downstream SM8150 kernel |
 | `boot/` | boot.img unpack/repack with the custom kernel; Magisk patching flow |
 | `magisk-module/` | the on-device Determination Magisk module: container launch, boot hooks, sepolicy rules |
-| `guest/` | Debian arm64 rootfs builder + LXC config (binder/kgsl/dmabuf `/dev`, `/vendor`, property area bind-mounts, libhybris) |
-| `toggle/` | §4 internal-panel handoff: SF stop + respawn suppression + compositor swap + input grab; plus `det-hostagent`  |
+| `guest/` | Debian baseline plus experimental Arch Linux ARM/Alpine rootfs builders; shared LXC, libhybris, and session contract |
+| `toggle/` | §4 internal-panel handoff: SF stop + respawn suppression + compositor swap + input grab; plus `det-hostagent` (guest→host control channel) |
 | `control/` | native `detd` state/API owner, `detctl` client, durable-state/protocol core, and host tests |
 | `audio/` | direct ALSA hardware inventory and journalled ownership binaries |
 | `companion/` | Android UI and permission facade: mode confirmation, status/API, Quick Settings, share sheet, optional external presenter |

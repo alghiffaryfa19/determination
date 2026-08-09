@@ -18,13 +18,13 @@
     <section class="page-hero proof-hero">
       <div class="page-number enter" style="--delay:80ms">02 / EVIDENCE</div>
       <h1 class="enter" style="--delay:140ms">It boots.<br><i>It returns.</i></h1>
-      <p class="enter" style="--delay:260ms">The claims below are dated, captured, and running on the device. No concept renders required.</p>
+      <p class="enter" style="--delay:260ms">The claims below are dated, captured, and running on the device. Compile success is never substituted for a visible frame.</p>
       <div class="page-sigil enter" style="--delay:340ms"><i></i><span>STATUS<br>DETERMINED</span></div>
     </section>
 
     <section class="proof proof-content">
       <div class="stats" data-reveal-stagger>
-        <article><span class="stat" data-target="95">0</span><small>COMMITS<br>JUL 01 → JUL 18</small></article><article><span class="stat" data-target="164">0</span><small>TRACKED FILES<br>ACROSS THE STACK</small></article><article><span class="stat" data-target="9348">0</span><small>LINES OF SOURCE<br>+ DOCUMENTATION</small></article><article><span class="stat stat-text">GL 4.6</span><small>ZINK / TURNIP<br>NATIVE PATH</small></article>
+        <article><span class="stat" data-target="140">0</span><small>COMMITS<br>THROUGH 09 AUG</small></article><article><span class="stat" data-target="305">0</span><small>TRACKED FILES<br>ACROSS THE STACK</small></article><article><span class="stat" data-target="23742">0</span><small>LINES OF SOURCE<br>+ DOCUMENTATION</small></article><article><span class="stat stat-text">GL 4.6</span><small>ZINK / TURNIP<br>NATIVE PATH</small></article>
       </div>
       <div class="device-proof" data-reveal>
         <div class="capture-pair">
@@ -33,11 +33,16 @@
         </div>
         <div><div class="section-label"><span>01</span> SAME PANEL</div><h2>Two worlds.<br>One device.</h2><p>Android 16 and a Debian arm64 Wayland desktop, captured tonight from the same physical OnePlus 7 panel. The mode changed. The hardware did not.</p><span class="live-stamp"><i></i> CAPTURED ON DEVICE / 19 JUL 2026</span></div>
       </div>
+      <div class="device-proof external-proof" id="concurrent" data-reveal>
+        <figure class="capture external-capture"><img src="device-shots/external-plasma-presenter.png" alt="Full Plasma desktop presented through Android at 1920 by 1080 on 9 August 2026"><figcaption>PLASMA / ANDROID PRESENTER / 1920×1080</figcaption></figure>
+        <div><div class="section-label"><span>02</span> CONCURRENT DISPLAY</div><h2>Android stayed.<br>The desktop arrived.</h2><p>KWin renders with Zink and Turnip into a three-buffer Android gralloc pool. Complete QTI native handles and dma-bufs cross the process boundary; Android owns the presentation surface. Touch and keyboard have crossed the same display path end to end.</p><div class="proof-pills"><span>VISIBLE FRAME</span><span>NO CPU COPY</span><span>DIRECT AUDIO HEARD</span><span class="pending">DP-ALT QUALIFYING</span></div><span class="live-stamp"><i></i> CAPTURED ON DEVICE / 09 AUG 2026</span></div>
+      </div>
       <div class="timeline" data-reveal-stagger>
         <article><time>02 JUL</time><span></span><div><small>BOOT</small><h3>Custom kernel alive.</h3><p>4.14.357 running, namespaces confirmed, Wi-Fi restored with matching modules.</p></div></article>
         <article><time>04 JUL</time><span></span><div><small>GRAPHICS</small><h3>GLES 3.2 on panel.</h3><p>libhybris clears the TLS wall and reaches the vendor composer.</p></div></article>
         <article><time>11 JUL</time><span></span><div><small>HANDOFF</small><h3>Round trip complete.</h3><p>Companion app enters desktop. Guest exits. Android returns without a cable.</p></div></article>
         <article><time>14 JUL</time><span></span><div><small>NATIVE KMS</small><h3>Plasma, GPU, touch.</h3><p>KWin on raw KMS with Turnip, Zink, minigbm, and working input.</p></div></article>
+        <article><time>09 AUG</time><span></span><div><small>CONCURRENT PRESENTER</small><h3>Full desktop beside Android.</h3><p>Pooled gralloc buffers reach an Android-owned external surface. Plasma, direct audio, touch, and keyboard are live; physical DP-alt recovery and soak remain qualification work.</p></div></article>
       </div>
     </section>
     <a class="next-page" href="architecture.html" data-reveal><small>RETURN / 01</small><span>Architecture</span><b>←</b></a>

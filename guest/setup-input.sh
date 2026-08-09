@@ -28,27 +28,41 @@
 #    (desktop-on does this for the phosh session and phoc).
 set -e
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-export DEBIAN_FRONTEND=noninteractive
 export TMPDIR=/tmp
 
-echo "== apt: phosh + squeekboard + input tools =="
+echo "== phosh + keyboard + input tools =="
 # Self-repair: adb/USB drops mid-run kill apt via SIGHUP and can leave dpkg
 # interrupted (happened 2026-07-06 when the phone's battery died mid-install).
-dpkg --configure -a 2>/dev/null || true
-apt-get update -qq
+if [ -x /usr/local/bin/det-platform ]; then
+    det-platform package-refresh
+else
+    export DEBIAN_FRONTEND=noninteractive
+    dpkg --configure -a 2>/dev/null || true
+    apt-get update -qq
+fi
 # xkb-data: libxkbcommon finds no keymaps without it (we install with
 # --no-install-recommends everywhere); fonts-cantarell: phosh's UI font.
 # gnome-settings-daemon-common: phosh ABORTS (fatal GLib-GIO-ERROR) without
 # the org.gnome.settings-daemon.* schemas --- it's only in Recommends
 # (found 2026-07-06: the "blinking compositor" crash loop on first light).
 # adwaita-icon-theme: squeekboard renders without its key icons otherwise.
-apt-get install -y -qq --no-install-recommends \
-    phosh squeekboard libinput-tools xkb-data fonts-cantarell \
-    gnome-settings-daemon-common adwaita-icon-theme
+if [ -x /usr/local/bin/det-platform ]; then
+    det-platform deps phosh
+else
+    apt-get install -y -qq --no-install-recommends \
+        phosh squeekboard libinput-tools xkb-data fonts-cantarell \
+        gnome-settings-daemon-common adwaita-icon-theme
+fi
 
 echo "== seatd =="
-systemctl enable --now seatd
-systemctl --no-pager --quiet is-active seatd || { echo "FATAL: seatd not active"; exit 1; }
+if [ -x /usr/local/bin/det-platform ]; then
+    det-platform service-enable seatd
+    det-platform service-start seatd
+    det-platform service-active seatd || { echo "FATAL: seatd not active"; exit 1; }
+else
+    systemctl enable --now seatd
+    systemctl --no-pager --quiet is-active seatd || { echo "FATAL: seatd not active"; exit 1; }
+fi
 
 echo "== det-input-udevdb =="
 cat > /usr/local/sbin/det-input-udevdb <<'EOF'
@@ -65,16 +79,20 @@ cat > /usr/local/sbin/det-input-udevdb <<'EOF'
 # ("Q:seat"), or session_device_verify then manager_process_seat_device skips it
 # and TakeDevice returns ENODEV. Verified against systemd v257 source.
 set -e
-mkdir -p /run/udev/data
+# systemd v257 may create these 0700 root:root. libinput runs as melissa and
+# treats every event node as unconfigured if it cannot traverse the database.
+install -d -m 0755 /run/udev /run/udev/data
 for ev in /sys/class/input/event*; do
     [ -e "$ev" ] || continue
     props=$(udevadm test-builtin input_id "$ev" 2>/dev/null | grep '^ID_' || true)
     [ -n "$props" ] || continue
     { printf 'I:1\n'; printf '%s\n' "$props" | sed 's/^/E:/'; } \
         > "/run/udev/data/c$(cat "$ev/dev")"
+    chmod 0644 "/run/udev/data/c$(cat "$ev/dev")"
     parent=$(basename "$(readlink -f "$ev/device")")
     case "$parent" in input*)
         printf 'I:1\nG:seat\nQ:seat\n' > "/run/udev/data/+input:$parent"
+        chmod 0644 "/run/udev/data/+input:$parent"
     esac
 done
 EOF

@@ -6,8 +6,10 @@ DET=${DET:-/data/determination}
 . "$DET/bin/device-config"
 . "$DET/bin/lifecycle-lib"
 
-GUEST_ETC="$DET/guest/etc"
-[ -d "$DET/guest" ] || { echo "FATAL: guest rootfs missing: $DET/guest" >&2; exit 1; }
+GUEST_ROOT=${DET_GUEST_ROOT:-$(readlink -f "$DET/active-guest" 2>/dev/null)}
+[ -n "$GUEST_ROOT" ] || GUEST_ROOT="$DET/guest"
+GUEST_ETC="$GUEST_ROOT/etc"
+[ -d "$GUEST_ROOT" ] || { echo "FATAL: guest rootfs missing: $GUEST_ROOT" >&2; exit 1; }
 mkdir -p "$GUEST_ETC"
 
 if [ "${DET_LOCK_HELD:-0}" != 1 ]; then
@@ -32,9 +34,11 @@ DEVICE_TMP="$GUEST_ETC/determination-device.conf.new.$$"
     echo "DET_INPUT_QUIRK=$DET_INPUT_QUIRK"
     echo "DET_GRAPHICS_RENDERER=$DET_GRAPHICS_RENDERER"
     echo "DET_GBM_PROVIDER=$DET_GBM_PROVIDER"
+    echo "DET_EXTERNAL_RENDERER=$DET_EXTERNAL_RENDERER"
     echo "DET_DRM_RENDER_NODE=$DET_DRM_RENDER_NODE"
     echo "DET_PANEL_WIDTH=$DET_PANEL_WIDTH"
     echo "DET_PANEL_HEIGHT=$DET_PANEL_HEIGHT"
+    echo "DET_PANEL_REFRESH_MHZ=$DET_PANEL_REFRESH_MHZ"
 } > "$DEVICE_TMP"
 mv -f "$DEVICE_TMP" "$GUEST_ETC/determination-device.conf"
 chmod 0644 "$GUEST_ETC/determination-device.conf"

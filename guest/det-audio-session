@@ -6,9 +6,35 @@ set -u
 MARKER=${DET_AUDIO_MARKER:-/mnt/det-control/audio-claimed}
 RUNTIME=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 LOG="$RUNTIME/determination-audio.log"
+LOCK="$RUNTIME/determination-audio-session.lock"
 pipewire_pid=
 pulse_pid=
 wireplumber_pid=
+
+acquire_session() {
+    tries=0
+    while ! mkdir "$LOCK" 2>/dev/null; do
+        owner=$(cat "$LOCK/owner" 2>/dev/null || true)
+        case "$owner" in
+            ''|*[!0-9]*)
+                # mkdir and owner publication are separate operations. Give a
+                # just-created lock one tick before deciding it is stale.
+                [ "$tries" -gt 0 ] || { tries=1; sleep 0.1; continue; }
+                ;;
+            *)
+                if kill -0 "$owner" 2>/dev/null; then
+                    printf '%s\n' "audio session already owned by pid $owner" >> "$LOG"
+                    return 1
+                fi
+                ;;
+        esac
+        rm -f "$LOCK/owner"
+        rmdir "$LOCK" 2>/dev/null || true
+        tries=$((tries + 1))
+        [ "$tries" -lt 5 ] || return 1
+    done
+    printf '%s\n' "$$" > "$LOCK/owner"
+}
 
 stop_graph() {
     for pid in "$wireplumber_pid" "$pulse_pid" "$pipewire_pid"; do
@@ -56,10 +82,20 @@ graph_alive() {
     [ -n "$wireplumber_pid" ] && kill -0 "$wireplumber_pid" 2>/dev/null
 }
 
-trap 'exit 0' HUP INT TERM
-trap 'stop_graph' EXIT
+cleanup_session() {
+    stop_graph
+    owner=$(cat "$LOCK/owner" 2>/dev/null || true)
+    if [ "$owner" = "$$" ]; then
+        rm -f "$LOCK/owner"
+        rmdir "$LOCK" 2>/dev/null || true
+    fi
+}
+
 mkdir -p "$RUNTIME"
 [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -le 131072 ] || : > "$LOG"
+acquire_session || exit 0
+trap 'exit 0' HUP INT TERM
+trap 'cleanup_session' EXIT
 
 while :; do
     if [ -f "$MARKER" ]; then

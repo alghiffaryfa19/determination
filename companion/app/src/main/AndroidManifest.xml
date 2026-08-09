@@ -7,9 +7,10 @@
         android:label="@string/control_permission_label"
         android:protectionLevel="signature" />
 
-    <!-- The companion is a UI and the optional Android external-display
+    <!-- The companion is a UI, updater, and optional Android external-display
          presenter. Determination audio is direct ALSA/PipeWire hardware access;
-         this app intentionally has no media-playback or network permission. -->
+         the network permission is used only for explicit update checks/downloads. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />

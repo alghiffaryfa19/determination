@@ -18,6 +18,13 @@ DET=/data/determination
 CTRL="$DET/run/control"
 LOG="$DET/log/hostagent.log"
 mkdir -p "$CTRL" "$DET/log"
+CONN="$CTRL/connectivity"
+CACHE="$DET/run/connectivity-cache"
+mkdir -p "$CONN" "$CACHE"
+# guest uid 1000 == Android AID_SYSTEM on this device family. The protocol
+# directory contains mode 0600 requests, including Wi-Fi passphrases.
+chown 1000:1000 "$CONN" 2>/dev/null || true
+chmod 0770 "$CONN" 2>/dev/null || true
 # Rotate the append-forever log once it passes ~256K (keep the newest half).
 [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 262144 ] &&
     tail -c 131072 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
@@ -33,8 +40,122 @@ echo "--- det-hostagent up $(date)"
 power_off() { svc power shutdown 2>/dev/null || reboot -p 2>/dev/null || reboot -p; }
 reboot_now() { svc power reboot 2>/dev/null || reboot 2>/dev/null || reboot; }
 
+system_server_frozen() {
+    ss_pid=$(pidof system_server 2>/dev/null)
+    [ -n "$ss_pid" ] || return 1
+    ss_state=$(awk '/^State:/{print $2; exit}' "/proc/$ss_pid/status" 2>/dev/null)
+    [ "$ss_state" = T ] || [ "$ss_state" = t ]
+}
+
+decode_arg() {
+    sed -n "${2}p" "$1" | base64 -d 2>/dev/null
+}
+
+# Android shell-command Binder APIs pass stdout/stderr FDs into system_server.
+# The framework cannot write a magisk_file FD under /data/determination, even
+# though this root process can. Spool through shell_data_file, then copy the
+# completed result into the private guest response.
+android_run() {
+    android_tmp="/data/local/tmp/.det-connectivity.$$"
+    "$@" >"$android_tmp" 2>&1
+    android_rc=$?
+    cat "$android_tmp"
+    rm -f "$android_tmp"
+    return "$android_rc"
+}
+
+connectivity_command() {
+    conn_req=$1
+    conn_op=$(sed -n '1p' "$conn_req")
+
+    if system_server_frozen; then
+        case "$conn_op" in
+            wifi-status|wifi-scan|wifi-list|bt-status)
+                if [ -r "$CACHE/$conn_op" ]; then
+                    cat "$CACHE/$conn_op"
+                    echo "[cached: Android services are paused in internal desktop mode]"
+                    return 0
+                fi
+                echo "Android services are paused in internal desktop mode; no cached result is available" >&2
+                return 69
+                ;;
+            *)
+                echo "Android services are paused in internal desktop mode. Change connectivity before handoff or use external-display mode." >&2
+                return 69
+                ;;
+        esac
+    fi
+
+    case "$conn_op" in
+        wifi-status)
+            android_run timeout 12 cmd wifi status
+            ;;
+        wifi-scan)
+            android_run timeout 12 cmd wifi start-scan >/dev/null && sleep 3
+            android_run timeout 12 cmd wifi list-scan-results
+            ;;
+        wifi-list)
+            android_run timeout 12 cmd wifi list-networks
+            ;;
+        wifi-enable)
+            conn_value=$(decode_arg "$conn_req" 2)
+            case "$conn_value" in
+                on) android_run timeout 12 cmd wifi set-wifi-enabled enabled ;;
+                off) android_run timeout 12 cmd wifi set-wifi-enabled disabled ;;
+                *) echo "invalid Wi-Fi state" >&2; return 2 ;;
+            esac
+            ;;
+        wifi-connect)
+            conn_ssid=$(decode_arg "$conn_req" 2)
+            conn_security=$(decode_arg "$conn_req" 3)
+            conn_passphrase=$(decode_arg "$conn_req" 4)
+            case "$conn_security" in open|owe|wpa2|wpa3|wep) ;; *) return 2;; esac
+            if [ -n "$conn_passphrase" ]; then
+                android_run timeout 25 cmd wifi connect-network "$conn_ssid" "$conn_security" "$conn_passphrase" -p
+            else
+                android_run timeout 25 cmd wifi connect-network "$conn_ssid" "$conn_security" -p
+            fi
+            unset conn_passphrase
+            ;;
+        wifi-forget)
+            conn_id=$(decode_arg "$conn_req" 2)
+            case "$conn_id" in ''|*[!0-9]*) return 2;; esac
+            android_run timeout 12 cmd wifi forget-network "$conn_id"
+            ;;
+        bt-status)
+            conn_bt=$(timeout 8 settings get global bluetooth_on 2>/dev/null)
+            case "$conn_bt" in 1) echo on;; 0) echo off;; *) echo unknown;; esac
+            ;;
+        bt-enable) android_run timeout 15 cmd bluetooth_manager enable ;;
+        bt-disable) android_run timeout 15 cmd bluetooth_manager disable ;;
+        *) echo "unknown connectivity command" >&2; return 2 ;;
+    esac
+}
+
+scan_connectivity() {
+    for conn_req in "$CONN"/req.*; do
+        [ -f "$conn_req" ] || continue
+        conn_name=${conn_req##*/req.}
+        case "$conn_name" in ''|*[!0-9.]*) rm -f "$conn_req"; continue;; esac
+        conn_body="$CONN/.body.$conn_name"
+        conn_res="$CONN/res.$conn_name"
+        connectivity_command "$conn_req" >"$conn_body" 2>&1
+        conn_rc=$?
+        case "$conn_op" in wifi-status|wifi-scan|wifi-list|bt-status)
+            [ "$conn_rc" -ne 0 ] || cp -f "$conn_body" "$CACHE/$conn_op"
+            ;;
+        esac
+        { printf '%s\n' "$conn_rc"; cat "$conn_body"; } > "$conn_res.tmp"
+        chown 1000:1000 "$conn_res.tmp" 2>/dev/null || true
+        chmod 0640 "$conn_res.tmp"
+        mv -f "$conn_res.tmp" "$conn_res"
+        rm -f "$conn_req" "$conn_body"
+    done
+}
+
 # Sweep the control dir: consume every pending file, act on the known ones.
 scan() {
+    scan_connectivity
     for f in "$CTRL"/*; do
         [ -e "$f" ] || continue
         cmd=${f##*/}
@@ -42,13 +163,14 @@ scan() {
         # legacy one-shot commands. Never unlink the authenticated RPC socket
         # or the journalled audio ownership marker.
         case "$cmd" in
-            detd.sock|audio-claimed) continue ;;
+            detd.sock|audio-claimed|external-input.fifo|connectivity) continue ;;
         esac
         rm -f "$f" 2>/dev/null
         case "$cmd" in
             exit)
                 echo "cmd: exit -> desktop-off $(date)"
                 "$DET/bin/desktop-off" ;;
+            connectivity-wake) : ;;
             reboot|poweroff)
                 echo "denied legacy power command: $cmd (use det-guest-agent RPC)" ;;
             *) echo "ignoring unknown cmd: $cmd" ;;

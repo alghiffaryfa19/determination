@@ -5,7 +5,10 @@
 
 lxc.uts.name = determination
 lxc.arch = aarch64
-lxc.rootfs.path = dir:/data/determination/guest
+# guest-distro atomically retargets this compatibility pointer while the
+# container is stopped. Debian remains at /data/determination/guest; optional
+# rootfs slots live below /data/determination/guests/.
+lxc.rootfs.path = dir:/data/determination/active-guest
 lxc.init.cmd = /sbin/init
 
 # Android has no /etc/lxc conventions; keep everything under /data/determination.

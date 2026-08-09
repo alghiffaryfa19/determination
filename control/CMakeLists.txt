@@ -31,6 +31,9 @@ if(NOT ANDROID)
     target_compile_options(det-guest-agent PRIVATE
         -Wall -Wextra -Wpedantic -Werror
     )
+    if(DET_STATIC_GUEST)
+        target_link_options(det-guest-agent PRIVATE -static)
+    endif()
 endif()
 
 if(ANDROID)

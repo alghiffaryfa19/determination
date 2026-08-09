@@ -9,6 +9,8 @@ import android.content.SharedPreferences
  */
 object Prefs {
     const val POLL_DEFAULT = 5
+    const val UPDATE_MANIFEST_DEFAULT =
+        "https://github.com/kriscrossapplesauce2004/determination/releases/latest/download/determination-update.json"
 
     private lateinit var sp: SharedPreferences
 
@@ -28,5 +30,21 @@ object Prefs {
     var stopGuestOnExit: Boolean
         get() = sp.getBoolean("stop_guest_on_exit", false)
         set(v) { sp.edit().putBoolean("stop_guest_on_exit", v).apply() }
+
+    /** HTTPS release metadata. Custom mirrors are allowed; plain HTTP is not. */
+    var updateManifestUrl: String
+        get() = sp.getString("update_manifest_url", UPDATE_MANIFEST_DEFAULT)
+            ?.takeIf { it.isNotBlank() } ?: UPDATE_MANIFEST_DEFAULT
+        set(v) { sp.edit().putString("update_manifest_url", v.trim()).apply() }
+
+    /** Validate and prepare every installer input, but do not install or flash. */
+    var installerDryRun: Boolean
+        get() = sp.getBoolean("installer_dry_run", false)
+        set(v) { sp.edit().putBoolean("installer_dry_run", v).apply() }
+
+    /** Prevent repeatedly forcing the walkthrough after the user has seen it. */
+    var installerWalkthroughSeen: Boolean
+        get() = sp.getBoolean("installer_walkthrough_seen", false)
+        set(v) { sp.edit().putBoolean("installer_walkthrough_seen", v).apply() }
 
 }

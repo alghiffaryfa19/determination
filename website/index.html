@@ -11,12 +11,6 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="boot" aria-hidden="true">
-    <div class="boot-top"><span>DETERMINATION</span><span>GUACAMOLEB / BOOT SEQUENCE</span></div>
-    <div class="boot-word"><span>D</span><i>/</i></div>
-    <div class="boot-bottom"><span class="boot-status">MOUNTING REALITY</span><b>000</b></div>
-    <div class="boot-bar"><i></i></div>
-  </div>
   <div class="noise" aria-hidden="true"></div>
   <div class="progress" aria-hidden="true"></div>
 
@@ -30,31 +24,53 @@
   </header>
 
   <main id="top">
-    <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-code" aria-hidden="true">ANDROID::PID1<br>LXC::DEBIAN_ARM64<br>DISPLAY::ARBITRATED<br>GPU::ADRENO_640</div>
-      <div class="hero-kicker enter" style="--delay:90ms"><span class="pulse"></span> ONEPLUS 7 / SM8150 / LIVE HARDWARE</div>
-      <h1 id="hero-title" aria-label="Determination" class="poster">
-        <span class="poster-line poster-line-one"><span>DETERMIN</span></span>
-        <span class="poster-line poster-line-two"><span>ATION</span><i>Android,<br>determined.</i></span>
-      </h1>
-      <div class="hero-bottom enter" style="--delay:410ms">
-        <p>A real Linux desktop, living beside Android on the same phone, the same kernel, and the same silicon.</p>
-        <a class="hero-cta pressure" href="architecture.html">Enter the system <span>→</span></a>
+    <section class="hero hero-concurrent" aria-labelledby="hero-title">
+      <div class="hero-kicker enter" style="--delay:0ms"><span class="pulse"></span> CONCURRENT MODE / LIVE ON ONEPLUS 7</div>
+      <div class="hero-copy">
+        <h1 id="hero-title" aria-label="The phone stays a phone" class="hero-statement">
+          <span><b>THE PHONE</b></span>
+          <span><b>STAYS <i>A PHONE.</i></b></span>
+        </h1>
+        <p class="enter" style="--delay:150ms">Android stays interactive. Plasma renders beside it through pooled gralloc buffers, Turnip/Zink, and no CPU readback.</p>
+        <a class="hero-cta pressure enter" style="--delay:230ms" href="proof.html">See the hardware proof <span>→</span></a>
       </div>
-      <div class="hero-index enter" style="--delay:500ms">001<br><span>CONVERGENCE<br>WITHOUT THE ROM</span></div>
+
+      <div class="hero-depth enter" style="--delay:80ms" aria-label="Determination concurrent desktop running on a virtual external display">
+        <figure class="hero-frame hero-frame-main">
+          <div class="frame-bar"><span><i></i><i></i><i></i></span><b>DETERMINATION / EXTERNAL 01</b><em>60 HZ</em></div>
+          <img src="device-shots/external-plasma-presenter.png" alt="Plasma desktop rendered by Determination on a 1920 by 1080 Android external presentation display">
+          <figcaption><span>ANDROID SURFACECONTROL</span><b>← DMA-BUF + FENCES →</b><span>KWIN / ZINK / TURNIP</span></figcaption>
+        </figure>
+        <figure class="hero-frame hero-frame-phone">
+          <img src="device-shots/android-home-clean.png" alt="Android 16 remaining live on the OnePlus 7 phone display">
+          <figcaption>ANDROID / STILL LIVE</figcaption>
+        </figure>
+        <aside class="hero-telemetry" aria-hidden="true">
+          <span>BUFFER POOL</span><b>03 / 03</b>
+          <span>PRESENT PATH</span><b>ZERO COPY</b>
+          <span>RENDERER</span><b>TURNIP + ZINK</b>
+        </aside>
+      </div>
+
+      <div class="hero-proofline enter" style="--delay:300ms">
+        <span><i></i> FULL DESKTOP</span>
+        <span><i></i> DIRECT AUDIO HEARD</span>
+        <span><i></i> TOUCH + KEYS PROVEN</span>
+        <span class="qualifying"><i></i> PHYSICAL DP QUALIFYING</span>
+      </div>
     </section>
 
     <div class="ticker" aria-label="Verified project capabilities">
       <div class="ticker-track">
-        <span>ANDROID HOST RETAINED</span><i>◆</i><span>DEBIAN RUNS NATIVE</span><i>◆</i><span>ONE SHARED KERNEL</span><i>◆</i><span>REAL GPU COMPOSITING</span><i>◆</i><span>PHONE ↔ DESKTOP</span><i>◆</i>
-        <span aria-hidden="true">ANDROID HOST RETAINED</span><i aria-hidden="true">◆</i><span aria-hidden="true">DEBIAN RUNS NATIVE</span><i aria-hidden="true">◆</i><span aria-hidden="true">ONE SHARED KERNEL</span><i aria-hidden="true">◆</i><span aria-hidden="true">REAL GPU COMPOSITING</span><i aria-hidden="true">◆</i><span aria-hidden="true">PHONE ↔ DESKTOP</span><i aria-hidden="true">◆</i>
+        <span>ANDROID HOST RETAINED</span><i>◆</i><span>POOLED GRALLOC BUFFERS</span><i>◆</i><span>TURNIP + ZINK</span><i>◆</i><span>FULL DESKTOP AUDIO</span><i>◆</i><span>TOUCH + KEYBOARD</span><i>◆</i>
+        <span aria-hidden="true">ANDROID HOST RETAINED</span><i aria-hidden="true">◆</i><span aria-hidden="true">POOLED GRALLOC BUFFERS</span><i aria-hidden="true">◆</i><span aria-hidden="true">TURNIP + ZINK</span><i aria-hidden="true">◆</i><span aria-hidden="true">FULL DESKTOP AUDIO</span><i aria-hidden="true">◆</i><span aria-hidden="true">TOUCH + KEYBOARD</span><i aria-hidden="true">◆</i>
       </div>
     </div>
 
     <section class="manifesto" data-reveal>
       <div class="section-label"><span>01</span> THE PREMISE</div>
-      <p class="manifesto-copy">Your phone doesn’t become a <em>fake desktop.</em> It runs one.</p>
-      <div class="manifesto-note">Android stays PID 1. Internal desktop mode time-slices the panel and pauses framework services; external convergence is the path that keeps Android interactive.</div>
+      <p class="manifesto-copy">Your phone doesn’t become a <em>fake desktop.</em> It runs one beside itself.</p>
+      <div class="manifesto-note">Android stays PID 1 and keeps its panel. The guest renders into Android-owned buffers; the presenter places them on a second display without a readback bridge.</div>
     </section>
 
     <section class="paths" data-reveal>

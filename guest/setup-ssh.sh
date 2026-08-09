@@ -9,7 +9,6 @@
 set -eu
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-export DEBIAN_FRONTEND=noninteractive
 export TMPDIR=/tmp HOME=/root
 
 KEY_FILE=${1:-}
@@ -20,9 +19,8 @@ KEY_FILE=${1:-}
 }
 
 # Reject private keys, options-bearing authorized_keys entries, and malformed
-# input before touching apt or sshd. Multiple plain public keys are accepted.
-# Package hooks may run systemd-tmpfiles and clean the container's /tmp while
-# apt is active. Keep the validated key material in root's private directory.
+# input before touching the package manager or sshd. Package hooks may clean
+# /tmp, so keep the validated key material in root's private directory.
 KEYS=$(mktemp /root/determination-ssh-keys.XXXXXX)
 trap 'rm -f "$KEYS"' EXIT HUP INT TERM
 while IFS= read -r line || [ -n "$line" ]; do
@@ -39,9 +37,15 @@ done < "$KEY_FILE"
 [ -s "$KEYS" ] || { echo "FATAL: no public keys found" >&2; exit 2; }
 
 echo "== OpenSSH server =="
-dpkg --configure -a 2>/dev/null || true
-apt-get update -qq
-apt-get install -y -qq --no-install-recommends openssh-server
+if [ -x /usr/local/bin/det-platform ]; then
+    det-platform package-refresh
+    det-platform package-install openssh-server
+else
+    export DEBIAN_FRONTEND=noninteractive
+    dpkg --configure -a 2>/dev/null || true
+    apt-get update -qq
+    apt-get install -y -qq --no-install-recommends openssh-server
+fi
 
 getent passwd melissa >/dev/null || { echo "FATAL: guest user melissa is missing" >&2; exit 1; }
 home=$(getent passwd melissa | cut -d: -f6)
@@ -80,8 +84,14 @@ EOF
 
 ssh-keygen -A
 sshd -t
-systemctl enable ssh >/dev/null
-systemctl restart ssh
-systemctl --quiet is-active ssh || { echo "FATAL: ssh.service did not start" >&2; exit 1; }
+if [ -x /usr/local/bin/det-platform ]; then
+    det-platform service-enable ssh >/dev/null
+    det-platform service-restart ssh
+    det-platform service-active ssh || { echo "FATAL: ssh service did not start" >&2; exit 1; }
+else
+    systemctl enable ssh >/dev/null
+    systemctl restart ssh
+    systemctl --quiet is-active ssh || { echo "FATAL: ssh.service did not start" >&2; exit 1; }
+fi
 
 echo "SSH-SETUP-OK --- key login for melissa; password/root login disabled"

@@ -4,15 +4,29 @@
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import unquote
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MARKDOWN = tuple(ROOT.rglob("*.md"))
 LINK = re.compile(r"(?<!!)\[[^]]*\]\(([^)\s]+)(?:\s+[^)]*)?\)")
 HEADING = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$")
+
+
+def markdown_files() -> tuple[Path, ...]:
+    """Return project Markdown, excluding ignored vendored/build payloads."""
+    result = subprocess.run(
+        ["git", "ls-files", "-co", "--exclude-standard", "--", "*.md"],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        return tuple(ROOT / path for path in result.stdout.splitlines() if path)
+    return tuple(ROOT.rglob("*.md"))
 
 
 def slug(text: str) -> str:
@@ -44,7 +58,8 @@ def local_target(source: Path, raw: str) -> tuple[Path, str]:
 
 def main() -> int:
     failures: list[str] = []
-    for source in MARKDOWN:
+    markdown = markdown_files()
+    for source in markdown:
         text = source.read_text(encoding="utf-8")
         for match in LINK.finditer(text):
             raw = match.group(1)
@@ -60,7 +75,7 @@ def main() -> int:
         print("Markdown link check failed:", file=sys.stderr)
         print("\n".join(f"- {item}" for item in failures), file=sys.stderr)
         return 1
-    print(f"Markdown link check passed for {len(MARKDOWN)} files.")
+    print(f"Markdown link check passed for {len(markdown)} files.")
     return 0
 
 

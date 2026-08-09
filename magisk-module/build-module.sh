@@ -11,6 +11,9 @@ det_load_version "$REPO/version.properties"
 
 [ -f ../tools/evgrab/evgrab ] || { echo "build evgrab for aarch64 first (tools/evgrab, make CC=aarch64-linux-gnu-gcc)" >&2; exit 1; }
 file ../tools/evgrab/evgrab | grep -q aarch64 || { echo "evgrab is not an aarch64 build" >&2; exit 1; }
+INPUT_FORWARDER="../tools/input-forwarder/det-input-forwarder"
+[ -f "$INPUT_FORWARDER" ] || { echo "build det-input-forwarder with the Android NDK first" >&2; exit 1; }
+file "$INPUT_FORWARDER" | grep -q 'ARM aarch64' || { echo "det-input-forwarder is not an Android aarch64 build" >&2; exit 1; }
 
 DETD="../control/build/android-arm64/detd"
 DETCTL="../control/build/android-arm64/detctl"
@@ -36,6 +39,10 @@ file "$DET_GUEST_AGENT" | grep -q 'ARM aarch64' || {
     echo "$DET_GUEST_AGENT is not a Linux aarch64 build" >&2
     exit 1
 }
+file "$DET_GUEST_AGENT" | grep -q 'statically linked' || {
+    echo "$DET_GUEST_AGENT must be rebuilt as a distro-neutral static guest binary" >&2
+    exit 1
+}
 for binary in "$DET_AUDIO_HOST" "$DET_AUDIO_GUEST" "$DET_AUDIO_OWNER"; do
     [ -f "$binary" ] || {
         echo "build the direct audio probes first (./audio/build.sh all)" >&2
@@ -46,6 +53,10 @@ for binary in "$DET_AUDIO_HOST" "$DET_AUDIO_GUEST" "$DET_AUDIO_OWNER"; do
         exit 1
     }
 done
+file "$DET_AUDIO_GUEST" | grep -q 'statically linked' || {
+    echo "$DET_AUDIO_GUEST must be rebuilt as a distro-neutral static guest binary" >&2
+    exit 1
+}
 
 ZYGISK_64="../zygisk/libs/arm64-v8a/libdetermination.so"
 ZYGISK_32="../zygisk/libs/armeabi-v7a/libdetermination.so"
@@ -59,12 +70,12 @@ cp customize.sh post-fs-data.sh service.sh sepolicy.rule "$WORK/"
 det_render_version_template module.prop.in "$WORK/module.prop"
 mkdir -p "$WORK/tools" "$WORK/guest-tools" "$WORK/zygisk" \
     "$WORK/device-profiles" "$WORK/audio-profiles"
-cp ../tools/evgrab/evgrab \
+cp ../tools/evgrab/evgrab "$INPUT_FORWARDER" \
    "$DETD" "$DETCTL" "$DET_AUDIO_HOST" "$DET_AUDIO_OWNER" \
    ../toggle/device-config ../toggle/generate-lxc-config ../toggle/generate-guest-config \
-   ../toggle/lifecycle-lib ../toggle/boot-profile \
+   ../toggle/lifecycle-lib ../toggle/boot-profile ../toggle/guest-distro \
    ../toggle/guest-start ../toggle/desktop-on ../toggle/desktop-off \
-   ../toggle/run-transition ../toggle/external-presenter \
+   ../toggle/run-transition ../toggle/external-presenter ../toggle/external-input \
    ../toggle/native-plasma ../toggle/native-kms-gate ../toggle/native-restore \
    ../toggle/det-hostagent ../toggle/det-color-compat \
    ../toggle/cycle-stress.sh ../audio/det-audio-route ../audio/det-audio-smoke \
@@ -75,6 +86,14 @@ cp "$DET_GUEST_AGENT" "$WORK/guest-tools/det-guest-agent"
 cp "$DET_AUDIO_GUEST" "$WORK/guest-tools/det-audio-probe"
 cp ../guest/det-audio-session "$WORK/guest-tools/det-audio-session"
 cp ../guest/det-pipewire-smoke "$WORK/guest-tools/det-pipewire-smoke"
+cp ../guest/det-input-actions "$WORK/guest-tools/det-input-actions"
+cp ../guest/det-media-action "$WORK/guest-tools/det-media-action"
+cp ../guest/det-connectivity "$WORK/guest-tools/det-connectivity"
+cp ../guest/det-connectivity-menu "$WORK/guest-tools/det-connectivity-menu"
+cp ../guest/det-platform "$WORK/guest-tools/det-platform"
+cp ../guest/determination-connectivity.desktop "$WORK/guest-tools/determination-connectivity.desktop"
+cp ../guest/determination-input-proxy.desktop "$WORK/guest-tools/determination-input-proxy.desktop"
+cp ../guest/det-input-udevdb "$WORK/guest-tools/det-input-udevdb"
 cp ../guest/90-determination-direct.conf "$WORK/guest-tools/90-determination-direct.conf"
 cp ../guest/lxc/config "$WORK/tools/lxc-config-base"
 cp "$ZYGISK_64" "$WORK/zygisk/arm64-v8a.so"

@@ -1,0 +1,567 @@
+--- a/src/opengl/eglswapchain.h
++++ b/src/opengl/eglswapchain.h
+@@ -47,6 +47,7 @@
+     std::unique_ptr<GLFramebuffer> m_framebuffer;
+     std::shared_ptr<GLTexture> m_texture;
+     int m_age = 0;
++    bool m_held = false;
+     FileDescriptor m_releaseFd;
+     friend class EglSwapchain;
+ };
+@@ -62,6 +63,7 @@
+     uint64_t modifier() const;
+ 
+     std::shared_ptr<EglSwapchainSlot> acquire();
++    void hold(const std::shared_ptr<EglSwapchainSlot> &slot);
+     void release(std::shared_ptr<EglSwapchainSlot> slot, FileDescriptor &&releaseFence);
+ 
+     void resetBufferAge();
+--- a/src/opengl/eglswapchain.cpp
++++ b/src/opengl/eglswapchain.cpp
+@@ -56,7 +56,7 @@
+ 
+ bool EglSwapchainSlot::isBusy() const
+ {
+-    return m_buffer->isReferenced() || (m_releaseFd.isValid() && !m_releaseFd.isReadable());
++    return m_held || m_buffer->isReferenced() || (m_releaseFd.isValid() && !m_releaseFd.isReadable());
+ }
+ 
+ std::shared_ptr<EglSwapchainSlot> EglSwapchainSlot::create(EglContext *context, GraphicsBuffer *buffer)
+@@ -134,8 +134,14 @@
+     return slot;
+ }
+ 
++void EglSwapchain::hold(const std::shared_ptr<EglSwapchainSlot> &slot)
++{
++    slot->m_held = true;
++}
++
+ void EglSwapchain::release(std::shared_ptr<EglSwapchainSlot> slot, FileDescriptor &&releaseFence)
+ {
++    slot->m_held = false;
+     slot->m_releaseFd = std::move(releaseFence);
+     for (qsizetype i = 0; i < m_slots.count(); ++i) {
+         if (m_slots[i] == slot) {
+--- a/src/backends/virtual/virtual_egl_backend.h
++++ b/src/backends/virtual/virtual_egl_backend.h
+@@ -10,6 +10,7 @@
+ 
+ #include "core/outputlayer.h"
+ #include "platformsupport/scenes/opengl/abstract_egl_backend.h"
++#include "utils/filedescriptor.h"
+ #include <chrono>
+ #include <memory>
+ 
+@@ -24,6 +25,8 @@
+ class GLTexture;
+ class VirtualEglBackend;
+ class GLRenderTimeQuery;
++class DetGrallocPoolAllocator;
++class GraphicsBuffer;
+ 
+ class VirtualEglLayer : public OutputLayer
+ {
+@@ -42,6 +45,7 @@
+     std::shared_ptr<EglSwapchain> m_swapchain;
+     std::shared_ptr<EglSwapchainSlot> m_current;
+     std::unique_ptr<GLRenderTimeQuery> m_query;
++    QHash<uint64_t, std::shared_ptr<EglSwapchainSlot>> m_submitted;
+ };
+ 
+ /**
+@@ -62,6 +66,11 @@
+ 
+     VirtualBackend *backend() const;
+     DrmDevice *drmDevice() const override;
++    GraphicsBufferAllocator *graphicsBufferAllocator() const;
++    bool usesGrallocPool() const;
++    uint64_t poolBufferId(GraphicsBuffer *buffer) const;
++    std::optional<std::pair<uint64_t, FileDescriptor>>
++    presentPoolBuffer(GraphicsBuffer *buffer, FileDescriptor &&acquireFence);
+ 
+ private:
+     bool initializeEgl();
+@@ -71,6 +80,8 @@
+     void removeOutput(Output *output);
+ 
+     VirtualBackend *m_backend;
++    bool m_poolRequested = false;
++    std::unique_ptr<DetGrallocPoolAllocator> m_poolAllocator;
+     std::map<Output *, std::unique_ptr<VirtualEglLayer>> m_outputs;
+ };
+ 
+--- a/src/backends/virtual/virtual_egl_backend.cpp
++++ b/src/backends/virtual/virtual_egl_backend.cpp
+@@ -9,6 +9,9 @@
+ #include "virtual_egl_backend.h"
+ #include "core/drmdevice.h"
+ #include "core/gbmgraphicsbufferallocator.h"
++#include "core/graphicsbuffer.h"
++#include "core/graphicsbufferallocator.h"
++#include "opengl/eglnativefence.h"
+ #include "opengl/eglswapchain.h"
+ #include "opengl/glrendertimequery.h"
+ #include "opengl/glutils.h"
+@@ -19,10 +22,343 @@
+ #include "virtual_output.h"
+ 
+ #include <drm_fourcc.h>
++#include <determination/gralloc-pool-protocol.h>
++
++#include <array>
++#include <algorithm>
++#include <cerrno>
++#include <cstring>
++#include <fcntl.h>
++#include <poll.h>
++#include <sys/socket.h>
++#include <sys/un.h>
++#include <unistd.h>
++#include <utility>
++
++#include <QtAlgorithms>
+ 
+ namespace KWin
+ {
+ 
++class DetGrallocPoolBuffer : public GraphicsBuffer
++{
++public:
++    DetGrallocPoolBuffer(const det_gralloc_pool_packet &packet,
++                         std::array<int, DET_GRALLOC_POOL_MAX_HANDLE_FDS> &handleFds)
++        : m_id(packet.buffer_id)
++        , m_size(packet.width, packet.height)
++        , m_hasAlpha(GraphicsBuffer::alphaChannelFromDrmFormat(packet.drm_format))
++    {
++        m_attributes.planeCount = packet.plane_count;
++        m_attributes.width = packet.width;
++        m_attributes.height = packet.height;
++        m_attributes.format = packet.drm_format;
++        m_attributes.modifier = packet.modifier;
++        for (uint32_t plane = 0; plane < packet.plane_count; ++plane) {
++            const uint32_t index = packet.plane_fd_index[plane];
++            int fd;
++            if (handleFds[index] >= 0) {
++                fd = std::exchange(handleFds[index], -1);
++            } else {
++                fd = fcntl(m_attributes.fd[0].get(), F_DUPFD_CLOEXEC, 0);
++            }
++            m_attributes.fd[plane] = FileDescriptor(fd);
++            m_attributes.offset[plane] = packet.offset[plane];
++            m_attributes.pitch[plane] = packet.pitch[plane];
++        }
++        for (int &fd : handleFds) {
++            if (fd >= 0) {
++                close(std::exchange(fd, -1));
++            }
++        }
++    }
++
++    uint64_t id() const
++    {
++        return m_id;
++    }
++
++    QSize size() const override
++    {
++        return m_size;
++    }
++
++    bool hasAlphaChannel() const override
++    {
++        return m_hasAlpha;
++    }
++
++    const DmaBufAttributes *dmabufAttributes() const override
++    {
++        return &m_attributes;
++    }
++
++private:
++    const uint64_t m_id;
++    const QSize m_size;
++    const bool m_hasAlpha;
++    DmaBufAttributes m_attributes;
++};
++
++class DetGrallocPoolAllocator : public GraphicsBufferAllocator
++{
++public:
++    explicit DetGrallocPoolAllocator(const QByteArray &socketPath)
++    {
++        sockaddr_un address = {.sun_family = AF_UNIX};
++        if (socketPath.isEmpty() ||
++            socketPath.size() >= qsizetype(sizeof(address.sun_path))) {
++            qCWarning(KWIN_VIRTUAL) << "invalid gralloc pool socket path";
++            return;
++        }
++        m_fd = FileDescriptor(socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0));
++        if (!m_fd.isValid()) {
++            qCWarning(KWIN_VIRTUAL) << "gralloc pool socket failed:" << strerror(errno);
++            return;
++        }
++        memcpy(address.sun_path, socketPath.constData(), socketPath.size() + 1);
++        if (connect(m_fd.get(), reinterpret_cast<sockaddr *>(&address),
++                    sizeof(address)) != 0) {
++            qCWarning(KWIN_VIRTUAL) << "gralloc pool connect failed:" << strerror(errno);
++            m_fd.reset();
++            return;
++        }
++
++        DetGrallocPoolBuffer *first = receiveBuffer();
++        if (!first) {
++            m_fd.reset();
++            return;
++        }
++        m_available.append(first);
++        for (uint32_t i = 1; i < m_poolSize; ++i) {
++            DetGrallocPoolBuffer *buffer = receiveBuffer();
++            if (!buffer) {
++                qDeleteAll(m_available);
++                m_available.clear();
++                m_fd.reset();
++                return;
++            }
++            m_available.append(buffer);
++        }
++        qCInfo(KWIN_VIRTUAL) << "Android gralloc pool connected buffers="
++                             << m_poolSize << "geometry=" << m_size
++                             << "format=" << Qt::hex << m_format;
++    }
++
++    ~DetGrallocPoolAllocator() override
++    {
++        qDeleteAll(m_available);
++    }
++
++    bool isValid() const
++    {
++        return m_fd.isValid() && m_poolSize >= 2;
++    }
++
++    GraphicsBuffer *allocate(const GraphicsBufferOptions &options) override
++    {
++        if (options.size != m_size || options.format != m_format ||
++            m_available.isEmpty()) {
++            qCWarning(KWIN_VIRTUAL)
++                << "gralloc pool allocation unavailable size=" << options.size
++                << "format=" << Qt::hex << options.format
++                << "remaining=" << Qt::dec << m_available.size();
++            return nullptr;
++        }
++        return m_available.takeFirst();
++    }
++
++    uint64_t bufferId(GraphicsBuffer *buffer) const
++    {
++        auto poolBuffer = dynamic_cast<DetGrallocPoolBuffer *>(buffer);
++        return poolBuffer ? poolBuffer->id() : 0;
++    }
++
++    std::optional<std::pair<uint64_t, FileDescriptor>>
++    present(GraphicsBuffer *buffer, FileDescriptor &&acquireFence)
++    {
++        const uint64_t id = bufferId(buffer);
++        if (!id || !acquireFence.isValid()) {
++            qCWarning(KWIN_VIRTUAL) << "refusing pool present without buffer id or acquire fence";
++            return std::nullopt;
++        }
++
++        det_gralloc_pool_packet request =
++            det_gralloc_pool_packet_init(DET_GRALLOC_POOL_PRESENT);
++        request.flags = DET_GRALLOC_POOL_HAS_ACQUIRE_FENCE;
++        request.serial = ++m_serial;
++        request.buffer_id = id;
++        iovec iov = {.iov_base = &request, .iov_len = sizeof(request)};
++        alignas(cmsghdr) char control[CMSG_SPACE(sizeof(int))] = {};
++        msghdr message = {
++            .msg_iov = &iov,
++            .msg_iovlen = 1,
++            .msg_control = control,
++            .msg_controllen = sizeof(control),
++        };
++        cmsghdr *header = CMSG_FIRSTHDR(&message);
++        header->cmsg_level = SOL_SOCKET;
++        header->cmsg_type = SCM_RIGHTS;
++        header->cmsg_len = CMSG_LEN(sizeof(int));
++        const int acquireFd = acquireFence.get();
++        memcpy(CMSG_DATA(header), &acquireFd, sizeof(acquireFd));
++        if (sendmsg(m_fd.get(), &message, MSG_NOSIGNAL) !=
++            ssize_t(sizeof(request))) {
++            qCWarning(KWIN_VIRTUAL) << "gralloc pool present send failed:" << strerror(errno);
++            return std::nullopt;
++        }
++
++        pollfd ready = {.fd = m_fd.get(), .events = POLLIN};
++        if (poll(&ready, 1, 5000) <= 0) {
++            qCWarning(KWIN_VIRTUAL) << "gralloc pool completion timeout";
++            return std::nullopt;
++        }
++        det_gralloc_pool_packet completion;
++        std::array<int, 2> receivedFds = {-1, -1};
++        iovec completionIov = {
++            .iov_base = &completion,
++            .iov_len = sizeof(completion),
++        };
++        alignas(cmsghdr) char completionControl[CMSG_SPACE(sizeof(int) * 2)] = {};
++        msghdr completionMessage = {
++            .msg_iov = &completionIov,
++            .msg_iovlen = 1,
++            .msg_control = completionControl,
++            .msg_controllen = sizeof(completionControl),
++        };
++        const ssize_t received = recvmsg(m_fd.get(), &completionMessage,
++                                         MSG_CMSG_CLOEXEC);
++        size_t fdCount = 0;
++        if (cmsghdr *completionHeader = CMSG_FIRSTHDR(&completionMessage)) {
++            if (completionHeader->cmsg_level == SOL_SOCKET &&
++                completionHeader->cmsg_type == SCM_RIGHTS) {
++                fdCount = std::min<size_t>(
++                    2, (completionHeader->cmsg_len - CMSG_LEN(0)) / sizeof(int));
++                memcpy(receivedFds.data(), CMSG_DATA(completionHeader),
++                       fdCount * sizeof(int));
++            }
++        }
++        auto closeReceived = [&receivedFds]() {
++            for (int &fd : receivedFds) {
++                if (fd >= 0) {
++                    close(std::exchange(fd, -1));
++                }
++            }
++        };
++        const uint32_t allowedFlags =
++            DET_GRALLOC_POOL_HAS_PRESENT_FENCE |
++            DET_GRALLOC_POOL_HAS_RELEASE_FENCE;
++        if (received != ssize_t(sizeof(completion)) ||
++            (completionMessage.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) ||
++            completion.magic != DET_GRALLOC_POOL_MAGIC ||
++            completion.version != DET_GRALLOC_POOL_VERSION ||
++            completion.size != sizeof(completion) ||
++            completion.op != DET_GRALLOC_POOL_COMPLETE ||
++            completion.serial != request.serial ||
++            completion.buffer_id != id || completion.status != 0 ||
++            (completion.flags & ~allowedFlags)) {
++            closeReceived();
++            qCWarning(KWIN_VIRTUAL) << "invalid gralloc pool completion";
++            return std::nullopt;
++        }
++        size_t index = 0;
++        if (completion.flags & DET_GRALLOC_POOL_HAS_PRESENT_FENCE) {
++            if (index >= fdCount) {
++                closeReceived();
++                return std::nullopt;
++            }
++            close(std::exchange(receivedFds[index++], -1));
++        }
++        FileDescriptor releaseFence;
++        if (completion.flags & DET_GRALLOC_POOL_HAS_RELEASE_FENCE) {
++            if (index >= fdCount || completion.released_buffer_id == 0) {
++                closeReceived();
++                return std::nullopt;
++            }
++            releaseFence = FileDescriptor(std::exchange(receivedFds[index++], -1));
++        }
++        if (index != fdCount ||
++            (completion.released_buffer_id == 0 && releaseFence.isValid())) {
++            closeReceived();
++            return std::nullopt;
++        }
++        closeReceived();
++        return std::pair<uint64_t, FileDescriptor>(
++            completion.released_buffer_id, std::move(releaseFence));
++    }
++
++private:
++    DetGrallocPoolBuffer *receiveBuffer()
++    {
++        pollfd ready = {.fd = m_fd.get(), .events = POLLIN};
++        if (poll(&ready, 1, 5000) <= 0) {
++            qCWarning(KWIN_VIRTUAL) << "gralloc pool buffer timeout";
++            return nullptr;
++        }
++        det_gralloc_pool_packet packet;
++        std::array<int, DET_GRALLOC_POOL_MAX_HANDLE_FDS> handleFds;
++        handleFds.fill(-1);
++        iovec iov = {.iov_base = &packet, .iov_len = sizeof(packet)};
++        alignas(cmsghdr) char control[
++            CMSG_SPACE(sizeof(int) * DET_GRALLOC_POOL_MAX_HANDLE_FDS)] = {};
++        msghdr message = {
++            .msg_iov = &iov,
++            .msg_iovlen = 1,
++            .msg_control = control,
++            .msg_controllen = sizeof(control),
++        };
++        const ssize_t received = recvmsg(m_fd.get(), &message, MSG_CMSG_CLOEXEC);
++        size_t fdCount = 0;
++        if (cmsghdr *header = CMSG_FIRSTHDR(&message)) {
++            if (header->cmsg_level == SOL_SOCKET &&
++                header->cmsg_type == SCM_RIGHTS) {
++                fdCount = std::min<size_t>(
++                    DET_GRALLOC_POOL_MAX_HANDLE_FDS,
++                    (header->cmsg_len - CMSG_LEN(0)) / sizeof(int));
++                memcpy(handleFds.data(), CMSG_DATA(header),
++                       fdCount * sizeof(int));
++            }
++        }
++        auto closeHandles = [&handleFds]() {
++            for (int &fd : handleFds) {
++                if (fd >= 0) {
++                    close(std::exchange(fd, -1));
++                }
++            }
++        };
++        if (received != ssize_t(sizeof(packet)) ||
++            (message.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) ||
++            !det_gralloc_pool_buffer_valid(&packet) ||
++            fdCount != packet.handle_fd_count ||
++            (m_poolSize && (packet.pool_size != m_poolSize ||
++                            QSize(packet.width, packet.height) != m_size ||
++                            packet.drm_format != m_format))) {
++            closeHandles();
++            qCWarning(KWIN_VIRTUAL) << "invalid gralloc pool buffer packet";
++            return nullptr;
++        }
++        if (!m_poolSize) {
++            m_poolSize = packet.pool_size;
++            m_size = QSize(packet.width, packet.height);
++            m_format = packet.drm_format;
++        }
++        qCInfo(KWIN_VIRTUAL)
++            << "gralloc buffer" << packet.buffer_id
++            << "handle=" << packet.handle_fd_count << "fd+"
++            << packet.native_int_count << "int"
++            << "minigbm="
++            << bool(packet.flags & DET_GRALLOC_POOL_MINIGBM_VALIDATED);
++        return new DetGrallocPoolBuffer(packet, handleFds);
++    }
++
++    FileDescriptor m_fd;
++    QList<DetGrallocPoolBuffer *> m_available;
++    QSize m_size;
++    uint32_t m_format = 0;
++    uint32_t m_poolSize = 0;
++    uint64_t m_serial = 0;
++};
++
+ VirtualEglLayer::VirtualEglLayer(Output *output, VirtualEglBackend *backend)
+     : OutputLayer(output)
+     , m_backend(backend)
+@@ -40,7 +376,12 @@
+ 
+     const QSize nativeSize = m_output->modeSize();
+     if (!m_swapchain || m_swapchain->size() != nativeSize) {
+-        m_swapchain = EglSwapchain::create(m_backend->drmDevice()->allocator(), m_backend->openglContext(), nativeSize, DRM_FORMAT_XRGB8888, {DRM_FORMAT_MOD_INVALID});
++        const uint32_t format = m_backend->usesGrallocPool()
++            ? DRM_FORMAT_ABGR8888
++            : DRM_FORMAT_XRGB8888;
++        m_swapchain = EglSwapchain::create(
++            m_backend->graphicsBufferAllocator(), m_backend->openglContext(),
++            nativeSize, format, {DRM_FORMAT_MOD_INVALID});
+         if (!m_swapchain) {
+             return std::nullopt;
+         }
+@@ -64,7 +405,40 @@
+ {
+     m_query->end();
+     frame->addRenderTimeQuery(std::move(m_query));
+-    glFlush(); // flush pending rendering commands.
++    if (m_backend->usesGrallocPool()) {
++        EGLNativeFence acquireFence{m_backend->eglDisplayObject()};
++        if (!acquireFence.isValid()) {
++            qCWarning(KWIN_VIRTUAL) << "Mesa renderer did not export an acquire sync_file";
++            return false;
++        }
++        const uint64_t id = m_backend->poolBufferId(m_current->buffer());
++        if (!id) {
++            return false;
++        }
++        m_swapchain->hold(m_current);
++        m_submitted[id] = m_current;
++        auto completion = m_backend->presentPoolBuffer(
++            m_current->buffer(), acquireFence.takeFileDescriptor());
++        if (!completion) {
++            m_submitted.remove(id);
++            m_swapchain->release(m_current, FileDescriptor{});
++            return false;
++        }
++        const uint64_t releasedId = completion->first;
++        if (releasedId) {
++            const auto released = m_submitted.find(releasedId);
++            if (released == m_submitted.end()) {
++                qCWarning(KWIN_VIRTUAL)
++                    << "presenter released unknown gralloc buffer" << releasedId;
++                return false;
++            }
++            m_swapchain->release(released.value(),
++                                 std::move(completion->second));
++            m_submitted.erase(released);
++        }
++    } else {
++        glFlush();
++    }
+     return true;
+ }
+ 
+@@ -82,6 +456,17 @@
+     : AbstractEglBackend()
+     , m_backend(b)
+ {
++    const QByteArray poolSocket = qgetenv("DETERMINATION_GRALLOC_POOL");
++    if (!poolSocket.isEmpty()) {
++        m_poolRequested = true;
++        auto allocator = std::make_unique<DetGrallocPoolAllocator>(poolSocket);
++        if (allocator->isValid()) {
++            m_poolAllocator = std::move(allocator);
++        } else {
++            qCWarning(KWIN_VIRTUAL)
++                << "Android gralloc pool requested but unavailable";
++        }
++    }
+ }
+ 
+ VirtualEglBackend::~VirtualEglBackend()
+@@ -100,6 +485,33 @@
+     return m_backend->drmDevice();
+ }
+ 
++GraphicsBufferAllocator *VirtualEglBackend::graphicsBufferAllocator() const
++{
++    return m_poolAllocator
++        ? static_cast<GraphicsBufferAllocator *>(m_poolAllocator.get())
++        : m_backend->drmDevice()->allocator();
++}
++
++bool VirtualEglBackend::usesGrallocPool() const
++{
++    return bool(m_poolAllocator);
++}
++
++uint64_t VirtualEglBackend::poolBufferId(GraphicsBuffer *buffer) const
++{
++    return m_poolAllocator ? m_poolAllocator->bufferId(buffer) : 0;
++}
++
++std::optional<std::pair<uint64_t, FileDescriptor>>
++VirtualEglBackend::presentPoolBuffer(GraphicsBuffer *buffer,
++                                    FileDescriptor &&acquireFence)
++{
++    if (!m_poolAllocator) {
++        return std::nullopt;
++    }
++    return m_poolAllocator->present(buffer, std::move(acquireFence));
++}
++
+ bool VirtualEglBackend::initializeEgl()
+ {
+     initClientExtensions();
+@@ -125,6 +537,10 @@
+ 
+ void VirtualEglBackend::init()
+ {
++    if (m_poolRequested && !m_poolAllocator) {
++        setFailed("Android gralloc pool was requested but could not be connected");
++        return;
++    }
+     if (!initializeEgl()) {
+         setFailed("Could not initialize egl");
+         return;

@@ -1,14 +1,19 @@
 package com.determination.companion.ui
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,25 +22,20 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.animation.animateContentSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.SystemUpdateAlt
-import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.SystemUpdateAlt
 import androidx.compose.material3.AlertDialog
@@ -44,7 +44,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -57,7 +56,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.windowsizeclass.WindowHeightSizeClass
 import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.runtime.Composable
@@ -71,16 +69,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.draw.clip
 import com.determination.companion.DetViewModel
 import com.determination.companion.R
 import com.determination.companion.Root
@@ -101,31 +96,21 @@ enum class Dest(
 ) {
     Control(
         "Control", Icons.Outlined.Smartphone, Icons.Rounded.Smartphone,
-        "Determination", "Android ↔ Linux convergence",
+        "Determination", "Mode, display, and input",
     ),
     Install(
         "Install", Icons.Outlined.SystemUpdateAlt, Icons.Rounded.SystemUpdateAlt,
-        "Install & update", "Kernel · module · guest",
+        "Install & update", "Guided setup and verified releases",
     ),
     Software(
-        "Software", Icons.Outlined.Apps, Icons.Rounded.Apps,
-        "Software", "Compositors & guest apps",
+        "Apps", Icons.Outlined.Apps, Icons.Rounded.Apps,
+        "Linux software", "Guest package catalog",
     ),
     Settings(
         "Settings", Icons.Outlined.Settings, Icons.Rounded.Settings,
-        "Settings", "Battery & behavior",
+        "Settings", "Behavior and advanced options",
     ),
 }
-
-// Long-press the refresh bubble. Nobody long-presses a refresh button.
-private val EGG_QUOTES = listOf(
-    "* (You feel your sins crawling on your back.)",
-    "* [[Hyperlink blocked.]]",
-    "* You're going to have a good time.",
-    "* (The refresh bubble refuses to elaborate.)",
-    "* THE POWER OF FLUFFY BOYS SHINES WITHIN YOU.",
-    "* (It's a phone. It fills you with determination.)",
-)
 
 @OptIn(
     ExperimentalMaterial3Api::class,
@@ -135,12 +120,10 @@ private val EGG_QUOTES = listOf(
 @Composable
 fun DetApp(vm: DetViewModel, windowSize: WindowSizeClass) {
     var dest by rememberSaveable { mutableStateOf(Dest.Control) }
+    var installerOpen by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val compact = windowSize.widthSizeClass == WindowWidthSizeClass.Compact
     val expanded = windowSize.widthSizeClass == WindowWidthSizeClass.Expanded
-    // Landscape phone: barely any height : swap the large collapsing bar for a
-    // pinned small one so content gets the room.
-    val shortScreen = windowSize.heightSizeClass == WindowHeightSizeClass.Compact
 
     LaunchedEffect(vm.message) {
         vm.message?.let { snackbar.showSnackbar(it); vm.message = null }
@@ -154,219 +137,215 @@ fun DetApp(vm: DetViewModel, windowSize: WindowSizeClass) {
             Dest.Settings -> vm.refresh()
         }
     }
+    LaunchedEffect(vm.rootState, vm.status["installed"], vm.installerWalkthroughSeen) {
+        if (vm.rootState == RootState.GRANTED && vm.status["installed"] == "no" &&
+            !vm.installerWalkthroughSeen
+        ) {
+            installerOpen = true
+        }
+    }
+    LaunchedEffect(installerOpen) {
+        if (installerOpen && vm.rootState == RootState.GRANTED) vm.refreshInstaller()
+    }
 
+    if (installerOpen) {
+        InstallerWizardScreen(
+            vm = vm,
+            wide = expanded,
+            onClose = {
+                vm.markInstallerWalkthroughSeen()
+                installerOpen = false
+            },
+        )
+        LogSheetAndDialogs(vm)
+        return
+    }
+
+    val refreshCurrent = {
+        when (dest) {
+            Dest.Control -> vm.refresh()
+            Dest.Install -> vm.refreshInstaller()
+            Dest.Software -> vm.refreshSoftware()
+            Dest.Settings -> vm.refresh()
+        }
+    }
+    var soulTaps by remember { mutableStateOf(0) }
+    var soulLast by remember { mutableStateOf(0L) }
+    val scroll = TopAppBarDefaults.pinnedScrollBehavior()
     val hazeState = rememberHazeState()
 
     AuroraBackground {
-        Row(Modifier.fillMaxSize()) {
-            val scroll =
-                if (shortScreen) TopAppBarDefaults.pinnedScrollBehavior()
-                else TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-            val barTitle: @Composable () -> Unit = {
-                Column {
-                    Text(dest.headline)
-                    if (!shortScreen) Text(
-                        dest.tagline,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-            // (7 quick taps on the soul : the number of human souls.)
-            var soulTaps by remember { mutableStateOf(0) }
-            var soulLast by remember { mutableStateOf(0L) }
-            val barNav: @Composable () -> Unit = {
-                Image(
-                    painterResource(R.drawable.ic_soul),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .size(28.dp)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                        ) {
-                            val now = System.currentTimeMillis()
-                            soulTaps = if (now - soulLast < 1500) soulTaps + 1 else 1
-                            soulLast = now
-                            if (soulTaps >= 7) {
-                                soulTaps = 0
-                                vm.message = "* Despite everything, it's still you."
-                            }
-                        },
-                )
-            }
-            val refreshCurrent = {
-                when (dest) {
-                    Dest.Control -> vm.refresh()
-                    Dest.Install -> vm.refreshInstaller()
-                    Dest.Software -> vm.refreshSoftware()
-                    Dest.Settings -> vm.refresh()
-                }
-            }
-            // Refresh lives in the floating bubble on every size class; the
-            // top bar stays clean and frosts (haze) over passing content.
-            val barColors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent,
-                scrolledContainerColor = Color.Transparent,
-            )
-            // Slightly gentler frost than the material default (24dp).
-            val barModifier = Modifier.hazeEffect(hazeState, HazeMaterials.ultraThin()) {
-                blurRadius = 14.dp
-            }
-            Scaffold(
-                modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
-                containerColor = Color.Transparent,
-                topBar = {
-                    if (shortScreen) {
-                        TopAppBar(
-                            title = barTitle, navigationIcon = barNav,
-                            colors = barColors, scrollBehavior = scroll,
-                            modifier = barModifier,
-                        )
-                    } else {
-                        LargeTopAppBar(
-                            title = barTitle, navigationIcon = barNav,
-                            colors = barColors, scrollBehavior = scroll,
-                            modifier = barModifier,
-                        )
-                    }
-                },
-                snackbarHost = {
-                    SnackbarHost(snackbar, Modifier.padding(bottom = 84.dp))
-                },
-            ) { pad ->
-                Box(Modifier.fillMaxSize().padding(pad)) {
-                    AnimatedContent(
-                        targetState = dest,
-                        transitionSpec = {
-                            // Slide toward the tab you moved to : the screen
-                            // follows the pill direction instead of dropping in.
-                            val dir = if (targetState.ordinal > initialState.ordinal) 1 else -1
-                            (fadeIn() + slideInHorizontally { dir * it / 14 })
-                                .togetherWith(fadeOut() + slideOutHorizontally { -dir * it / 18 })
-                        },
-                        label = "screen",
-                        modifier = Modifier.fillMaxSize().hazeSource(hazeState),
-                    ) { d ->
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
-                            val content = Modifier.widthIn(
-                                max = when {
-                                    expanded -> 1080.dp
-                                    !compact -> 760.dp
-                                    else -> 640.dp
+        Scaffold(
+            modifier = Modifier.nestedScroll(scroll.nestedScrollConnection),
+            containerColor = Color.Transparent,
+            topBar = {
+                TopAppBar(
+                    navigationIcon = {
+                        Image(
+                            painterResource(R.drawable.ic_soul),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(horizontal = 14.dp)
+                                .size(26.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) {
+                                    val now = System.currentTimeMillis()
+                                    soulTaps = if (now - soulLast < 1500) soulTaps + 1 else 1
+                                    soulLast = now
+                                    if (soulTaps >= 7) {
+                                        soulTaps = 0
+                                        vm.message = "* Despite everything, it's still you."
+                                    }
                                 },
+                        )
+                    },
+                    title = {
+                        Column {
+                            Text(dest.headline, style = MaterialTheme.typography.titleLarge)
+                            Text(
+                                dest.tagline,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            // Content scrolls UNDER the floating pill; screens
-                            // add this much extra end-of-scroll padding.
-                            val bottomPad = 84.dp
-                            when (d) {
-                                Dest.Control -> ControlScreen(vm, expanded, content, bottomPad)
-                                Dest.Install -> InstallScreen(vm, expanded, content, bottomPad)
-                                Dest.Software -> SoftwareScreen(vm, expanded, content, bottomPad)
-                                Dest.Settings -> SettingsScreen(vm, content, bottomPad)
-                            }
                         }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface,
+                    ),
+                    scrollBehavior = scroll,
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbar, Modifier.padding(bottom = 82.dp)) },
+        ) { pad ->
+            Box(
+                Modifier.fillMaxSize().padding(pad),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                val content = Modifier.widthIn(
+                    max = when {
+                        expanded -> 1080.dp
+                        !compact -> 760.dp
+                        else -> 640.dp
+                    },
+                )
+                Box(Modifier.fillMaxSize().hazeSource(hazeState), contentAlignment = Alignment.TopCenter) {
+                    // Intentional hard cut: keep the pill, lose the page carousel.
+                    when (dest) {
+                        Dest.Control -> ControlScreen(vm, expanded, content, 82.dp)
+                        Dest.Install -> InstallScreen(
+                            vm,
+                            expanded,
+                            onOpenInstaller = { installerOpen = true },
+                            modifier = content,
+                            bottomPad = 82.dp,
+                        )
+                        Dest.Software -> SoftwareScreen(vm, expanded, content, 82.dp)
+                        Dest.Settings -> SettingsScreen(
+                            vm,
+                            onOpenInstaller = { installerOpen = true },
+                            modifier = content,
+                            bottomPad = 82.dp,
+                        )
                     }
-                    FloatingNav(
-                        dest = dest,
-                        onSelect = { dest = it },
-                        busy = vm.busy != null,
-                        onRefresh = refreshCurrent,
-                        onRefreshLongPress = { vm.message = EGG_QUOTES.random() },
-                        wide = !compact,
-                        hazeState = hazeState,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 14.dp),
-                    )
                 }
+                FloatingPillNav(
+                    dest = dest,
+                    onSelect = { dest = it },
+                    busy = vm.busy != null,
+                    onRefresh = refreshCurrent,
+                    hazeState = hazeState,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp),
+                )
             }
         }
     }
 
-    // Log viewer sheet (shared by every screen).
     LogSheetAndDialogs(vm)
 }
 
-/**
- * Floating pill navigation (the Google-Photos look) on every size class: a
- * frosted-glass pill hovering over the content : real backdrop blur via haze :
- * with the selected destination highlighted as a chip, plus a round refresh
- * bubble beside it that doubles as the busy indicator. On wide screens the
- * pill expands: every destination shows its icon and items breathe more.
- */
-@OptIn(
-    ExperimentalMaterial3ExpressiveApi::class,
-    ExperimentalHazeMaterialsApi::class,
-    ExperimentalFoundationApi::class,
-)
+@OptIn(ExperimentalHazeMaterialsApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun FloatingNav(
+private fun FloatingPillNav(
     dest: Dest,
     onSelect: (Dest) -> Unit,
     busy: Boolean,
     onRefresh: () -> Unit,
-    onRefreshLongPress: () -> Unit,
-    wide: Boolean,
     hazeState: HazeState,
     modifier: Modifier = Modifier,
 ) {
-    val stroke = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+    val stroke = BorderStroke(
+        1.dp,
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+    )
     val frost = HazeMaterials.thin(MaterialTheme.colorScheme.surfaceContainerHigh)
-    val haptics = LocalHapticFeedback.current
-    // Compact fits four destinations because unselected items are icon-only.
-    val itemPadH = if (wide) 20.dp else 14.dp
     Row(
         modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
     ) {
         Surface(
             shape = CircleShape,
             color = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurface,
             border = stroke,
-            shadowElevation = 6.dp,
+            shadowElevation = 7.dp,
         ) {
             Row(
                 Modifier
                     .clip(CircleShape)
                     .hazeEffect(hazeState, frost) { blurRadius = 14.dp }
                     .padding(6.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Dest.entries.forEach { d ->
-                    val selected = d == dest
-                    Surface(
-                        onClick = {
-                            if (!selected) haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                            onSelect(d)
-                        },
-                        shape = CircleShape,
-                        color = if (selected) MaterialTheme.colorScheme.secondaryContainer
+                Dest.entries.forEach { item ->
+                    val selected = dest == item
+                    val itemColor by animateColorAsState(
+                        targetValue = if (selected) MaterialTheme.colorScheme.secondaryContainer
                         else Color.Transparent,
+                        animationSpec = tween(durationMillis = 220),
+                        label = "pill color",
+                    )
+                    Surface(
+                        onClick = { onSelect(item) },
+                        shape = CircleShape,
+                        color = itemColor,
                         contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                     ) {
                         Row(
                             Modifier
-                                .animateContentSize()
-                                .padding(horizontal = itemPadH, vertical = 11.dp),
+                                .animateContentSize(
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMedium,
+                                    ),
+                                )
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             Icon(
-                                if (selected) d.activeIcon else d.icon,
-                                contentDescription = d.label,
-                                modifier = Modifier.size(if (selected || wide) 18.dp else 20.dp),
+                                if (selected) item.activeIcon else item.icon,
+                                contentDescription = item.label,
+                                modifier = Modifier.size(19.dp),
                             )
-                            if (selected || wide) Text(
-                                d.label,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                            )
+                            AnimatedVisibility(
+                                visible = selected,
+                                enter = fadeIn(tween(120)) + expandHorizontally(
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioNoBouncy,
+                                        stiffness = Spring.StiffnessMedium,
+                                    ),
+                                ),
+                                exit = fadeOut(tween(90)) + shrinkHorizontally(tween(160)),
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(Modifier.size(6.dp))
+                                    Text(item.label, style = MaterialTheme.typography.labelLarge)
+                                    Box(Modifier.size(2.dp))
+                                }
+                            }
                         }
                     }
                 }
@@ -375,20 +354,19 @@ private fun FloatingNav(
         Surface(
             shape = CircleShape,
             color = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurface,
             border = stroke,
-            shadowElevation = 6.dp,
+            shadowElevation = 7.dp,
         ) {
             Box(
                 Modifier
                     .clip(CircleShape)
                     .hazeEffect(hazeState, frost) { blurRadius = 14.dp }
-                    .combinedClickable(onClick = onRefresh, onLongClick = onRefreshLongPress)
-                    .size(52.dp),
+                    .clickable(enabled = !busy, onClick = onRefresh)
+                    .size(50.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                if (busy) LoadingIndicator(Modifier.size(28.dp))
-                else Icon(Icons.Rounded.Refresh, "Refresh", Modifier.size(22.dp))
+                if (busy) LoadingIndicator(Modifier.size(26.dp))
+                else Icon(Icons.Rounded.Refresh, "Refresh", Modifier.size(21.dp))
             }
         }
     }
@@ -404,7 +382,7 @@ private fun LogSheetAndDialogs(vm: DetViewModel) {
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
             Column(Modifier.padding(horizontal = 20.dp).padding(bottom = 24.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         vm.logName ?: "",
                         style = MaterialTheme.typography.titleMedium,
@@ -439,7 +417,6 @@ private fun LogSheetAndDialogs(vm: DetViewModel) {
         }
     }
 
-    // "Reboot to apply" prompt after a successful module install / boot flash.
     vm.rebootPrompt?.let { why ->
         AlertDialog(
             onDismissRequest = { vm.rebootPrompt = null },

@@ -1,6 +1,7 @@
 [Unit]
 Description=Determination full Plasma Desktop presenter session
-After=dbus.service
+Requires=det-gralloc-pool.service
+After=dbus.service det-gralloc-pool.service
 
 [Service]
 Type=simple
@@ -11,6 +12,8 @@ Environment=DET_PLASMA_HEIGHT=1080
 ExecStart=/usr/local/bin/det-plasma-presenter-session
 Restart=on-failure
 RestartSec=2
+TimeoutStopSec=5
+KillMode=control-group
 StandardOutput=journal
 StandardError=journal
 

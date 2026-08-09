@@ -43,33 +43,38 @@
 set -e
 . "$(dirname "$0")/sources.lock"
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-export DEBIAN_FRONTEND=noninteractive
 export TMPDIR=/tmp
 export PKG_CONFIG_PATH=/usr/local/lib/aarch64-linux-gnu/pkgconfig:/usr/local/lib/pkgconfig
 export CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib
 B=/root/build
 mkdir -p "$B"
 
-echo "== deps (apt) =="
+echo "== build dependencies =="
 # wlroots core + sway-era leftovers + phoc/GNOME bits + xwayland (phoc hard
 # requirement) + drm backend bits (libdisplay-info/liftoff) + runtime
 # (foot terminal, a font --- foot fails without one --- grim for screenshots,
 # dbus quiets phoc's session warnings).
-apt-get update -qq
-apt-get install -y -qq --no-install-recommends \
-    meson ninja-build git ca-certificates pkg-config gettext \
-    wayland-protocols libwayland-dev libdrm-dev libgbm-dev libinput-dev \
-    libxkbcommon-dev libpixman-1-dev libseat-dev libudev-dev hwdata \
-    libegl-dev libgles-dev glslang-tools libevdev-dev \
-    libgbinder-dev libglib2.0-dev libgirepository1.0-dev libsystemd-dev \
-    systemd-dev \
-    libgnome-desktop-3-dev gsettings-desktop-schemas mutter-common \
-    libgmobile-dev libjson-glib-dev \
-    xwayland libxcb1-dev libxcb-composite0-dev libxcb-render0-dev \
-    libxcb-res0-dev libxcb-xfixes0-dev libxcb-icccm4-dev libxcb-ewmh-dev \
-    libxcb-xinput-dev libxcb-dri3-dev libxcb-present-dev libxcb-shm0-dev \
-    libdisplay-info-dev libliftoff-dev \
-    foot fonts-dejavu-core dbus grim
+if command -v det-platform >/dev/null 2>&1; then
+    det-platform package-refresh
+    det-platform deps wlroots-phoc
+    if ! pkg-config --exists libgbinder; then
+        "$(dirname "$0")/build-libgbinder.sh"
+    fi
+else
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update -qq
+    apt-get install -y -qq --no-install-recommends \
+        meson ninja-build git ca-certificates pkg-config gettext \
+        wayland-protocols libwayland-dev libdrm-dev libgbm-dev libinput-dev \
+        libxkbcommon-dev libpixman-1-dev libseat-dev libudev-dev hwdata \
+        libegl-dev libgles-dev glslang-tools libevdev-dev \
+        libgbinder-dev libglib2.0-dev libgirepository1.0-dev libsystemd-dev \
+        systemd-dev libgnome-desktop-3-dev gsettings-desktop-schemas mutter-common \
+        libgmobile-dev libjson-glib-dev xwayland libxcb1-dev libxcb-composite0-dev \
+        libxcb-render0-dev libxcb-res0-dev libxcb-xfixes0-dev libxcb-icccm4-dev \
+        libxcb-ewmh-dev libxcb-xinput-dev libxcb-dri3-dev libxcb-present-dev \
+        libxcb-shm0-dev libdisplay-info-dev libliftoff-dev foot fonts-dejavu-core dbus grim
+fi
 
 echo "== libhybris prereq check =="
 # android-headers comes from the droidian repo (installed by
@@ -83,6 +88,8 @@ nm -D /usr/local/lib/libhwc2.so.1 | grep -q hwc2_compat_display_set_brightness |
     echo "FATAL: libhwc2 lacks set_brightness wrapper --- re-run guest/build-libhybris.sh"; exit 1; }
 grep -q hwc2_compat_display_set_brightness /usr/local/include/hybris/hwc2/hwc2_compatibility_layer.h || {
     echo "FATAL: installed hwc2 header lacks set_brightness decl --- re-run guest/build-libhybris.sh"; exit 1; }
+grep -q hwc2_compat_display_get_configs /usr/local/include/hybris/hwc2/hwc2_compatibility_layer.h || {
+    echo "FATAL: installed hwc2 header lacks mode enumeration --- re-run guest/build-libhybris.sh"; exit 1; }
 # GPU app buffers: clients reach the GPU through hybris' wayland EGL
 # platform (android_wlegl); wlroots' android renderer serves the other
 # half. Without this plugin every app silently falls back to wl_shm.
@@ -111,6 +118,82 @@ F=backend/hwcomposer/hwcomposer2.c
 grep -q hwc2_compat_display_set_brightness "$F" || sed -i \
 's|\t\tif (enable \&\& change_backlight \&\&|\t\t/* Determination: SDM inits new composer clients at brightness 0 and\n\t\t * DSPP-dims their output to black; one set_brightness after\n\t\t * power-on fixes it (see determination b182d86). */\n\t\tif (enable)\n\t\t\thwc2_compat_display_set_brightness(hwc2_output->hwc2_display, 1.0f);\n\n\t\tif (enable \&\& change_backlight \&\&|' "$F"
 grep -q hwc2_compat_display_set_brightness "$F" || { echo "FATAL: brightness patch anchor missing"; exit 1; }
+
+# Select a profile-requested panel refresh without baking a Qualcomm or
+# OnePlus mode ID into the compositor. HWC config IDs are vendor-specific, so
+# enumerate at runtime and choose the nearest refresh at the active resolution.
+python3 - <<'PYEOF'
+import pathlib, sys
+
+p = pathlib.Path('backend/hwcomposer/hwcomposer2.c')
+s = p.read_text()
+if 'WLR_HWC_REFRESH_MHZ' in s:
+    print('HWC refresh selection patch: already applied')
+    sys.exit(0)
+s = s.replace('#include <math.h>\n', '#include <math.h>\n#include <limits.h>\n', 1)
+old = '''\
+\tHWC2DisplayConfig *config = hwc2_compat_display_get_active_config(hwc2_output->hwc2_display);
+\tassert(config);
+
+\thwc2_output->output.hwc_width = config->width;
+'''
+new = '''\
+\tHWC2DisplayConfig *config = hwc2_compat_display_get_active_config(hwc2_output->hwc2_display);
+\tassert(config);
+
+\tconst char *refresh_env = getenv("WLR_HWC_REFRESH_MHZ");
+\tif (refresh_env && refresh_env[0]) {
+\t\tchar *end = NULL;
+\t\tlong target = strtol(refresh_env, &end, 10);
+\t\tint count = hwc2_compat_display_get_configs(hwc2_output->hwc2_display, NULL, 0);
+\t\tif (end && *end == '\\0' && target >= 24000 && target <= 240000 && count > 0) {
+\t\t\tHWC2DisplayConfig *configs = calloc((size_t)count, sizeof(*configs));
+\t\t\tint got = configs ? hwc2_compat_display_get_configs(
+\t\t\t\thwc2_output->hwc2_display, configs, count) : 0;
+\t\t\tint best = -1;
+\t\t\tlong long best_delta = LLONG_MAX;
+\t\t\tfor (int i = 0; i < got; ++i) {
+\t\t\t\tif (configs[i].width != config->width ||
+\t\t\t\t\t\tconfigs[i].height != config->height ||
+\t\t\t\t\t\tconfigs[i].vsyncPeriod <= 0)
+\t\t\t\t\tcontinue;
+\t\t\t\tlong long mhz = 1000000000000LL / configs[i].vsyncPeriod;
+\t\t\t\tlong long delta = llabs(mhz - target);
+\t\t\t\twlr_log(WLR_INFO, "HWC config id=%" PRIu32 " %dx%d@%.3fHz",
+\t\t\t\t\tconfigs[i].id, configs[i].width, configs[i].height,
+\t\t\t\t\t(double)mhz / 1000.0);
+\t\t\t\tif (delta < best_delta) {
+\t\t\t\t\tbest = i;
+\t\t\t\t\tbest_delta = delta;
+\t\t\t\t}
+\t\t\t}
+\t\t\tif (best >= 0 && configs[best].id != config->id) {
+\t\t\t\thwc2_error_t error = hwc2_compat_display_set_active_config(
+\t\t\t\t\thwc2_output->hwc2_display, configs[best].id);
+\t\t\t\tif (error == HWC2_ERROR_NONE) {
+\t\t\t\t\tfree(config);
+\t\t\t\t\tconfig = hwc2_compat_display_get_active_config(
+\t\t\t\t\t\thwc2_output->hwc2_display);
+\t\t\t\t\tassert(config);
+\t\t\t\t\twlr_log(WLR_INFO, "selected HWC config id=%" PRIu32,
+\t\t\t\t\t\tconfig->id);
+\t\t\t\t} else {
+\t\t\t\t\twlr_log(WLR_ERROR, "failed to select HWC config id=%" PRIu32 ": %d",
+\t\t\t\t\t\tconfigs[best].id, error);
+\t\t\t\t}
+\t\t\t}
+\t\t\tfree(configs);
+\t\t}
+\t}
+
+\thwc2_output->output.hwc_width = config->width;
+'''
+assert old in s, 'HWC active config anchor missing'
+s = s.replace(old, new, 1)
+p.write_text(s)
+print('HWC refresh selection patch: applied')
+PYEOF
+grep -q WLR_HWC_REFRESH_MHZ "$F" || { echo "FATAL: refresh selection patch failed"; exit 1; }
 
 # PATCH 2 (Determination §4, 2026-07-06): EVIOCGRAB handoff in the libinput
 # backend. Android's EventHub (inside system_server) keeps every
@@ -219,6 +302,70 @@ print('grab patch: applied')
 PYEOF
 grep -q dos_grab_evdev backend/libinput/backend.c || { echo "FATAL: grab patch failed"; exit 1; }
 
+# PATCH 3 (Determination): fix HWC frame pacing. The Droidian backend predicts
+# only `last_vsync + one period`. If compositor/client startup work misses two
+# or more periods, timerfd is armed in the past and immediately fires in a
+# burst, producing visible scroll/touch jitter until the pipeline catches up.
+# Advance by as many whole periods as necessary so every timer targets the
+# first render deadline in the future. Also mark successful HWC submissions as
+# presented; the fork currently emits a zero-initialized (presented=false)
+# event, which tells presentation-time clients that every frame was discarded.
+python3 - <<'PYEOF'
+import pathlib, sys
+
+p = pathlib.Path('backend/hwcomposer/output.c')
+s = p.read_text()
+if 'Determination: advance stale HWC timestamps' in s:
+    print('HWC frame pacing patch: already applied')
+    sys.exit(0)
+
+old = '''\
+\tnext_vsync = output->hwc_backend->hwc_vsync_last_timestamp + display_refresh;
+
+\t// We need to schedule the frame render so that it can be hopefully
+'''
+new = '''\
+\tnext_vsync = output->hwc_backend->hwc_vsync_last_timestamp + display_refresh;
+
+\t/* Determination: advance stale HWC timestamps to the first deadline that
+\t * is still renderable. The original code added exactly one period; after
+\t * a startup stall it repeatedly armed timerfd in the past and generated a
+\t * burst of immediate frame callbacks. */
+\tint64_t render_deadline = time + output->hwc_backend->idle_time;
+\tif (display_refresh > 0 && next_vsync <= render_deadline) {
+\t\tint64_t missed = (render_deadline - next_vsync) / display_refresh + 1;
+\t\tnext_vsync += missed * display_refresh;
+\t}
+
+\t// We need to schedule the frame render so that it can be hopefully
+'''
+assert old in s, 'schedule_frame anchor missing'
+s = s.replace(old, new, 1)
+
+old = '''\
+\t\tstruct wlr_output_event_present present_event = {
+\t\t\t.output = &output->wlr_output,
+\t\t\t.commit_seq = output->wlr_output.commit_seq,
+\t\t};
+'''
+new = '''\
+\t\tstruct wlr_output_event_present present_event = {
+\t\t\t.output = &output->wlr_output,
+\t\t\t.commit_seq = output->wlr_output.commit_seq,
+\t\t\t.presented = true,
+\t\t\t.refresh = (int)display_refresh,
+\t\t\t.flags = WLR_OUTPUT_PRESENT_VSYNC,
+\t\t};
+'''.replace('display_refresh',
+'''MIN(output->hwc_refresh, output->hwc_backend->hwc_device_refresh)''')
+assert old in s, 'presentation event anchor missing'
+s = s.replace(old, new, 1)
+p.write_text(s)
+print('HWC frame pacing patch: applied')
+PYEOF
+grep -q 'advance stale HWC timestamps' backend/hwcomposer/output.c || {
+    echo "FATAL: HWC frame pacing patch failed"; exit 1; }
+
 # drm backend + xwayland are NOT optional: phoc group/102 has unguarded
 # wlr/xwayland.h includes and calls drm-backend symbols.
 meson setup build --prefix=/usr/local -Dbuildtype=release \
@@ -233,7 +380,7 @@ git clone --depth 1 -b group/102/keypad-slide-lights "$PHOC_REPO"
 cd phoc
 [ "$(git rev-parse HEAD)" = "$PHOC_COMMIT" ] || { echo "FATAL: phoc pin mismatch" >&2; exit 1; }
 
-# PATCH 3 (Determination): Ctrl+Alt+F2-F12 spawns a console terminal instead
+# PATCH 4 (Determination): Ctrl+Alt+F2-F12 spawns a console terminal instead
 # of the no-op wlr_session_change_vt (no real VTs --- CONFIG_FRAMEBUFFER_CONSOLE
 # is off because it fights SF for the panel). VT 1 is left as-is (phosh). The
 # helper /usr/local/bin/det-console opens a fullscreen foot terminal; it can
@@ -275,7 +422,7 @@ new = '''\
 assert old in s, 'VT switch anchor missing in keyboard.c'
 s = s.replace(old, new, 1)
 p.write_text(s)
-print('PATCH 3 (det-console VT switch): applied')
+print('PATCH 4 (det-console VT switch): applied')
 PYEOF
 grep -q 'det-console' "$F" || { echo "FATAL: det-console VT patch failed"; exit 1; }
 

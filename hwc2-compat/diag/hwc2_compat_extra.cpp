@@ -6,6 +6,7 @@
 
 #include <ui/Fence.h>
 
+#include <algorithm>
 #include <fcntl.h>
 #include <unistd.h>
 #include <cerrno>
@@ -84,5 +85,42 @@ extern "C" hwc2_error_t hwc2_compat_display_set_brightness(
         .applyImmediately = true};
     auto error = display->self
             ->setDisplayBrightness(brightness, -1.0f, opts).get();
+    return static_cast<hwc2_error_t>(error);
+}
+
+extern "C" int32_t hwc2_compat_display_get_configs(
+        hwc2_compat_display* display, HWC2DisplayConfig* output,
+        int32_t capacity)
+{
+    auto configs = display->self->getConfigs();
+    if (!output || capacity <= 0)
+        return static_cast<int32_t>(configs.size());
+
+    int32_t count = std::min(capacity, static_cast<int32_t>(configs.size()));
+    for (int32_t i = 0; i < count; ++i) {
+        const auto& config = configs[static_cast<size_t>(i)];
+        output[i] = {
+            .id = config->getId(),
+            .display = config->getDisplayId(),
+            .width = config->getWidth(),
+            .height = config->getHeight(),
+            .vsyncPeriod = config->getVsyncPeriod(),
+            .dpiX = config->getDpiX(),
+            .dpiY = config->getDpiY(),
+        };
+    }
+    return count;
+}
+
+extern "C" hwc2_error_t hwc2_compat_display_set_active_config(
+        hwc2_compat_display* display, hwc2_config_t config)
+{
+    using namespace android::hardware::graphics::composer;
+    hal::VsyncPeriodChangeConstraints constraints{};
+    constraints.desiredTimeNanos = 0;
+    constraints.seamlessRequired = false;
+    hal::VsyncPeriodChangeTimeline timeline{};
+    auto error = display->self->setActiveConfigWithConstraints(
+            config, constraints, &timeline);
     return static_cast<hwc2_error_t>(error);
 }

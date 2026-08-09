@@ -23,31 +23,6 @@ document.querySelectorAll('a[href]').forEach(link => {
   });
 });
 
-const boot = document.querySelector('.boot');
-if (boot && !reduce) {
-  document.body.classList.add('is-booting');
-  const number = boot.querySelector('b');
-  const bar = boot.querySelector('.boot-bar i');
-  const status = boot.querySelector('.boot-status');
-  const started = performance.now();
-  const bootTick = now => {
-    const progress = Math.min((now - started) / 620, 1);
-    const value = Math.round(progress * 100);
-    number.textContent = String(value).padStart(3, '0');
-    bar.style.transform = `scaleX(${progress})`;
-    if (value > 38) status.textContent = 'ACQUIRING HARDWARE';
-    if (value > 76) status.textContent = 'DETERMINED';
-    if (progress < 1) requestAnimationFrame(bootTick);
-    else {
-      boot.classList.add('done');
-      document.body.classList.remove('is-booting');
-    }
-  };
-  requestAnimationFrame(bootTick);
-} else if (boot) {
-  boot.remove();
-}
-
 const observer = new IntersectionObserver((entries) => {
   entries.forEach((entry) => {
     if (!entry.isIntersecting) return;

@@ -9,6 +9,21 @@ LXC="$DET/lxc/bin"  # static lxc build pushed alongside the rootfs
 export PATH="$LXC:$PATH"
 . "$DET/bin/device-config"
 
+# Keep the proven Debian rootfs in place and point active-guest at whichever
+# independent slot the user selected. Older installations acquire the Debian
+# pointer lazily, with no rootfs move or rewrite.
+if [ -x "$DET/bin/guest-distro" ]; then
+    "$DET/bin/guest-distro" ensure || exit 1
+elif [ ! -L "$DET/active-guest" ]; then
+    ln -s guest "$DET/active-guest.new" && mv -f "$DET/active-guest.new" "$DET/active-guest"
+fi
+GUEST_ROOT=$(readlink -f "$DET/active-guest" 2>/dev/null)
+[ -n "$GUEST_ROOT" ] && [ -d "$GUEST_ROOT" ] || {
+    echo "FATAL: selected guest rootfs is missing: $DET/active-guest" >&2
+    exit 1
+}
+export DET_GUEST_ROOT="$GUEST_ROOT"
+
 # lxc-start pins the container rootfs here; must pre-exist or start fails.
 # run/control is the bind source for the guest->host channel (lxc config binds
 # it to guest /mnt/det-control); it must exist before lxc-start.
@@ -26,34 +41,50 @@ mkdir -p "$DET/lxc/lib/lxc/rootfs" "$DET/run" "$DET/run/control" "$DET/log"
 # real directory).
 [ -L /data/decemberos ] && rm -f /data/decemberos
 # lxc-info/lxc-attach resolve container "guest" as $lxcpath/guest/config ---
-# keep a copy of the config at that path (the rootfs dir doubles as it).
+# keep a copy of the config at that path. On Debian the rootfs doubles as the
+# container directory; fresh Arch/Alpine installs use a config-only anchor.
 # Always refresh so config updates propagate.
+mkdir -p "$DET/guest"
 cp -f "$DET/lxc/config" "$DET/guest/config"
 
 # Native guest control agent. Keep the staged copy outside the rootfs so module
-# upgrades can refresh it before every container start; the guest binary is
-# glibc/aarch64 and deliberately separate from host bionic detd/detctl.
-for det_guest_tool in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke; do
+# upgrades can refresh it before every container start. Native guest helpers
+# are static Linux/aarch64 binaries so the same payload runs on glibc and musl;
+# they remain deliberately separate from host-bionic detd/detctl.
+for det_guest_tool in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke \
+                      det-input-actions det-media-action det-connectivity det-connectivity-menu \
+                      det-platform; do
     if [ -f "$DET/guest-tools/$det_guest_tool" ]; then
-        mkdir -p "$DET/guest/usr/local/bin"
+        mkdir -p "$GUEST_ROOT/usr/local/bin"
         cp -f "$DET/guest-tools/$det_guest_tool" \
-            "$DET/guest/usr/local/bin/$det_guest_tool"
-        chmod 0755 "$DET/guest/usr/local/bin/$det_guest_tool"
+            "$GUEST_ROOT/usr/local/bin/$det_guest_tool"
+        chmod 0755 "$GUEST_ROOT/usr/local/bin/$det_guest_tool"
     fi
 done
+if [ -f "$DET/guest-tools/det-input-udevdb" ]; then
+    mkdir -p "$GUEST_ROOT/usr/local/sbin"
+    cp -f "$DET/guest-tools/det-input-udevdb" "$GUEST_ROOT/usr/local/sbin/det-input-udevdb"
+    chmod 0755 "$GUEST_ROOT/usr/local/sbin/det-input-udevdb"
+fi
+if [ -f "$DET/guest-tools/determination-connectivity.desktop" ]; then
+    mkdir -p "$GUEST_ROOT/usr/share/applications"
+    cp -f "$DET/guest-tools/determination-connectivity.desktop" \
+        "$GUEST_ROOT/usr/share/applications/determination-connectivity.desktop"
+    chmod 0644 "$GUEST_ROOT/usr/share/applications/determination-connectivity.desktop"
+fi
 if [ "${DET_PROFILE_ID:-}" = guacamoleb ] && \
    [ -f "$DET/guest-tools/90-determination-direct.conf" ]; then
-    mkdir -p "$DET/guest/etc/pipewire/pipewire.conf.d"
+    mkdir -p "$GUEST_ROOT/etc/pipewire/pipewire.conf.d"
     cp -f "$DET/guest-tools/90-determination-direct.conf" \
-        "$DET/guest/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
-    chmod 0644 "$DET/guest/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
+        "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
+    chmod 0644 "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
 fi
 
 # /data is mounted nodev: device nodes inside the rootfs would be dead.
 # Bind-remount just the guest subtree with dev,exec,suid.
-if ! grep -q " $DET/guest " /proc/mounts; then
-    mount --bind "$DET/guest" "$DET/guest"
-    mount -o remount,bind,dev,exec,suid "$DET/guest" "$DET/guest"
+if ! grep -q " $GUEST_ROOT " /proc/mounts; then
+    mount --bind "$GUEST_ROOT" "$GUEST_ROOT"
+    mount -o remount,bind,dev,exec,suid "$GUEST_ROOT" "$GUEST_ROOT"
 fi
 
 # --- Network: veth bridge + NAT out through whatever's up (wlan0/rmnet) ---

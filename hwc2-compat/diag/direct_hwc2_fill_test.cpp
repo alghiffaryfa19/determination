@@ -57,7 +57,7 @@ class HWComposer : public HWComposerNativeWindow
         hwc2_compat_display_t *hwcDisplay;
         HWComposerNativeWindowBuffer *lastBuffer;
     protected:
-        void present(HWComposerNativeWindowBuffer *buffer);
+        int present(HWComposerNativeWindowBuffer *buffer);
 
     public:
         HWComposer(unsigned int width, unsigned int height, unsigned int format,
@@ -81,7 +81,7 @@ HWComposer::~HWComposer()
         lastBuffer->common.decRef(&lastBuffer->common);
 }
 
-void HWComposer::present(HWComposerNativeWindowBuffer *buffer)
+int HWComposer::present(HWComposerNativeWindowBuffer *buffer)
 {
     uint32_t numTypes = 0;
     uint32_t numRequests = 0;
@@ -89,8 +89,13 @@ void HWComposer::present(HWComposerNativeWindowBuffer *buffer)
 
     // Layer state must be in place before validate (SF's order).
     if (g_mode == MODE_DEVICE) {
-        hwc2_compat_layer_set_buffer(layer, /* slot */0, buffer,
-                                     getFenceBufferFd(buffer));
+        const hwc2_error_t bufferError = hwc2_compat_layer_set_buffer(
+                layer, /* slot */0, buffer, getFenceBufferFd(buffer));
+        setFenceBufferFd(buffer, -1);
+        if (bufferError != HWC2_ERROR_NONE) {
+            fprintf(stderr, "setLayerBuffer failed: %d\n", bufferError);
+            return -EIO;
+        }
     } else if (g_mode == MODE_SOLID) {
         static const hwc_color_t solidCols[3] =
             { {255,0,0,255}, {0,255,0,255}, {0,0,255,255} };
@@ -102,7 +107,7 @@ void HWComposer::present(HWComposerNativeWindowBuffer *buffer)
 
     if (error != HWC2_ERROR_NONE && error != HWC2_ERROR_HAS_CHANGES) {
         fprintf(stderr, "validate failed: %d\n", error);
-        return;
+        return -EIO;
     }
 
     bool demoted = (numTypes || numRequests);
@@ -115,14 +120,20 @@ void HWComposer::present(HWComposerNativeWindowBuffer *buffer)
     error = hwc2_compat_display_accept_changes(hwcDisplay);
     if (error != HWC2_ERROR_NONE) {
         fprintf(stderr, "acceptChanges failed: %d\n", error);
-        return;
+        return -EIO;
     }
 
     if (g_mode == MODE_CLIENT || demoted) {
-        hwc2_compat_display_set_client_target(hwcDisplay, /* slot */0, buffer,
-                                              g_mode == MODE_CLIENT
-                                                  ? getFenceBufferFd(buffer) : -1,
-                                              FILL_DATASPACE);
+        error = hwc2_compat_display_set_client_target(
+                hwcDisplay, /* slot */0, buffer,
+                g_mode == MODE_CLIENT ? getFenceBufferFd(buffer) : -1,
+                FILL_DATASPACE);
+        if (g_mode == MODE_CLIENT)
+            setFenceBufferFd(buffer, -1);
+        if (error != HWC2_ERROR_NONE) {
+            fprintf(stderr, "setClientTarget failed: %d\n", error);
+            return -EIO;
+        }
     }
 
     int presentFence = -1;
@@ -148,14 +159,18 @@ void HWComposer::present(HWComposerNativeWindowBuffer *buffer)
 
     if (error != HWC2_ERROR_NONE) {
         fprintf(stderr, "present failed: %d\n", error);
-        return;
+        if (presentFence != -1)
+            close(presentFence);
+        return -EIO;
     }
 
     hwc2_compat_out_fences_t* fences;
     error = hwc2_compat_display_get_release_fences(hwcDisplay, &fences);
     if (error != HWC2_ERROR_NONE) {
         fprintf(stderr, "getReleaseFences failed: %d\n", error);
-        return;
+        if (presentFence != -1)
+            close(presentFence);
+        return -EIO;
     }
 
     int fenceFd = hwc2_compat_out_fences_get_fence(fences, layer);
@@ -174,6 +189,7 @@ void HWComposer::present(HWComposerNativeWindowBuffer *buffer)
 
     lastBuffer = buffer;
     lastBuffer->common.incRef(&lastBuffer->common);
+    return 0;
 }
 
 void onVsyncReceived(HWC2EventListener* listener, int32_t sequenceId,
