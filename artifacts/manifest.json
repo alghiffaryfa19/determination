@@ -11,6 +11,6 @@
     {"path":"magisk-module/decemberos-magisk-v0.1.3.zip","sha256":"externalized","size":409430,"retention":"external-release","purpose":"obsolete module archive"},
     {"path":"artifacts/kernel-config-full.txt","sha256":"12443cef556f1422775ea0eb0babb4ed26b9fc90260b3088744ac7d6d8a1e257","size":161443,"retention":"tracked-evidence","purpose":"canonical kernel configuration"},
     {"path":"artifacts/config.gz","sha256":"d6e068d68167c2d27e2587e4c839c8413eb98ec07e987ab7ebf270d85da1f58e","size":36110,"retention":"tracked-evidence","purpose":"canonical compressed kernel configuration"},
-    {"path":"website/phosh-on-device.png","sha256":"15a0b0c3caf90be118d01955ec0253b24235933ad0aaa23cf5797deb0bc1da6b","size":100144,"retention":"tracked-proof","purpose":"canonical Phosh device capture"}
+    {"path":"website/phosh-on-device.png","sha256":"809f36bfc13782304496e2a43c51db1e2bd23bd04f8d6b8a8ae58e06a2341a1a","size":95650,"retention":"tracked-proof","purpose":"canonical Phosh device capture"}
   ]
 }
