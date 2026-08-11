@@ -82,6 +82,14 @@ GatewayPorts no
 PermitTunnel no
 EOF
 
+# Alpine's `adduser -D` leaves a `!`-locked shadow entry, and sshd rejects a
+# locked account before it considers authorized_keys. Remove only that lock
+# after password, keyboard-interactive, and empty-password login are disabled
+# above. This creates no usable password; `det passwd` can still set one for
+# sudo later.
+account_state=$(passwd -S melissa 2>/dev/null | awk '{ print $2 }')
+case "$account_state" in L|LK) passwd -d melissa >/dev/null ;; esac
+
 ssh-keygen -A
 sshd -t
 if [ -x /usr/local/bin/det-platform ]; then

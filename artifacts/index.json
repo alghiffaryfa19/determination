@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "path": "artifacts/alpine-rootfs-qualification-20260811.txt",
+      "retention": "tracked-evidence",
+      "sha256": "6b9f6fe6ee52987332200587a401917431c04a4b76c0d25a8415603814929c90",
+      "size": 2644
+    },
+    {
       "path": "artifacts/config.gz",
       "retention": "tracked-evidence",
       "sha256": "d6e068d68167c2d27e2587e4c839c8413eb98ec07e987ab7ebf270d85da1f58e",

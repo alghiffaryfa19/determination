@@ -88,3 +88,21 @@ The honest acceptance sequence is:
 “The archive builds” proves only the build path. It does not prove a usable
 desktop or make Arch/Alpine release-supported.
 
+## Alpine qualification snapshot (2026-08-11)
+
+On `guacamoleb`, Alpine 3.24 now passes archive validation and installation,
+health-gated selection, cold boot, OpenRC service startup, uid-1000/group
+mapping, gateway/internet/DNS, direct key-only SSH, shared device SSH identity,
+seatd, and generated libinput udev data. Pinned `libglibutil` and `libgbinder`
+also build and install natively against musl. The host returned to the proven
+Debian slot after these tests.
+
+Graphics is still **blocked and unqualified**. The Android-Q linker plugin can
+be compiled against musl with the scoped compatibility code in
+`build-libhybris.sh`, but libhybris' host hook layer still depends on glibc-only
+APIs and private layouts, including `pthread_cond_t.__data`, `fpos64_t`,
+`mallinfo`, and `pvalloc`. The build now fails at that boundary instead of
+ignoring `make` errors and printing false success. `test_hwcomposer`, Phoc,
+panel ownership, direct audio playback, external display, and repeated visual
+restore therefore remain untested for Alpine. `/etc/determination-ready`
+correctly keeps `graphics=unqualified`.

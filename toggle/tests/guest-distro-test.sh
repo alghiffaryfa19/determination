@@ -4,8 +4,10 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT HUP INT TERM
+REAL_TAR=$(command -v tar)
 mkdir -p "$WORK/bin" "$WORK/etc" "$WORK/guest/etc" "$WORK/guest/sbin" \
-    "$WORK/lxc/bin" "$WORK/run" "$WORK/archive/etc" "$WORK/archive/sbin"
+    "$WORK/lxc/bin" "$WORK/run" "$WORK/archive/etc" "$WORK/archive/sbin" \
+    "$WORK/toybox-bin"
 printf '13\n' > "$WORK/guest/etc/debian_version"
 printf '#!/bin/sh\n' > "$WORK/guest/sbin/init"
 chmod 0755 "$WORK/guest/sbin/init"
@@ -31,6 +33,20 @@ touch "$WORK/run/fake-running"
 EOF
 chmod 0755 "$WORK/bin/"* "$WORK/lxc/bin/"*
 
+# Android toybox appends ` -> target` to symlinks in plain tar listings. Keep
+# the real extractor, but reproduce that listing dialect so host tests cover
+# the parser used on the phone.
+cat > "$WORK/toybox-bin/tar" <<EOF
+#!/bin/sh
+if [ "\${1:-}" = -tzf ]; then
+    "$REAL_TAR" "\$@"
+    echo './compat-link -> ../../../etc'
+else
+    exec "$REAL_TAR" "\$@"
+fi
+EOF
+chmod 0755 "$WORK/toybox-bin/tar"
+
 DET="$WORK" DET_LXC_BIN="$WORK/lxc/bin" sh "$WORK/bin/guest-distro" ensure
 [ "$(readlink "$WORK/active-guest")" = guest ]
 [ "$(DET="$WORK" DET_LXC_BIN="$WORK/lxc/bin" sh "$WORK/bin/guest-distro" active)" = debian ]
@@ -45,7 +61,7 @@ EOF
 printf '#!/bin/sh\n' > "$WORK/archive/sbin/init"
 chmod 0755 "$WORK/archive/sbin/init"
 tar -C "$WORK/archive" -czf "$WORK/arch.tar.gz" .
-DET="$WORK" DET_LXC_BIN="$WORK/lxc/bin" \
+PATH="$WORK/toybox-bin:$PATH" DET="$WORK" DET_LXC_BIN="$WORK/lxc/bin" \
     sh "$WORK/bin/guest-distro" install arch "$WORK/arch.tar.gz"
 DET="$WORK" DET_LXC_BIN="$WORK/lxc/bin" sh "$WORK/bin/guest-distro" select arch
 [ "$(DET="$WORK" DET_LXC_BIN="$WORK/lxc/bin" sh "$WORK/bin/guest-distro" active)" = arch ]

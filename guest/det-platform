@@ -215,7 +215,7 @@ install_deps() {
             ;;
         alpine:libhybris)
             package_install_raw build-base binutils git curl ca-certificates xz tar automake \
-                autoconf libtool pkgconf wayland-dev wayland-protocols
+                autoconf libtool pkgconf wayland-dev wayland-protocols libbsd-dev
             ;;
         debian:libgbinder)
             package_install_raw git build-essential pkg-config libglib2.0-dev

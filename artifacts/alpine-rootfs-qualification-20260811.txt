@@ -1,0 +1,66 @@
+Determination Alpine rootfs qualification - 2026-08-11
+Device: OnePlus 7 / guacamoleb
+Android: crDroid 12.11 / Android 16 (SDK 36)
+Kernel: 4.14.357-perf-g96adfa8256dc
+
+Source archive
+--------------
+Builder: guest/build-portable-rootfs.sh alpine
+Archive: determination-rootfs-alpine-20260811.tar.gz
+SHA-256: ff4eeb6ea361400115564a4b4ecca1d4058b7b48e44f65a10ca0fda4a09e6713
+Profile: Alpine 3.24.0, aarch64, musl, OpenRC, device-unverified
+Archive traversal and special-file checks: PASS
+Android toybox tar listing compatibility: PASS after parser fix
+
+On-device base and provisioning gates
+-------------------------------------
+Install to /data/determination/guests/alpine/rootfs: PASS
+Health-gated selection: PASS
+Cold boot with /sbin/init as PID 1: PASS
+Root remount with suid, dev, and exec: PASS
+Gateway, internet, and DNS: PASS
+OpenRC dbus, seatd, and sshd: PASS
+melissa uid 1000 and Android device groups: PASS
+Direct key-only ssh melissa@192.168.117.2: PASS
+Stable SSH host identity across Debian and Alpine: PASS
+Phosh/OpenRC package provisioning: PASS
+Input udev database and touchpanel recognition: PASS
+Static Determination guest helpers on musl: PASS
+det-pidfd-shim.so load under musl: PASS
+
+Native source builds
+--------------------
+Pinned libglibutil 1.0.82: BUILD + INSTALL PASS
+Pinned libgbinder 1.1.52: BUILD + INSTALL PASS
+Pinned libhybris 7079712a42ea2754adf747e70c6cc75764c8596e:
+  - Android Q linker plugin q.la linked against musl: PASS
+  - host hook layer: BLOCKED
+
+libhybris blocker
+-----------------
+The remaining host hook layer uses glibc-only APIs and private layouts that do
+not exist on musl. The first hard failures include:
+
+  pthread_cond_t.__data.__wrefs
+  pthread_attr_setstackaddr / pthread_attr_getstackaddr
+  pthread_cond_clockwait
+  pthread_rwlockattr_setkind_np / pthread_rwlockattr_getkind_np
+  fpos64_t and glibc fpos_t.__pos / __state
+  mallinfo, pvalloc, wmempcpy, scandirat, and GNU strerror_r semantics
+
+The build script now exits at this boundary and requires fresh q.so, EGL, GLES,
+HWC2, and test_hwcomposer artifacts before reporting success. It no longer
+ignores make failures.
+
+Not qualified
+-------------
+test_hwcomposer was not reached. Alpine has not taken panel ownership and has
+not passed Phoc, direct audio playback, external-display, or repeated visual
+restore gates. /etc/determination-ready remains graphics=unqualified.
+
+Restoration
+-----------
+Active guest restored to /data/determination/guest (Debian): PASS
+Toolkit pointer restored to /data/determination/versions/12: PASS
+Debian LXC cold start, internet, and SSH: PASS
+Android phone mode, SurfaceFlinger, and system_server: PASS

@@ -4,6 +4,8 @@
 # maintainer scripts or Debian package database are used.
 
 set -eu
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export HOME=/root
 HERE=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 . "$HERE/sources.lock"
 
@@ -25,4 +27,3 @@ pkg-config --exists 'android-headers >= 9.0.0' || {
     exit 1
 }
 echo "installed pinned android-headers-30 payload"
-

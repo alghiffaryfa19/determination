@@ -4,6 +4,9 @@
 # package or enable a foreign repository.
 
 set -eu
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export HOME=/root
+export TMPDIR=/tmp
 HERE=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 . "$HERE/sources.lock"
 export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:${PKG_CONFIG_PATH:-}
@@ -30,13 +33,12 @@ clone_pin() {
 }
 
 clone_pin "$LIBGLIBUTIL_REPO" "$LIBGLIBUTIL_COMMIT" "$B/libglibutil"
-make -C "$B/libglibutil" -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)" release
+make -C "$B/libglibutil" -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)" release pkgconfig
 make -C "$B/libglibutil" install-dev
 
 clone_pin "$LIBGBINDER_REPO" "$LIBGBINDER_COMMIT" "$B/libgbinder"
-make -C "$B/libgbinder" -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)" release
+make -C "$B/libgbinder" -j"$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 2)" release pkgconfig
 make -C "$B/libgbinder" install-dev
 command -v ldconfig >/dev/null 2>&1 && ldconfig || true
 pkg-config --exists libgbinder
 echo "libgbinder built from pinned source"
-

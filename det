@@ -176,6 +176,12 @@ ssh-setup)
         echo 'det: guest SSH setup failed' >&2
         exit 1
     fi
+    # A distro slot is replaceable; the phone's SSH identity is not. Capture
+    # the first successfully generated host keys outside the active rootfs.
+    adb shell "su -c 'SSH_ID=$G/etc/ssh-host-keys; SRC=$G/active-guest/etc/ssh; if [ ! -f \"\$SSH_ID/ssh_host_ed25519_key\" ]; then install -d -m 0700 \"\$SSH_ID\"; cp -f \"\$SRC\"/ssh_host_*_key \"\$SRC\"/ssh_host_*_key.pub \"\$SSH_ID/\"; chmod 0600 \"\$SSH_ID\"/ssh_host_*_key; chmod 0644 \"\$SSH_ID\"/ssh_host_*_key.pub; fi'" || {
+        echo 'det: failed to preserve device SSH host identity' >&2
+        exit 1
+    }
     adb shell "su -c 'rm -f /data/local/tmp/determination-setup-ssh.sh /data/local/tmp/determination-authorized-key.pub'" >/dev/null
     # Keep host SSH policy in a drop-in. The main Include is added once without
     # replacing any unrelated user configuration.

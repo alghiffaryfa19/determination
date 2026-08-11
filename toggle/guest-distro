@@ -155,6 +155,11 @@ install_slot() {
     mkdir -p "$DET/guests"
     tar -tzf "$archive" > "$list" 2>/dev/null || { rm -f "$list"; return 1; }
     while IFS= read -r entry; do
+        # Android toybox decorates symlinks as `member -> target` even without
+        # verbose mode; GNU tar prints only the member. Validate the archive
+        # member name, not toybox's display suffix. Alpine legitimately ships
+        # relative links such as crontabs -> ../../../etc/crontabs.
+        entry=${entry%% -> *}
         case "$entry" in
             /*|../*|*/../*|*/..) bad=1 ;;
             ./etc/determination-profile|etc/determination-profile) [ "$id" != debian ] && found_identity=1 ;;

@@ -64,9 +64,16 @@ chmod 0644 /etc/xdg/fastfetch/config.jsonc
 # Keep the login visually MOTD -> prompt. Host-key and authentication policy
 # remain in the separate SSH setup drop-in.
 install -d -m 0755 /etc/ssh/sshd_config.d
-cat > /etc/ssh/sshd_config.d/55-determination-motd.conf <<'EOF'
-PrintLastLog no
-EOF
+motd_sshd=/etc/ssh/sshd_config.d/55-determination-motd.conf
+: > "$motd_sshd"
+# OpenSSH-portable on Alpine omits PrintLastLog. Probe the running daemon's
+# option set instead of shipping a Debian-only directive that makes every
+# subsequent `sshd -t` fail. MOTD setup can run before SSH setup, so create
+# host keys before asking sshd to validate its complete configuration.
+ssh-keygen -A
+if sshd -T 2>/dev/null | grep -q '^printlastlog '; then
+    printf '%s\n' 'PrintLastLog no' > "$motd_sshd"
+fi
 sshd -t
 if [ -x /usr/local/bin/det-platform ]; then
     det-platform service-restart ssh 2>/dev/null || true
@@ -90,6 +97,7 @@ DET_CODENAME='$CODENAME'
 EOF
 chmod 0644 /etc/determination-release
 
+install -d -m 0755 /etc/update-motd.d
 cat > /etc/update-motd.d/00-determination <<'EOF'
 #!/bin/sh
 # Fastfetch-style MOTD without fastfetch: that binary currently prints its
@@ -137,7 +145,10 @@ release=${DET_CODENAME:-Determination}
 [ "${DET_VERSION:-unknown}" = unknown ] || release="$release ${DET_VERSION}"
 
 row() {
-    printf '%b%-31b%b%-9s%b%s%b\n' "$pink" "$1" "$pink" "$2" "$text" "$3" "$reset"
+    # BusyBox printf rejects field widths on %b. Expand the handful of escaped
+    # apostrophes first, then apply ordinary string widths portably.
+    left=$(printf '%b' "$1")
+    printf '%b%-31s%b%-9s%b%s%b\n' "$pink" "$left" "$pink" "$2" "$text" "$3" "$reset"
 }
 
 row '       _,met$$$$$gg.' 'melissa' '@determination'

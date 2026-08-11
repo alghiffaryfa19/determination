@@ -188,6 +188,9 @@ gcc -shared -fPIC -O2 -o /usr/local/lib/det-pidfd-shim.so /tmp/det-pidfd-shim.c
 echo "shim installed: /usr/local/lib/det-pidfd-shim.so"
 
 echo "== phosh binary location (Debian splits wrapper vs binary) =="
-dpkg -L phosh | grep -E 'bin/|libexec/' || true
+case "$(det-platform id 2>/dev/null || echo debian)" in
+debian) dpkg -L phosh | grep -E 'bin/|libexec/' || true ;;
+*) command -v phosh phoc phosh-session || true ;;
+esac
 
 echo "SETUP-INPUT-OK"

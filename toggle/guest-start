@@ -24,6 +24,34 @@ GUEST_ROOT=$(readlink -f "$DET/active-guest" 2>/dev/null)
 }
 export DET_GUEST_ROOT="$GUEST_ROOT"
 
+# SSH identifies the Determination device, not an interchangeable guest slot.
+# Keep one root-owned host identity outside every rootfs and install it before
+# boot, so switching Debian/Arch/Alpine never looks like a MITM attack. Existing
+# devices seed from the proven Debian guest; fresh non-Debian installs capture
+# their first generated keys in `det ssh-setup`.
+SSH_IDENTITY="$DET/etc/ssh-host-keys"
+if [ ! -f "$SSH_IDENTITY/ssh_host_ed25519_key" ]; then
+    for ssh_source in "$DET/guest/etc/ssh" "$GUEST_ROOT/etc/ssh"; do
+        [ -f "$ssh_source/ssh_host_ed25519_key" ] || continue
+        install -d -m 0700 "$SSH_IDENTITY"
+        for ssh_key in "$ssh_source"/ssh_host_*_key "$ssh_source"/ssh_host_*_key.pub; do
+            [ -f "$ssh_key" ] || continue
+            cp -f "$ssh_key" "$SSH_IDENTITY/${ssh_key##*/}"
+        done
+        chmod 0600 "$SSH_IDENTITY"/ssh_host_*_key
+        chmod 0644 "$SSH_IDENTITY"/ssh_host_*_key.pub
+        break
+    done
+fi
+if [ -f "$SSH_IDENTITY/ssh_host_ed25519_key" ] && [ -d "$GUEST_ROOT/etc/ssh" ]; then
+    for ssh_key in "$SSH_IDENTITY"/ssh_host_*_key "$SSH_IDENTITY"/ssh_host_*_key.pub; do
+        [ -f "$ssh_key" ] || continue
+        cp -f "$ssh_key" "$GUEST_ROOT/etc/ssh/${ssh_key##*/}"
+    done
+    chmod 0600 "$GUEST_ROOT"/etc/ssh/ssh_host_*_key
+    chmod 0644 "$GUEST_ROOT"/etc/ssh/ssh_host_*_key.pub
+fi
+
 # lxc-start pins the container rootfs here; must pre-exist or start fails.
 # run/control is the bind source for the guest->host channel (lxc config binds
 # it to guest /mnt/det-control); it must exist before lxc-start.

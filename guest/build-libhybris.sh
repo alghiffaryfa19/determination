@@ -1,5 +1,5 @@
 #!/bin/sh
-# Build UPSTREAM libhybris (glibc side) inside the guest, natively on the
+# Build UPSTREAM libhybris (host-libc side) inside the guest, natively on the
 # phone. Runs INSIDE the container (e.g. via lxc-attach or the guest shell),
 # NOT on the host. Needs network + the Droidian apt repo already configured
 # (guest/setup-guest.sh).
@@ -19,7 +19,11 @@
 # device = the HidlComposerHal variant for composer@2.1-2.4) is a SEPARATE
 # bionic build and is NOT produced here. Without it test_hwcomposer stops at
 # "libhwc2_compat_layer.so not found". That is the remaining porting work.
+# Alpine/musl is experimental: the script carries only narrow, audited libc
+# adapters and exits unless every required artifact was freshly produced.
 set -eu
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export HOME=/root
 
 SRC="${SRC:-/root/build/libhybris}"
 JOBS="$(nproc)"
@@ -57,6 +61,99 @@ mkdir -p "$(dirname "$SRC")"
 # newlocale() hands out GLIBC locale_t objects, so bionic's *_l consumers
 # would misinterpret them; and the mb/wc conversions libc++ facets use.
 HOST_LIBC=$(det-platform libc 2>/dev/null || echo glibc)
+if [ "$HOST_LIBC" = musl ]; then
+    # libhybris' bundled bionic linker includes <sys/cdefs.h>. musl does not
+    # ship that glibc/BSD compatibility header, but Alpine's libbsd overlay
+    # does. Keep the overlay scoped to this build; do not add glibc or gcompat.
+    pkg-config --exists libbsd-overlay || {
+        echo "FATAL: musl libhybris build needs libbsd-overlay (libbsd-dev)" >&2
+        exit 1
+    }
+    MUSL_COMPAT="$SRC/hybris/common/det-musl-compat.h"
+    cat > "$MUSL_COMPAT" <<'MUSLEOF'
+#pragma once
+/* Android's bundled linker expects glibc large-file aliases. On 64-bit musl,
+ * off_t and the unsuffixed calls already have the required 64-bit ABI. */
+#define off64_t off_t
+#define mmap64 mmap
+#define pread64 pread
+#ifndef __ASSEMBLER__
+typedef void (*__sighandler_t)(int);
+#endif
+#ifndef TEMP_FAILURE_RETRY
+#define TEMP_FAILURE_RETRY(exp) \
+    ({ __typeof__(exp) _rc; do { _rc = (exp); } while (_rc == -1 && errno == EINTR); _rc; })
+#endif
+#ifndef R_AARCH64_IRELATIVE
+#define R_AARCH64_IRELATIVE 1032
+#endif
+MUSLEOF
+    CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }$(pkg-config --cflags libbsd-overlay) -include $MUSL_COMPAT"
+    MUSL_LIBS=$(pkg-config --libs libbsd-overlay)
+    export CPPFLAGS
+
+    # musl deliberately has no non-portable static recursive-mutex
+    # initializer. Initialize it once through the pthread API before each
+    # linker entrypoint takes the lock. Apply to every bundled linker variant.
+    python3 - "$SRC/hybris/common" <<'PYEOF'
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+stock = "static pthread_mutex_t g_dl_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;"
+replacement = r'''\
+static pthread_mutex_t g_dl_mutex;
+static pthread_once_t g_dl_mutex_once = PTHREAD_ONCE_INIT;
+
+static void hybris_init_dl_mutex() {
+  pthread_mutexattr_t attr;
+  pthread_mutexattr_init(&attr);
+  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&g_dl_mutex, &attr);
+  pthread_mutexattr_destroy(&attr);
+}
+
+static pthread_mutex_t* hybris_dl_mutex() {
+  pthread_once(&g_dl_mutex_once, hybris_init_dl_mutex);
+  return &g_dl_mutex;
+}'''
+for variant in ("mm", "n", "o", "q"):
+    path = root / variant / "dlfcn.cpp"
+    text = path.read_text()
+    if "hybris_init_dl_mutex" in text:
+        continue
+    if stock not in text:
+        raise SystemExit(f"musl mutex patch anchor missing: {path}")
+    text = text.replace(stock, replacement, 1)
+    text = text.replace("ScopedPthreadMutexLocker locker(&g_dl_mutex);",
+                        "ScopedPthreadMutexLocker locker(hybris_dl_mutex());")
+    path.write_text(text)
+    print(f"musl recursive mutex: patched {path}")
+
+# musl exposes basename through libgen.h rather than the glibc string.h
+# extension. Add the standard declaration only to translation units that use
+# it; force-including libgen.h would break old Autoconf function probes.
+for path in root.rglob("*.cpp"):
+    text = path.read_text()
+    if "basename(" not in text or "hybris_musl_basename" in text:
+        continue
+    text = text.replace("basename(", "hybris_musl_basename(")
+    first_include = text.find("#include ")
+    if first_include < 0:
+        raise SystemExit(f"basename include anchor missing: {path}")
+    helper = """#include <libgen.h>
+static inline char* hybris_musl_basename(const char* path) {
+  return basename(const_cast<char*>(path));
+}
+"""
+    if "#include <libgen.h>" in text:
+        text = text.replace("#include <libgen.h>\n", helper, 1)
+    else:
+        text = text[:first_include] + helper + text[first_include:]
+    path.write_text(text)
+    print(f"musl basename declaration: patched {path}")
+PYEOF
+fi
 if [ "$HOST_LIBC" = glibc ] && ! grep -q "__ctype_get_mb_cur_max" "$SRC/hybris/common/hooks.c"; then
     git -C "$SRC" apply <<'HOOKPATCH'
 diff --git a/hybris/common/hooks.c b/hybris/common/hooks.c
@@ -449,19 +546,78 @@ cd "$SRC/hybris"
 # --enable-arch=arm64 is REQUIRED: the default is 32-bit arm, which builds a
 # linker that can't load the device's 64-bit bionic (gives /system/lib paths
 # instead of lib64).
-[ -f Makefile ] || ./configure \
+./configure \
     --build="$(./config.guess)" --enable-arch=arm64 \
     --with-android-headers=/usr/include/android \
     --with-default-egl-platform=hwcomposer \
     --enable-wayland --enable-adreno-quirks --enable-experimental
 
-# The tests subdir fails to build test_audio (strdup decl missing in the
-# android audio.h) --- irrelevant, and it is the LAST subdir, so the libraries
-# and the linker are already built/installed before it aborts. Ignore it.
-make -j"$JOBS" || true
-make install || true    # -> /usr/local; installs the q/mm/n/o linkers to
-                        # /usr/local/lib/libhybris/linker/ (HYBRIS_LINKER_DIR
-                        # default) and the glibc-side libs to /usr/local/lib.
+if [ "$HOST_LIBC" = musl ]; then
+    # SDK 36 selects q.so as libhybris' newest/default linker. The M/N/O
+    # plugins are compatibility payloads for old Android releases and contain
+    # additional glibc assumptions; do not make them an Alpine build gate.
+    python3 - "$SRC/hybris/common/Makefile" <<'PYEOF'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+lines = path.read_text().splitlines()
+start = next((i for i, line in enumerate(lines) if line.startswith("SUBDIRS = ")), None)
+if start is None:
+    raise SystemExit("musl SUBDIRS anchor missing")
+end = start
+while lines[end].endswith("\\"):
+    end += 1
+lines[start:end + 1] = ["SUBDIRS = q"]
+path.write_text("\n".join(lines) + "\n")
+print("musl linker set: Android Q only")
+PYEOF
+fi
+
+# The tests subdir can fail on the irrelevant test_audio target after the
+# libraries and test_hwcomposer have built. Record those aggregate failures,
+# but only tolerate them when every product artifact from THIS build exists.
+# This prevents a compiler failure in the linker from printing false success.
+make clean >/dev/null 2>&1 || true
+build_rc=0
+if [ -n "${MUSL_LIBS:-}" ]; then
+    make -j"$JOBS" LIBS="$MUSL_LIBS" || build_rc=$?
+else
+    make -j"$JOBS" || build_rc=$?
+fi
+
+for built in \
+    common/q/.libs/q.so \
+    egl/.libs/libEGL.so.1 \
+    glesv2/.libs/libGLESv2.so.2 \
+    hwc2/.libs/libhwc2.so.1 \
+    tests/.libs/test_hwcomposer
+do
+    [ -e "$built" ] || {
+        echo "FATAL: libhybris build did not produce $built (make rc=$build_rc)" >&2
+        exit 1
+    }
+done
+
+install_rc=0
+if [ -n "${MUSL_LIBS:-}" ]; then
+    make install LIBS="$MUSL_LIBS" || install_rc=$?
+else
+    make install || install_rc=$?
+fi
+for installed in \
+    /usr/local/lib/libhybris/linker/q.so \
+    /usr/local/lib/libEGL.so.1 \
+    /usr/local/lib/libGLESv2.so.2 \
+    /usr/local/lib/libhwc2.so.1
+do
+    [ -e "$installed" ] || {
+        echo "FATAL: libhybris install did not produce $installed (make install rc=$install_rc)" >&2
+        exit 1
+    }
+done
+[ "$build_rc" -eq 0 ] || echo "NOTE: optional libhybris test target failed after required artifacts built (rc=$build_rc)"
+[ "$install_rc" -eq 0 ] || echo "NOTE: optional libhybris install target failed after required artifacts installed (rc=$install_rc)"
 # GOTCHA (bit us 2026-07-06): the include/ install can lag the patched
 # source headers (the hwc2 set_brightness decl never landed in
 # /usr/local/include until wlroots failed to compile against it). Force it.
