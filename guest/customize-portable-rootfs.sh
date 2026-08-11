@@ -30,10 +30,14 @@ esac
 install -d "$ROOT/etc" "$ROOT/etc/profile.d" "$ROOT/root" \
     "$ROOT/root/determination-build" "$ROOT/usr/local/bin" \
     "$ROOT/usr/local/sbin" "$ROOT/usr/lib/determination"
+# Rootfs archives are not consistent about preserving the standard sticky
+# mode. Unprivileged sessions and build probes must be able to use /tmp.
+install -d -m 1777 "$ROOT/tmp"
 install -m 0755 "$HERE/det-platform" "$ROOT/usr/local/bin/det-platform"
 install -m 0644 "$HERE/sources.lock" "$ROOT/root/determination-build/sources.lock"
 for build_file in install-android-headers.sh build-libgbinder.sh \
-                  build-libhybris.sh build-wlroots-phoc.sh setup-input.sh; do
+                  build-libhybris.sh patch-libhybris-musl.py \
+                  build-wlroots-phoc.sh setup-input.sh; do
     install -m 0755 "$HERE/$build_file" "$ROOT/root/determination-build/$build_file"
 done
 

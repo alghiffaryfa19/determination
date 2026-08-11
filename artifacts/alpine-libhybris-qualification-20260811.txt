@@ -1,0 +1,101 @@
+Determination Alpine libhybris qualification - 2026-08-11
+Device: OnePlus 7 / guacamoleb
+Android: crDroid 12.11 / Android 16 (SDK 36)
+Guest: Alpine Linux v3.24, aarch64, native musl (no glibc or gcompat)
+Kernel: 4.14.357-perf-g96adfa8256dc
+libhybris source: 7079712a42ea2754adf747e70c6cc75764c8596e
+
+Native build and install
+------------------------
+The pinned upstream source built natively inside the Alpine guest. Required
+fresh artifacts and the full aggregate build/install completed successfully:
+
+  Android Q embedded linker                  PASS
+  libhybris common host bridge               PASS
+  EGL and GLESv1/GLESv2 wrappers             PASS
+  Wayland EGL platform plugin                PASS
+  hwcomposer native-window backend           PASS
+  host-side HWC2 wrapper                     PASS
+  installed test_hwcomposer                  PASS
+
+The musl adapter is an idempotent, source-pinned transform. It supplies narrow
+host-libc compatibility for pthread attributes/condition variables/rwlocks,
+fpos and 64-bit stdio aliases, scandirat, GNU strerror semantics, pvalloc,
+mallinfo, wmempcpy, fortified stdio calls, and the bundled linker's recursive
+mutex initialization. It does not install or emulate glibc.
+
+Embedded-linker TLS lifetime
+----------------------------
+Android bionic DSOs use Initial-Exec TLS. In the embedded linker there is no
+normal PT_INTERP lifetime, so unloading only part of a local load group first
+CHECK-aborted in unregister_tls_module and then, when only the TLS DSO was
+pinned, left dangling dependency graph state and segfaulted after dlclose.
+
+The final adapter pins a static-TLS DSO and propagates NODELETE to its complete
+local load-group root. Real in-guest tests, with coherent /proc and namespaces:
+
+  getprop ro.build.version.sdk -> 36, rc=0       PASS
+  20 consecutive loader/property cycles         PASS
+  post-HWC-restoration property query -> 36      PASS
+
+Installed object SHA-256
+------------------------
+q.so:
+  ba465ae722506196104602173d0b95c6d83daddf9c4ad4420b29020f3e8a9ece
+libEGL.so.1.0.0:
+  131c37cc2df3d7cf6180ed5645904742fab266a5a85b0fece1aa3fd2520f8791
+libGLESv2.so.2.0.0:
+  89831a99d4429585e42f97068fdf4f05cd0ee2bc3fee77f320ae7d0c1c2e54ba
+libhwc2.so.1.0.0:
+  4ec6ac45c5b06b704e7d6f5eb91527629b33d6e636922cf3ab254190d77235fe
+libhwc2_compat_layer.so:
+  a8c176bba41f4028b03bb24ea40ee872b74a6abfcbc6e0a0beef32ceded0634f
+
+Display-safe contract
+---------------------
+The contract was corrected to test EGL extensions through eglGetProcAddress,
+which is how upstream libhybris intentionally dispatches them, rather than
+incorrectly requiring direct ELF exports. Alpine /tmp was restored to the
+standard 1777 mode so the unprivileged compile/run probe can operate.
+
+Result: 20 passed, 0 failed, 0 skipped.
+
+This includes separate Wayland and HWC platform objects, the HWC buffer-count
+extension, both configured mode APIs, all five EGL_HYBRIS native-buffer
+procedures, eglSwapBuffersWithDamageKHR, and a display-less QTI native_handle
+allocation/serialization/reconstruction:
+
+  2 fds, 22 private ints, stride 64              PASS
+
+The vendor loader printed optional-library search warnings for
+libui_compat_layer.so, eglSubDriverAndroid.so, and libadreno_app_profiles.so;
+allocation and complete-handle reconstruction still passed.
+
+Real panel gate and restoration
+-------------------------------
+The distro-neutral HWC smoke harness stopped SurfaceFlinger under an EXIT
+restore trap and ran /usr/local/bin/test_hwcomposer inside Alpine. Evidence:
+
+  Android SDK detected as 36                     PASS
+  panel dimensions 1080x2340                     PASS
+  DOS-FMQ ashmem region created                  PASS
+  live diamond render with white corners         PASS (user-observed)
+  BusyBox timeout terminated continuous test     EXPECTED rc=143
+
+After the test:
+
+  SurfaceFlinger running                         PASS
+  sys.boot_completed=1                           PASS
+  boot animation stopped                         PASS
+  Determination mode=phone                       PASS
+  Alpine SSH/network still reachable             PASS
+  libhybris property bridge still healthy        PASS
+
+Qualification boundary
+----------------------
+Alpine now passes the native libhybris build, loader lifecycle, display-safe
+native-handle contract, real Android-16 HWC panel render, and one clean Android
+restore. It is not yet a device-qualified Determination guest: patched Phoc
+plus real input, repeated desktop restoration, direct audio, and external
+display remain untested. /etc/determination-ready must therefore continue to
+report graphics=unqualified.

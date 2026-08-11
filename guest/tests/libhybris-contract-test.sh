@@ -173,15 +173,12 @@ for symbol in \
     eglGetDisplay \
     eglGetPlatformDisplay \
     eglGetProcAddress \
-    eglInitialize \
-    eglHybrisCreateNativeBuffer \
-    eglHybrisReleaseNativeBuffer \
-    eglHybrisGetNativeBufferInfo \
-    eglHybrisSerializeNativeBuffer \
-    eglHybrisCreateRemoteBuffer \
-    eglSwapBuffersWithDamageKHR; do
+    eglInitialize; do
     check_symbol "$EGL_LIB" "$symbol"
 done
+# EGL extensions are intentionally dispatched by eglGetProcAddress rather
+# than exported directly from libEGL. The native-handle probe below resolves
+# all five EGL_HYBRIS procedures plus eglSwapBuffersWithDamageKHR at runtime.
 check_symbol "$GLES_LIB" glShaderSource
 for symbol in HWCNativeWindowCreate HWCNativeWindowDestroy HWCNativeWindowSetBufferCount; do
     check_symbol "$HWC_WINDOW_LIB" "$symbol"

@@ -88,71 +88,14 @@ typedef void (*__sighandler_t)(int);
 #define R_AARCH64_IRELATIVE 1032
 #endif
 MUSLEOF
-    CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }$(pkg-config --cflags libbsd-overlay) -include $MUSL_COMPAT"
+    CPPFLAGS="${CPPFLAGS:+$CPPFLAGS }-D_GNU_SOURCE $(pkg-config --cflags libbsd-overlay) -include $MUSL_COMPAT"
     MUSL_LIBS=$(pkg-config --libs libbsd-overlay)
     export CPPFLAGS
 
-    # musl deliberately has no non-portable static recursive-mutex
-    # initializer. Initialize it once through the pthread API before each
-    # linker entrypoint takes the lock. Apply to every bundled linker variant.
-    python3 - "$SRC/hybris/common" <<'PYEOF'
-import pathlib
-import sys
-
-root = pathlib.Path(sys.argv[1])
-stock = "static pthread_mutex_t g_dl_mutex = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;"
-replacement = r'''\
-static pthread_mutex_t g_dl_mutex;
-static pthread_once_t g_dl_mutex_once = PTHREAD_ONCE_INIT;
-
-static void hybris_init_dl_mutex() {
-  pthread_mutexattr_t attr;
-  pthread_mutexattr_init(&attr);
-  pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-  pthread_mutex_init(&g_dl_mutex, &attr);
-  pthread_mutexattr_destroy(&attr);
-}
-
-static pthread_mutex_t* hybris_dl_mutex() {
-  pthread_once(&g_dl_mutex_once, hybris_init_dl_mutex);
-  return &g_dl_mutex;
-}'''
-for variant in ("mm", "n", "o", "q"):
-    path = root / variant / "dlfcn.cpp"
-    text = path.read_text()
-    if "hybris_init_dl_mutex" in text:
-        continue
-    if stock not in text:
-        raise SystemExit(f"musl mutex patch anchor missing: {path}")
-    text = text.replace(stock, replacement, 1)
-    text = text.replace("ScopedPthreadMutexLocker locker(&g_dl_mutex);",
-                        "ScopedPthreadMutexLocker locker(hybris_dl_mutex());")
-    path.write_text(text)
-    print(f"musl recursive mutex: patched {path}")
-
-# musl exposes basename through libgen.h rather than the glibc string.h
-# extension. Add the standard declaration only to translation units that use
-# it; force-including libgen.h would break old Autoconf function probes.
-for path in root.rglob("*.cpp"):
-    text = path.read_text()
-    if "basename(" not in text or "hybris_musl_basename" in text:
-        continue
-    text = text.replace("basename(", "hybris_musl_basename(")
-    first_include = text.find("#include ")
-    if first_include < 0:
-        raise SystemExit(f"basename include anchor missing: {path}")
-    helper = """#include <libgen.h>
-static inline char* hybris_musl_basename(const char* path) {
-  return basename(const_cast<char*>(path));
-}
-"""
-    if "#include <libgen.h>" in text:
-        text = text.replace("#include <libgen.h>\n", helper, 1)
-    else:
-        text = text[:first_include] + helper + text[first_include:]
-    path.write_text(text)
-    print(f"musl basename declaration: patched {path}")
-PYEOF
+    # libhybris' host hook layer assumes glibc symbols and private layouts in
+    # several places. Apply the source-pinned adapter set as one auditable,
+    # idempotent transform; never paper over the gap with gcompat.
+    python3 "$(dirname "$0")/patch-libhybris-musl.py" "$SRC"
 fi
 if [ "$HOST_LIBC" = glibc ] && ! grep -q "__ctype_get_mb_cur_max" "$SRC/hybris/common/hooks.c"; then
     git -C "$SRC" apply <<'HOOKPATCH'

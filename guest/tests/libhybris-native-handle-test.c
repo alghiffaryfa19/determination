@@ -72,6 +72,7 @@ int main(void)
     get_native_buffer_info_fn get_info = NULL;
     serialize_native_buffer_fn serialize = NULL;
     create_remote_buffer_fn create_remote = NULL;
+    void *swap_buffers_with_damage = NULL;
 
     if (strcmp(getenv("EGL_PLATFORM") ? getenv("EGL_PLATFORM") : "", "null") != 0 ||
         strcmp(getenv("HYBRIS_EGLPLATFORM") ? getenv("HYBRIS_EGLPLATFORM") : "", "null") != 0)
@@ -96,8 +97,9 @@ int main(void)
         get_proc("eglHybrisSerializeNativeBuffer");
     create_remote = (create_remote_buffer_fn)
         get_proc("eglHybrisCreateRemoteBuffer");
+    swap_buffers_with_damage = get_proc("eglSwapBuffersWithDamageKHR");
     if (!create_buffer || !release_buffer || !get_info || !serialize ||
-        !create_remote)
+        !create_remote || !swap_buffers_with_damage)
         goto out;
 
     if (!create_buffer(64, 64,

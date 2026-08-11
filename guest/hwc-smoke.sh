@@ -41,8 +41,16 @@ BLKEEP=$!
     export LD_LIBRARY_PATH=/usr/local/lib
     export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
     export EGL_PLATFORM=hwcomposer HYBRIS_EGLPLATFORM=hwcomposer ANDROID_ROOT=/system
-    stdbuf -o0 -e0 timeout 30 /root/build/libhybris/hybris/tests/.libs/test_hwcomposer > /tmp/hwc.out 2>&1
-    echo "GUEST-TEST-RC=$?"
+    # Use the installed artifact so this gate is independent of distro name
+    # and build-tree location (Debian, Arch, and Alpine all share /usr/local).
+    timeout 30 /usr/local/bin/test_hwcomposer > /tmp/hwc.out 2>&1
+    TEST_RC=$?
+    echo "GUEST-TEST-RC=$TEST_RC"
     tail -20 /tmp/hwc.out
+    # The test is deliberately patched to render continuously. GNU timeout
+    # reports 124; BusyBox timeout reports the terminating signal as 143.
+    case "$TEST_RC" in 124|143) exit 0 ;; *) exit 1 ;; esac
 '
+TEST_RC=$?
 kill $BLKEEP 2>/dev/null
+exit "$TEST_RC"

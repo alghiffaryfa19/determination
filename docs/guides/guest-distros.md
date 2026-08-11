@@ -97,12 +97,17 @@ seatd, and generated libinput udev data. Pinned `libglibutil` and `libgbinder`
 also build and install natively against musl. The host returned to the proven
 Debian slot after these tests.
 
-Graphics is still **blocked and unqualified**. The Android-Q linker plugin can
-be compiled against musl with the scoped compatibility code in
-`build-libhybris.sh`, but libhybris' host hook layer still depends on glibc-only
-APIs and private layouts, including `pthread_cond_t.__data`, `fpos64_t`,
-`mallinfo`, and `pvalloc`. The build now fails at that boundary instead of
-ignoring `make` errors and printing false success. `test_hwcomposer`, Phoc,
-panel ownership, direct audio playback, external display, and repeated visual
-restore therefore remain untested for Alpine. `/etc/determination-ready`
-correctly keeps `graphics=unqualified`.
+Pinned upstream libhybris now builds and installs natively on musl without
+glibc or `gcompat`. Its scoped source adapter covers the host-libc ABI gaps and
+pins complete embedded-linker load groups when bionic Initial-Exec TLS makes
+them non-unloadable. The property bridge survives 20 load/unload cycles, the
+display-safe contract passes 20/20 (including the complete 2-fd + 22-int QTI
+native handle), and `test_hwcomposer` rendered the expected diamond on the
+1080x2340 panel through the real Android 16 vendor stack. SurfaceFlinger,
+Android phone mode, guest networking, and the property bridge all recovered.
+
+Alpine is still **not graphics-qualified**. This proves the libhybris and raw
+HWC gate, not a usable desktop: patched Phoc with input, repeated desktop
+restoration, direct audio playback, and external display remain untested.
+`/etc/determination-ready` correctly keeps `graphics=unqualified`. Evidence:
+`artifacts/alpine-libhybris-qualification-20260811.txt`.
