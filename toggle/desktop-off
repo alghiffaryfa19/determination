@@ -101,6 +101,28 @@ sleep 0.5
 # Android owners recorded in the journal. Display recovery continues if audio
 # restore fails, but doctor will keep reporting the failed audio phase.
 lc_state_write EXITING "$generation" audio running
+# Do not rely solely on the shell session's child cleanup here. A stopped or
+# degraded user manager can leave the direct graph reparented while Phosh is
+# already gone. Terminate the supervisor by its singleton owner record, then
+# drain the three graph processes before the ownership coordinator probes ALSA.
+"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
+    lock=/run/user/1000/determination-audio-session.lock/owner
+    owner=$(cat "$lock" 2>/dev/null || true)
+    case "$owner" in *[!0-9]*|'') ;; *) kill -TERM "$owner" 2>/dev/null || true ;; esac
+    pkill -TERM -x wireplumber 2>/dev/null || true
+    pkill -TERM -x pipewire-pulse 2>/dev/null || true
+    pkill -TERM -x pipewire 2>/dev/null || true
+    i=0
+    while pgrep -x wireplumber >/dev/null 2>&1 ||
+          pgrep -x pipewire-pulse >/dev/null 2>&1 ||
+          pgrep -x pipewire >/dev/null 2>&1; do
+        i=$((i + 1)); [ "$i" -lt 30 ] || break
+        sleep 0.1
+    done
+    pkill -KILL -x wireplumber 2>/dev/null || true
+    pkill -KILL -x pipewire-pulse 2>/dev/null || true
+    pkill -KILL -x pipewire 2>/dev/null || true
+' 2>/dev/null || true
 if [ -x "$DET/bin/det-audio-route" ] && \
    [ -f "$DET/run/audio-route.state" ]; then
     "$DET/bin/det-audio-route" restore ||

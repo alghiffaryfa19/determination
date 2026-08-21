@@ -162,6 +162,23 @@ lc_state_write ENTERING "$generation" animation running
 if [ -x "$DET/bin/det-audio-route" ] &&
    [ -f "$DET/etc/audio-owner.conf" ]; then
     lc_state_write ENTERING "$generation" audio running
+    # A previous phone restore can time out waiting for a guest graph and leave
+    # a restore-failed journal. Android subsequently restarts its own audio HAL,
+    # so a later recover sees those legitimate holders and cannot distinguish
+    # them from unreleased guest ALSA. At this point system_server is frozen and
+    # desktop mode is taking ownership anyway: quiesce the profile services,
+    # finish the old restore transaction, then make the normal fresh claim.
+    audio_phase=$(sed -n 's/^phase=//p' "$DET/run/audio-owner.state" 2>/dev/null | tail -n 1)
+    case "$audio_phase" in
+        restoring|restore-failed)
+            echo "recovering stale direct-audio journal phase=$audio_phase"
+            for audio_service in $(sed -n 's/^service=//p' "$DET/etc/audio-owner.conf"); do
+                stop "$audio_service" 2>/dev/null || true
+            done
+            "$DET/bin/det-audio-owner" recover --apply ||
+                echo "WARN: stale direct-audio journal recovery failed"
+            ;;
+    esac
     "$DET/bin/det-audio-route" claim ||
         echo "WARN: direct audio claim failed; desktop continues muted"
 fi
