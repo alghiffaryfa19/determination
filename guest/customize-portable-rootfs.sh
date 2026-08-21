@@ -34,6 +34,13 @@ install -d "$ROOT/etc" "$ROOT/etc/profile.d" "$ROOT/root" \
 # mode. Unprivileged sessions and build probes must be able to use /tmp.
 install -d -m 1777 "$ROOT/tmp"
 install -m 0755 "$HERE/det-platform" "$ROOT/usr/local/bin/det-platform"
+install -m 0755 "$HERE/det-phosh-session" "$ROOT/usr/local/bin/det-phosh-session"
+install -m 0755 "$HERE/det-compat-check" "$ROOT/usr/local/bin/det-compat-check"
+install -m 0755 "$HERE/det-firefox-content-defaults" \
+    "$ROOT/usr/local/bin/det-firefox-content-defaults"
+install -m 0755 "$HERE/setup-compatibility.sh" "$ROOT/usr/local/sbin/setup-compatibility.sh"
+install -D -m 0644 "$HERE/det-phosh.service" \
+    "$ROOT/usr/local/lib/determination/det-phosh.service"
 install -m 0644 "$HERE/sources.lock" "$ROOT/root/determination-build/sources.lock"
 for build_file in install-android-headers.sh build-libgbinder.sh \
                   build-libhybris.sh patch-libhybris-musl.py \
@@ -120,6 +127,8 @@ for group in video input render audio android_graphics android_input android_aud
         *) usermod -aG "$group" melissa ;;
     esac
 done
+
+setup-compatibility.sh
 
 install -d -m 0750 /etc/sudoers.d
 printf '%s\n' 'melissa ALL=(ALL) ALL' > /etc/sudoers.d/melissa

@@ -7,6 +7,8 @@
 set -e
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DEBIAN_FRONTEND=noninteractive TMPDIR=/tmp HOME=/root
+[ ! -f /usr/local/lib/det-pidfd-shim.so ] || \
+    export LD_PRELOAD=/usr/local/lib/det-pidfd-shim.so
 
 echo "== apps =="
 dpkg --configure -a 2>/dev/null || true
@@ -45,7 +47,8 @@ for t in hicolor Adwaita; do
     [ -d "/usr/share/icons/$t" ] && gtk-update-icon-cache -f -t "/usr/share/icons/$t" 2>/dev/null || true
 done
 # Confirm the loader is now present --- fail loud if the icon fix didn't take.
-if gdk-pixbuf-query-loaders 2>/dev/null | grep -qi svg; then
+PIXBUF_CACHE=/usr/lib/aarch64-linux-gnu/gdk-pixbuf-2.0/2.10.0/loaders.cache
+if { gdk-pixbuf-query-loaders 2>/dev/null || cat "$PIXBUF_CACHE" 2>/dev/null; } | grep -qi svg; then
     echo "SVG loader OK --- app icons will render"
 else
     echo "WARN: SVG loader still absent after librsvg2-common install"
@@ -105,7 +108,7 @@ done
 FAVS="[${FAVS%, }]"
 echo "favorites -> $FAVS"
 
-echo "== phosh settings (dconf under /root, persists) =="
+echo "== phosh settings (melissa user dconf, persists) =="
 # idle-delay 0: phosh's idle blank goes through the same broken
 # output-wake path as the power button (KEY_POWER is quirked inert; an
 # idle blank would still soft-kill the session). Never blank.
@@ -117,7 +120,9 @@ DARKBG=$(ls /usr/share/backgrounds/gnome/*[Dd]ark*.jpg \
             /usr/share/backgrounds/gnome/*-d.jpg 2>/dev/null | head -1)
 BG=${DARKBG:-$(ls /usr/share/backgrounds/gnome/*.jpg /usr/share/backgrounds/gnome/*.png 2>/dev/null | head -1)}
 export BG FAVS
-dbus-run-session -- /bin/sh -c '
+det-platform run-user melissa env \
+    HOME=/home/melissa USER=melissa LOGNAME=melissa BG="$BG" FAVS="$FAVS" \
+    dbus-run-session -- /bin/sh -c '
     gsettings set org.gnome.desktop.session idle-delay "uint32 0"
     gsettings set org.gnome.desktop.screensaver lock-enabled false
     gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"
@@ -131,4 +136,18 @@ dbus-run-session -- /bin/sh -c '
         echo "note: sm.puri.phosh favorites key not present in this phosh"
     echo "gsettings done"
 '
+
+echo "== Firefox narrow-window content default =="
+# Desktop Firefox correctly scales its chrome through Wayland, but a 3x-scaled
+# 1080px panel leaves web content a 360 CSS-pixel desktop viewport. Old and
+# fixed-width sites then overflow horizontally. Firefox stores its supported
+# global Default Zoom as a global browser.content.full-zoom content preference,
+# not a normal pref. Seed 67% only when the user has not chosen a global value;
+# site-specific zooms and later Settings changes remain authoritative.
+if ! pgrep -x firefox-esr >/dev/null 2>&1; then
+    det-platform run-user melissa env HOME=/home/melissa USER=melissa LOGNAME=melissa \
+        det-firefox-content-defaults
+else
+    echo "Firefox is running; preserving its live content database"
+fi
 echo "SETUP-POLISH-OK"

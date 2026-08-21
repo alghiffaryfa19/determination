@@ -290,66 +290,21 @@ lc_pid_write compositor "$!" "$generation" || exit 1
 # break. Falls back to a bare foot terminal if phosh isn't installed.
 (
     while [ -f "$DET/run/desktop-mode" ]; do
-        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- \
-            /usr/local/bin/det-platform run-user melissa /bin/sh -c '
-            export HOME=/home/melissa USER=melissa LOGNAME=melissa
-            export XDG_RUNTIME_DIR=/run/user/1000
-            i=0
-            until [ -S "$XDG_RUNTIME_DIR/wayland-0" ]; do
-                i=$((i+1)); [ $i -gt 100 ] && exit 9; sleep 0.2
-            done
-            export PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            export WAYLAND_DISPLAY=wayland-0 LANG=C.UTF-8
-            export XDG_CURRENT_DESKTOP=Phosh XDG_SESSION_TYPE=wayland
-            # phosh grays out its Log Out button unless GDMSESSION=phosh
-            # (phosh_shell_started_by_display_manager: shell.c). We launch
-            # phosh bare (no display manager), so fake it --- then Log Out
-            # calls SessionManager.Logout(1) -> our shim -> det-signal exit.
-            export GDMSESSION=phosh
-            # /usr/local first: phosh must load OUR libgmobile (embeds the
-            # OP7 notch panel for the qcom,sm8150 DT compatibles) --- the
-            # Debian one has no entry and the top bar ignores the notch.
-            export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/aarch64-linux-gnu
-            # GPU app buffers (2026-07-08): clients do GLES through the
-            # hybris wayland EGL platform --- gralloc buffers shared
-            # zero-copy over the android_wlegl protocol; the phoc android
-            # renderer imports them as EGLImages (GL_TEXTURE_EXTERNAL_OES).
-            # LD_LIBRARY_PATH above already puts hybris libEGL/libGLESv2
-            # ahead of glvnd/Mesa. EGL_PLATFORM=wayland is load-bearing: a
-            # plain eglGetDisplay() otherwise takes the configure-time
-            # default (hwcomposer) and fights phoc for the composer HAL.
-            # HYBRIS_LD_LIBRARY_PATH: the bionic side (vendor EGL, apex
-            # libc) must resolve in CLIENT processes too, not just phoc.
-            # GSK_RENDERER=ngl skips the GTK4 vulkan probe (no hybris
-            # vulkan platform installed) and forces the GLES renderer.
-            # NO APOSTROPHES IN THIS BLOCK --- it is a single-quoted sh -c
-            # string (one broke the session launcher on first deploy).
-            export EGL_PLATFORM=wayland HYBRIS_EGLPLATFORM=wayland
-            export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
-            export ANDROID_ROOT=/system GSK_RENDERER=ngl
-            [ -f /usr/local/lib/det-pidfd-shim.so ] &&
-                export LD_PRELOAD=/usr/local/lib/det-pidfd-shim.so
-            PHOSH=$(command -v phosh || true)
-            [ -x /usr/libexec/phosh ] && PHOSH=/usr/libexec/phosh
-            # det-session-manager owns org.gnome.SessionManager on this bus
-            # BEFORE phosh/squeekboard register, and routes Logout/Shutdown/
-            # Reboot to the host (log out == back to phone). Give it a beat to
-            # acquire the name; harmless if the shim is absent (old rootfs).
-            SM=$(command -v det-session-manager || true)
-            AUDIO=$(command -v det-audio-session || true)
-            INPUT_ACTIONS=$(command -v det-input-actions || true)
-            MEDIA_KEYS=/usr/libexec/gsd-media-keys
-            [ -x "$MEDIA_KEYS" ] || MEDIA_KEYS=
-            command -v pipewire >/dev/null 2>&1 || AUDIO=
-            if [ -n "$PHOSH" ]; then
-                # Let the shell produce its first stable frames before cold
-                # starting audio, the OSK and media-key services. Starting all
-                # of them in the same frame window amplified missed HWC vsyncs
-                # into visible touch/scroll jitter on guacamoleb.
-                exec dbus-run-session -- /bin/sh -c \
-                    "${SM:+$SM & sleep 0.3;} $PHOSH & PHOSH_PID=\$!; sleep 1; squeekboard & sleep 2; ${AUDIO:+$AUDIO & }${INPUT_ACTIONS:+$INPUT_ACTIONS apply;} ${MEDIA_KEYS:+$MEDIA_KEYS & }wait \$PHOSH_PID"
+        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
+            export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+            # systemd guests get a real PAM/logind login session. This is the
+            # difference between merely drawing Phosh and applications seeing
+            # a first-class graphical desktop. Experimental OpenRC guests keep
+            # the direct launcher until their elogind path is qualified.
+            if [ "$(det-platform init)" = systemd ] &&
+                    [ -f /etc/systemd/system/det-phosh.service ]; then
+                systemctl stop det-phosh.service 2>/dev/null || true
+                det-platform service-start det-phosh || exit 10
+                while det-platform service-active det-phosh; do sleep 1; done
+                journalctl -u det-phosh.service -n 100 --no-pager 2>/dev/null || true
+                exit 11
             fi
-            exec foot -- /bin/bash -l
+            exec det-platform run-user melissa /usr/local/bin/det-phosh-session
         ' >> "$CLOG" 2>&1
         [ -f "$DET/run/desktop-mode" ] || break
         sleep 2

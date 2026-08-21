@@ -64,6 +64,10 @@ fi
 #    live from that moment even though SF is still coming back.
 lc_state_write EXITING "$generation" compositor running
 "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c \
+    'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; \
+     [ "$(det-platform init 2>/dev/null)" != systemd ] || \
+         systemctl stop det-phosh.service 2>/dev/null || true' 2>/dev/null
+"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c \
     'pkill -TERM phosh; pkill -TERM squeekboard; pkill -TERM foot; true' 2>/dev/null
 # Guest pids are visible from the host pid ns (host root, init ns), so poll
 # for the clients actually exiting instead of a fixed sleep --- typically

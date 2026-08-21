@@ -115,6 +115,13 @@ default dedicated `~/.ssh/determination_ed25519` key.
 - [x] Milestone 6: Zygisk hook on system_server's SF-death handling :
       verified on device 2026-07-11: system_server stable, WiFi stays up,
       guest networking alive throughout desktop mode
+- [x] Debian application-session compatibility layer (2026-08-21): Phosh now
+      runs in an active PAM/logind Wayland login with its standard systemd user
+      bus, XDG portals, Secret Service, accessibility, feedback, GVfs, Flatpak,
+      native Wayland app hints, and user-owned GNOME settings. The live contract
+      passed 17/17 checks and GNOME Calculator launched through its desktop
+      entry. This qualifies the session plumbing, not every individual app or
+      hardware API.
 - [x] Milestone 5 phase 1: native graphics/KMS path proven (2026-07-13/14) :
       Turnip on KGSL, minigbm allocation, dmabuf→Vulkan import, raw DSI KMS
       scanout, and Plasma Mobile under KWin with GPU compositing + touch.

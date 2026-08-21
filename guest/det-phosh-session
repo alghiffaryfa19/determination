@@ -1,0 +1,147 @@
+#!/bin/sh
+# Canonical Phosh application session for Determination. The compositor stays
+# separate because phoc -E is not safe on the downstream 4.14 pidfd ABI.
+set -eu
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export HOME=${HOME:-/home/melissa} USER=${USER:-melissa} LOGNAME=${LOGNAME:-melissa}
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/1000}
+export XDG_SESSION_TYPE=wayland XDG_SESSION_CLASS=user
+export XDG_CURRENT_DESKTOP=Phosh:GNOME XDG_SESSION_DESKTOP=phosh
+export DESKTOP_SESSION=phosh GDMSESSION=phosh
+export WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
+export LANG=${LANG:-C.UTF-8} TMPDIR=${TMPDIR:-/tmp}
+
+# Make applications select their native Wayland, adaptive GNOME and portal
+# paths. Apps remain free to override these per launcher or in their settings.
+export GDK_BACKEND=wayland,x11
+export QT_QPA_PLATFORM=wayland
+export MOZ_ENABLE_WAYLAND=1
+export GTK_USE_PORTAL=1
+export XDG_MENU_PREFIX=gnome-
+
+# Compatibility graphics contract: applications are Wayland clients of phoc,
+# never direct hwcomposer clients. GTK4 uses GLES instead of probing Vulkan.
+export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/aarch64-linux-gnu
+export EGL_PLATFORM=wayland HYBRIS_EGLPLATFORM=wayland
+export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
+export ANDROID_ROOT=/system GSK_RENDERER=ngl
+[ ! -f /usr/local/lib/det-pidfd-shim.so ] || \
+    export LD_PRELOAD=/usr/local/lib/det-pidfd-shim.so
+
+if [ "${1:-}" = --print-environment ]; then
+    for name in XDG_SESSION_TYPE XDG_SESSION_CLASS XDG_CURRENT_DESKTOP \
+                XDG_SESSION_DESKTOP DESKTOP_SESSION GDMSESSION \
+                GDK_BACKEND QT_QPA_PLATFORM MOZ_ENABLE_WAYLAND GTK_USE_PORTAL \
+                EGL_PLATFORM HYBRIS_EGLPLATFORM GSK_RENDERER; do
+        eval "value=\${$name}"
+        printf '%s=%s\n' "$name" "$value"
+    done
+    exit 0
+fi
+
+install -d -m 700 "$XDG_RUNTIME_DIR"
+i=0
+until [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; do
+    i=$((i + 1))
+    [ "$i" -le 100 ] || { echo "det-phosh-session: Wayland socket timed out" >&2; exit 9; }
+    sleep 0.2
+done
+
+# Use pam_systemd's standard user bus when available. This lets applications,
+# portals and systemd user services inhabit one real login session. OpenRC and
+# older images retain a private-bus fallback.
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    if [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+        export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+    else
+        exec dbus-run-session -- "$0" --on-session-bus
+    fi
+fi
+
+# D-Bus-activated portals and services must inherit the compositor/session
+# environment. Also update the systemd user manager when pam_systemd made one.
+dbus-update-activation-environment \
+    WAYLAND_DISPLAY XDG_RUNTIME_DIR XDG_SESSION_TYPE XDG_SESSION_CLASS \
+    XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP DESKTOP_SESSION GDMSESSION \
+    GDK_BACKEND QT_QPA_PLATFORM MOZ_ENABLE_WAYLAND GTK_USE_PORTAL \
+    EGL_PLATFORM HYBRIS_EGLPLATFORM HYBRIS_LD_LIBRARY_PATH ANDROID_ROOT \
+    GSK_RENDERER LD_LIBRARY_PATH PATH HOME USER LOGNAME LANG TMPDIR 2>/dev/null || true
+if systemctl --user show-environment >/dev/null 2>&1; then
+    systemctl --user import-environment \
+        WAYLAND_DISPLAY XDG_RUNTIME_DIR XDG_SESSION_TYPE XDG_SESSION_CLASS \
+        XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP DESKTOP_SESSION GDMSESSION \
+        GDK_BACKEND QT_QPA_PLATFORM MOZ_ENABLE_WAYLAND GTK_USE_PORTAL \
+        EGL_PLATFORM HYBRIS_EGLPLATFORM HYBRIS_LD_LIBRARY_PATH ANDROID_ROOT \
+        GSK_RENDERER LD_LIBRARY_PATH PATH HOME USER LOGNAME LANG TMPDIR 2>/dev/null || true
+fi
+
+# Debian enables PipeWire socket activation in every systemd user session.
+# Determination's direct-audio supervisor is the sole owner of this graph: it
+# gates lifetime on the host audio journal and must release ALSA before Android
+# restoration. Mask only for this runtime login, before Phosh can trigger the
+# distro units; the mask disappears with /run/user/1000.
+if systemctl --user show-environment >/dev/null 2>&1; then
+    systemctl --user mask --runtime --now \
+        pipewire.socket pipewire-pulse.socket pipewire.service \
+        pipewire-pulse.service wireplumber.service >/dev/null 2>&1 || true
+    rm -f "$XDG_RUNTIME_DIR/pipewire-0" \
+        "$XDG_RUNTIME_DIR/pipewire-0.lock" \
+        "$XDG_RUNTIME_DIR/pipewire-0-manager" \
+        "$XDG_RUNTIME_DIR/pipewire-0-manager.lock" \
+        "$XDG_RUNTIME_DIR/pulse/native" "$XDG_RUNTIME_DIR/pulse/pid"
+fi
+
+children=
+spawn() {
+    "$@" &
+    children="$children $!"
+}
+cleanup() {
+    trap - EXIT HUP INT TERM
+    [ -z "$children" ] || kill -TERM $children 2>/dev/null || true
+    [ -z "$children" ] || wait $children 2>/dev/null || true
+}
+trap cleanup EXIT HUP INT TERM
+
+# A passwordless session cannot unlock an existing login keyring, but starting
+# the daemon still provides Secret Service and a user-visible unlock prompt.
+if command -v gnome-keyring-daemon >/dev/null 2>&1; then
+    keyring_env=$(gnome-keyring-daemon --start --components=secrets,pkcs11,ssh 2>/dev/null || true)
+    [ -z "$keyring_env" ] || eval "$keyring_env"
+    export SSH_AUTH_SOCK
+fi
+
+SM=$(command -v det-session-manager || true)
+[ -z "$SM" ] || { spawn "$SM"; sleep 0.3; }
+
+# Start direct audio before the shell so applications never win a race with a
+# distro socket-activated graph. It remains background/non-blocking.
+command -v det-audio-session >/dev/null 2>&1 && \
+    command -v pipewire >/dev/null 2>&1 && spawn det-audio-session
+
+PHOSH=$(command -v phosh || true)
+[ -x /usr/libexec/phosh ] && PHOSH=/usr/libexec/phosh
+[ -n "$PHOSH" ] || exec foot -- /bin/bash -l
+
+spawn "$PHOSH"
+PHOSH_PID=$!
+sleep 1
+
+# Trigger service activation after Phosh owns its shell interfaces. The Phosh
+# portal backend may consult those interfaces and can otherwise stall startup.
+# Failure is non-fatal: det-compat-check reports the missing contract.
+if command -v gdbus >/dev/null 2>&1; then
+    gdbus call --session --dest org.freedesktop.portal.Desktop \
+        --object-path /org/freedesktop/portal/desktop \
+        --method org.freedesktop.DBus.Peer.Ping >/dev/null 2>&1 || true
+    gdbus call --session --dest org.a11y.Bus --object-path /org/a11y/bus \
+        --method org.freedesktop.DBus.Peer.Ping >/dev/null 2>&1 || true
+fi
+command -v squeekboard >/dev/null 2>&1 && spawn squeekboard
+sleep 2
+
+command -v det-input-actions >/dev/null 2>&1 && det-input-actions apply || true
+[ ! -x /usr/libexec/gsd-media-keys ] || spawn /usr/libexec/gsd-media-keys
+
+wait "$PHOSH_PID"

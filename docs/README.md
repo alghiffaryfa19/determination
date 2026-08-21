@@ -23,6 +23,7 @@ yet hardware-qualified end to end.
 | Build or switch guest distros | [guest distro profiles](guides/guest-distros.md) |
 | Install, upgrade, or return to phone mode | [install and recovery guide](guides/install-and-recovery.md) |
 | Use the companion and guest day to day | [daily use guide](guides/daily-use.md) |
+| Install or diagnose Linux app integration | [application compatibility](guides/app-compatibility.md) |
 | Diagnose a failure or collect qualification evidence | [troubleshooting and qualification](operations/troubleshooting-and-qualification.md) |
 
 ## Browse by subject

@@ -28,7 +28,7 @@ for f in evgrab det-input-forwarder detd detctl det-audio-probe det-audio-owner 
     chmod 0755 "$STAGE/bin/$f"
 done
 cp -f "$MODPATH/tools/lxc-config-base" "$STAGE/lxc-config-base"
-for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke det-input-actions det-media-action det-connectivity det-connectivity-menu det-platform; do
+for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke det-input-actions det-media-action det-connectivity det-connectivity-menu det-platform det-phosh-session det-compat-check det-firefox-content-defaults; do
   if [ -f "$MODPATH/guest-tools/$f" ]; then
     cp -f "$MODPATH/guest-tools/$f" "$STAGE/guest-tools/$f"
     chmod 0755 "$STAGE/guest-tools/$f"
@@ -38,6 +38,31 @@ for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke de
     fi
   fi
 done
+if [ -f "$MODPATH/guest-tools/setup-compatibility.sh" ]; then
+    cp -f "$MODPATH/guest-tools/setup-compatibility.sh" \
+        "$STAGE/guest-tools/setup-compatibility.sh"
+    chmod 0755 "$STAGE/guest-tools/setup-compatibility.sh"
+    if [ -d "$GUEST_ROOT/usr/local/sbin" ]; then
+        cp -f "$MODPATH/guest-tools/setup-compatibility.sh" \
+            "$GUEST_ROOT/usr/local/sbin/setup-compatibility.sh"
+        chmod 0755 "$GUEST_ROOT/usr/local/sbin/setup-compatibility.sh"
+    fi
+fi
+if [ -f "$MODPATH/guest-tools/det-phosh.service" ]; then
+    cp -f "$MODPATH/guest-tools/det-phosh.service" "$STAGE/guest-tools/det-phosh.service"
+    chmod 0644 "$STAGE/guest-tools/det-phosh.service"
+    if [ -d "$GUEST_ROOT/usr/local/lib" ]; then
+        mkdir -p "$GUEST_ROOT/usr/local/lib/determination"
+        cp -f "$MODPATH/guest-tools/det-phosh.service" \
+            "$GUEST_ROOT/usr/local/lib/determination/det-phosh.service"
+        chmod 0644 "$GUEST_ROOT/usr/local/lib/determination/det-phosh.service"
+    fi
+    if [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
+        cp -f "$MODPATH/guest-tools/det-phosh.service" \
+            "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
+        chmod 0644 "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
+    fi
+fi
 if [ -f "$MODPATH/guest-tools/det-input-udevdb" ]; then
     cp -f "$MODPATH/guest-tools/det-input-udevdb" "$STAGE/guest-tools/det-input-udevdb"
     chmod 0755 "$STAGE/guest-tools/det-input-udevdb"

@@ -81,7 +81,8 @@ cp -f "$DET/lxc/config" "$DET/guest/config"
 # they remain deliberately separate from host-bionic detd/detctl.
 for det_guest_tool in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke \
                       det-input-actions det-media-action det-connectivity det-connectivity-menu \
-                      det-platform; do
+                      det-platform det-phosh-session det-compat-check \
+                      det-firefox-content-defaults; do
     if [ -f "$DET/guest-tools/$det_guest_tool" ]; then
         mkdir -p "$GUEST_ROOT/usr/local/bin"
         cp -f "$DET/guest-tools/$det_guest_tool" \
@@ -89,6 +90,23 @@ for det_guest_tool in det-guest-agent det-audio-probe det-audio-session det-pipe
         chmod 0755 "$GUEST_ROOT/usr/local/bin/$det_guest_tool"
     fi
 done
+if [ -f "$DET/guest-tools/setup-compatibility.sh" ]; then
+    mkdir -p "$GUEST_ROOT/usr/local/sbin"
+    cp -f "$DET/guest-tools/setup-compatibility.sh" \
+        "$GUEST_ROOT/usr/local/sbin/setup-compatibility.sh"
+    chmod 0755 "$GUEST_ROOT/usr/local/sbin/setup-compatibility.sh"
+fi
+if [ -f "$DET/guest-tools/det-phosh.service" ]; then
+    mkdir -p "$GUEST_ROOT/usr/local/lib/determination"
+    cp -f "$DET/guest-tools/det-phosh.service" \
+        "$GUEST_ROOT/usr/local/lib/determination/det-phosh.service"
+    chmod 0644 "$GUEST_ROOT/usr/local/lib/determination/det-phosh.service"
+    if [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
+        cp -f "$DET/guest-tools/det-phosh.service" \
+            "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
+        chmod 0644 "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
+    fi
+fi
 if [ -f "$DET/guest-tools/det-input-udevdb" ]; then
     mkdir -p "$GUEST_ROOT/usr/local/sbin"
     cp -f "$DET/guest-tools/det-input-udevdb" "$GUEST_ROOT/usr/local/sbin/det-input-udevdb"

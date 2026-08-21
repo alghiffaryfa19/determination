@@ -16,6 +16,7 @@
 #   det ssh [command...]  direct SSH to melissa@192.168.117.2
 #   det on | det off      enter / leave desktop mode (detached; panel changes!)
 #   det linux-first CMD   status, enable, disable, or apply the boot profile
+#   det compat CMD        setup or inspect the application compatibility layer
 #   det log [name] [n]    tail a /data/determination/log file (default toggle)
 #   det version           print the local project version and release state
 #   det status            connection, root, kernel, mode, guest state
@@ -255,6 +256,39 @@ linux-first)
         apply)
             adb shell "su -c '/data/determination/bin/boot-profile apply'" ;;
         *) echo "usage: det linux-first status|enable|disable|apply" >&2; exit 2 ;;
+    esac ;;
+compat)
+    ensure
+    action=${2:-check}
+    G=/data/determination
+    case "$action" in
+        setup)
+            if ! adb shell "su -c '$G/lxc/bin/lxc-info -P $G -n guest 2>/dev/null'" |
+                    grep -q RUNNING; then
+                adb shell "su -c '$G/bin/guest-start </dev/null >/dev/null 2>&1'"
+            fi
+            for file in det-phosh-session det-compat-check det-audio-session \
+                        det-firefox-content-defaults setup-compatibility.sh \
+                        det-phosh.service; do
+                adb push "guest/$file" "/data/local/tmp/$file" >/dev/null
+            done
+            adb push toggle/desktop-on /data/local/tmp/determination-desktop-on >/dev/null
+            adb push toggle/desktop-off /data/local/tmp/determination-desktop-off >/dev/null
+            adb shell "su -c 'ROOT=\$(readlink -f $G/active-guest); \
+                install -m 0755 /data/local/tmp/det-phosh-session \$ROOT/usr/local/bin/det-phosh-session; \
+                install -m 0755 /data/local/tmp/det-compat-check \$ROOT/usr/local/bin/det-compat-check; \
+                install -m 0755 /data/local/tmp/det-audio-session \$ROOT/usr/local/bin/det-audio-session; \
+                install -m 0755 /data/local/tmp/det-firefox-content-defaults \$ROOT/usr/local/bin/det-firefox-content-defaults; \
+                install -m 0755 /data/local/tmp/setup-compatibility.sh \$ROOT/usr/local/sbin/setup-compatibility.sh; \
+                install -D -m 0644 /data/local/tmp/det-phosh.service \$ROOT/usr/local/lib/determination/det-phosh.service; \
+                install -m 0755 /data/local/tmp/determination-desktop-on $G/bin/desktop-on; \
+                install -m 0755 /data/local/tmp/determination-desktop-off $G/bin/desktop-off; \
+                $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh -c \"/usr/local/sbin/setup-compatibility.sh; if ! pgrep -x firefox-esr >/dev/null 2>&1; then /usr/local/bin/det-platform run-user melissa env HOME=/home/melissa USER=melissa LOGNAME=melissa /usr/local/bin/det-firefox-content-defaults; fi\"'"
+            ;;
+        check)
+            adb shell "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/local/bin/det-compat-check --live'"
+            ;;
+        *) echo 'usage: det compat setup|check' >&2; exit 2 ;;
     esac ;;
 distro)
     ensure

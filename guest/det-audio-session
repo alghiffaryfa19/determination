@@ -3,6 +3,11 @@
 # PipeWire only while the host's journalled owner publishes audio-claimed.
 set -u
 
+# The Android-hosted guest has no usable RTKit or realtime portal. Without
+# this, each PipeWire process blocks for roughly 25 seconds on DBus before
+# falling back. PipeWire documents DISABLE_RTKIT for exactly this case.
+export DISABLE_RTKIT=1
+
 MARKER=${DET_AUDIO_MARKER:-/mnt/det-control/audio-claimed}
 RUNTIME=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 LOG="$RUNTIME/determination-audio.log"

@@ -98,7 +98,33 @@ install -m 0755 "$HERE/det-input-actions" "$R/usr/local/bin/det-input-actions"
 install -m 0755 "$HERE/det-media-action" "$R/usr/local/bin/det-media-action"
 install -m 0755 "$HERE/det-connectivity" "$R/usr/local/bin/det-connectivity"
 install -m 0755 "$HERE/det-connectivity-menu" "$R/usr/local/bin/det-connectivity-menu"
+install -m 0755 "$HERE/det-phosh-session" "$R/usr/local/bin/det-phosh-session"
+install -m 0755 "$HERE/det-compat-check" "$R/usr/local/bin/det-compat-check"
+install -m 0755 "$HERE/det-firefox-content-defaults" \
+    "$R/usr/local/bin/det-firefox-content-defaults"
 install -m 0755 "$HERE/det-input-udevdb" "$R/usr/local/sbin/det-input-udevdb"
+install -m 0755 "$HERE/setup-compatibility.sh" "$R/usr/local/sbin/setup-compatibility.sh"
+install -D -m 0644 "$HERE/det-phosh.service" \
+    "$R/usr/local/lib/determination/det-phosh.service"
+install -D -m 0644 "$HERE/det-phosh.service" \
+    "$R/etc/systemd/system/det-phosh.service"
+install -d "$R/etc/xdg/xdg-desktop-portal" "$R/etc/environment.d"
+cat > "$R/etc/xdg/xdg-desktop-portal/phosh-portals.conf" <<'EOF'
+[preferred]
+default=phosh;gtk;
+org.freedesktop.impl.portal.FileChooser=phosh;gtk;
+org.freedesktop.impl.portal.Screenshot=phosh;
+org.freedesktop.impl.portal.ScreenCast=phosh;
+EOF
+cat > "$R/etc/environment.d/90-determination-session.conf" <<'EOF'
+XDG_CURRENT_DESKTOP=Phosh:GNOME
+XDG_SESSION_DESKTOP=phosh
+DESKTOP_SESSION=phosh
+GDK_BACKEND=wayland,x11
+QT_QPA_PLATFORM=wayland
+MOZ_ENABLE_WAYLAND=1
+GTK_USE_PORTAL=1
+EOF
 install -D -m 0644 "$HERE/determination-connectivity.desktop" \
     "$R/usr/share/applications/determination-connectivity.desktop"
 install -D -m 0644 "$HERE/determination-input-proxy.desktop" \
