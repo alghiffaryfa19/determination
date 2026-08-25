@@ -1,32 +1,25 @@
 #!/system/bin/sh
-# Determination internal-panel handoff, phone -> desktop (spec §4).
-# Single-client composer HAL: SF must release it before the guest compositor
-# can bind. The respawn fight is the real engineering here, not the stop.
-# Installed to /data/determination/bin/. Run as root.
+# Internal-panel handoff: SurfaceFlinger must release the single-client HAL.
 
 set -u
 DET=${DET:-/data/determination}
 LOG=$DET/log/toggle.log
 . "$DET/bin/device-config"
 . "$DET/bin/lifecycle-lib"
-# Rotate the append-forever log once it passes ~256K (keep the newest half).
 [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 262144 ] &&
     tail -c 131072 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 exec >>"$LOG" 2>&1
 echo "--- desktop-on $(date)"
 
-# 0. Preconditions: claim the transition before any helper can inspect state.
+# Claim the transition before helpers can inspect it.
 [ -f "$DET/run/desktop-mode" ] && { echo "already in desktop mode"; exit 0; }
 mkdir -p "$DET/run"
 lc_lock_acquire || exit 1
 generation=$(lc_generation_next)
 lc_state_write ENTERING "$generation" preflight running || { lc_lock_release; exit 1; }
-# The marker is deliberately first. The suppressor must never observe a missing
-# marker after it has been launched.
+# The suppressor requires this marker before it starts.
 touch "$DET/run/desktop-mode"
-# Snapshot Android-owned connectivity while framework services still answer.
-# The guest connectivity bridge serves this read-only cache after system_server
-# is frozen; mutations remain disabled until phone/external-display mode.
+# Cache connectivity reads before system_server is frozen.
 mkdir -p "$DET/run/connectivity-cache"
 timeout 8 cmd wifi status > "$DET/run/connectivity-cache/wifi-status" 2>/dev/null || true
 timeout 8 cmd wifi list-networks > "$DET/run/connectivity-cache/wifi-list" 2>/dev/null || true
@@ -53,11 +46,7 @@ rollback() {
 }
 trap rollback EXIT HUP INT TERM
 
-# desktop-off may intentionally stop the guest to return resources to Android.
-# The old script assumed the boot service always kept LXC alive and could
-# commit DESKTOP with a frozen system_server even when every lxc-attach had
-# failed. Start it while Android still owns the display, then enforce the
-# actual state before touching input or SurfaceFlinger.
+# Prove the guest is running before Android releases display ownership.
 lc_state_write ENTERING "$generation" guest running
 "$DET/bin/guest-start" || { echo "guest-start failed"; exit 1; }
 guest_state=$("$DET/lxc/bin/lxc-info" -P "$DET" -n guest -sH 2>/dev/null)
@@ -66,9 +55,7 @@ guest_state=$("$DET/lxc/bin/lxc-info" -P "$DET" -n guest -sH 2>/dev/null)
     exit 1
 }
 
-# 1. Input first: grab evdev nodes so Android stops seeing events *before* its
-#    UI disappears (avoids a window where touches land on invisible UI).
-#    evgrab holds EVIOCGRAB on every touchscreen/key node until killed.
+# Grab input before Android's UI disappears.
 "$DET/bin/evgrab" -a -p "$DET/run/evgrab.legacy.pid" || { echo "evgrab failed"; exit 1; }
 evgrab_pid=$(sed -n 's/^pid=//p' "$DET/run/evgrab.legacy.pid" 2>/dev/null | head -n 1)
 [ -n "$evgrab_pid" ] || evgrab_pid=$(sed -n '1p' "$DET/run/evgrab.legacy.pid" 2>/dev/null)
@@ -76,18 +63,10 @@ case "$evgrab_pid" in ''|*[!0-9]*) echo "evgrab identity unavailable"; exit 1;; 
 lc_pid_write evgrab "$evgrab_pid" "$generation" || { echo "evgrab identity unavailable"; exit 1; }
 lc_state_write ENTERING "$generation" display-owner running
 
-# 2. Stop SurfaceFlinger and its dependents-in-fact.
 stop bootanim
 stop surfaceflinger
 
-# 3. Suppress re-start. Known re-issuers of `start surfaceflinger`:
-#    system_server SF-death handling, bootanim, class_restart. An explicit
-#    init `stop` is honoured but doesn't survive those. Bring-up approach: a
-#    suppressor loop re-asserting the stop. The Zygisk hook (milestone 6)
-#    handles this in-process now; the loop is a fallback + backlight keeper.
-#    The same loop doubles as the backlight keeper (see 4b): every SF stop ---
-#    including the suppressor's own re-stops --- zeroes the panel backlight, so
-#    re-asserting both in one loop is not just cheaper, it's more correct.
+# Keep SF stopped and restore the backlight it zeroes on every stop.
 BL_LEVEL=$DET_BACKLIGHT_LEVEL
 BL=$DET_BACKLIGHT_PATH
 (
@@ -102,14 +81,8 @@ BL=$DET_BACKLIGHT_PATH
 ) &
 lc_pid_write suppressor "$!" "$generation" || exit 1
 
-# 3b. system_server freezer: SIGSTOP any running system_server so its
-#     framework Watchdog can't fire. Without this, the display thread blocks
-#     60s in SurfaceControl.nativeApplyTransaction (BLAST sync to stopped SF),
-#     Watchdog kills system_server, init/zygote respawns it, ~78s crash loop
-#     --- which thrashes netd and takes wlan0 down. Freezing keeps ss suspended
-#     for the entire session; desktop-off SIGKILLs it (SIGCONT would just
-#     unblock the Watchdog with accumulated block time and it'd self-kill).
-#     Tick fast (200ms) so a fresh ss is caught before it can touch netd.
+# Freeze system_server before its blocked display thread trips Watchdog.
+# desktop-off must SIGKILL it; SIGCONT resumes with accumulated block time.
 (
     while [ -f "$DET/run/desktop-mode" ]; do
         pid=$(pidof system_server 2>/dev/null)
@@ -125,49 +98,27 @@ lc_pid_write suppressor "$!" "$generation" || exit 1
 ) &
 lc_pid_write ss-freezer "$!" "$generation" || exit 1
 
-# 4. Wait for SF to actually release the composer client + GPU context.
 i=0
 while [ "$(getprop init.svc.surfaceflinger)" != "stopped" ]; do
     i=$((i+1)); [ $i -gt 20 ] && { echo "SF didn't stop"; exit 1; }
     sleep 0.5
 done
-# The composer HAL process itself keeps running (it's a vendor service; SF is
-# its *client*). Give the HAL a beat to drop the client state.
+# Let the vendor HAL drop SF's client state.
 sleep 1
 
-# 4b. Stopping SF zeroes the panel backlight (found 2026-07-04: guest renders
-# were reaching scanout but the light was off --- the panel wasn't "dark", it
-# was unlit). Force it back on; desktop-off restores Android's own control.
-# ACTIVE node is backlight/ (max 4095); panel0-backlight is inert (2026-07-05
-# fill-run: frames visible while panel0-backlight=0).
-# BL_LEVEL: 1400/4095 (~34%). Lowered from 2048 for OLED burn-in --- the idle
-# blank is disabled (broken wake path) so the panel stays lit the whole
-# session; lower luminance + the dark UI theme cut the burn-in rate. Still
-# very readable indoors. Bump it if you're outdoors. (BL_LEVEL/BL are set at
-# step 3 --- the suppressor loop doubles as the keeper.)
+# SF zeroes the active backlight node; keep desktop brightness burn-in-safe.
 [ -n "$BL" ] && echo "$BL_LEVEL" > "$BL" 2>/dev/null
 
-# 4c. Standalone owner transition. SF is gone and phoc has not started yet, so
-# this finite libhybris/GLES client can acquire HWC without fighting either
-# system. It lands on black and releases cleanly. Cosmetic and timeout-bounded:
-# display recovery always wins if the renderer is absent or broken.
+# Run the bounded transition while neither SF nor phoc owns HWC.
 lc_state_write ENTERING "$generation" animation running
 "$DET/bin/run-transition" desktop ||
     echo "WARN: native desktop transition skipped/failed rc=$? (see log/transition.log)"
 
-# 4d. Claim the internal codec and apply the exact guacamoleb speaker route.
-# The guest session below starts PipeWire only while the owner's marker exists.
-# Audio failure is non-fatal to display handoff and remains recoverable through
-# the route and ownership journals.
+# Audio failure is non-fatal and remains journal-recoverable.
 if [ -x "$DET/bin/det-audio-route" ] &&
    [ -f "$DET/etc/audio-owner.conf" ]; then
     lc_state_write ENTERING "$generation" audio running
-    # A previous phone restore can time out waiting for a guest graph and leave
-    # a restore-failed journal. Android subsequently restarts its own audio HAL,
-    # so a later recover sees those legitimate holders and cannot distinguish
-    # them from unreleased guest ALSA. At this point system_server is frozen and
-    # desktop mode is taking ownership anyway: quiesce the profile services,
-    # finish the old restore transaction, then make the normal fresh claim.
+    # Resolve an interrupted audio restore before claiming desktop audio.
     audio_phase=$(sed -n 's/^phase=//p' "$DET/run/audio-owner.state" 2>/dev/null | tail -n 1)
     case "$audio_phase" in
         restoring|restore-failed)
@@ -183,42 +134,8 @@ if [ -x "$DET/bin/det-audio-route" ] &&
         echo "WARN: direct audio claim failed; desktop continues muted"
 fi
 
-# 5. THE REAL COMPOSITOR (2026-07-06): phoc 0.47 (droidian group/102) on the
-#    droidian wlroots hwcomposer backend, built in-guest against upstream
-#    libhybris --- guest/build-wlroots-phoc.sh. First light + 40s soak:
-#    artifacts/guest-phoc-foot-v2-20260706.txt.
-#
-#    Hard-won constraints encoded below:
-#      - phoc must NOT be started with -E: glib's child watch is broken on
-#        this pidfd-less 4.14 kernel (waitid(P_PIDFD) EINVAL) --- phoc
-#        mis-reads the session child as dead and shuts down. Compositor and
-#        clients are launched separately.
-#      - stdbuf -oL or compositor.log stays empty (block-buffered stdout).
-#      - stale wayland-0 socket+lock must be removed pre-launch or a
-#        relaunched phoc silently binds wayland-1 and clients miss it.
-#      - backlight keeper: an SF stop zeroes the backlight; the step-3
-#        suppressor loop re-asserts BL_LEVEL every 1s (see 4b --- ~34% for
-#        burn-in). ACTIVE node is backlight/ (max 4095); panel0-backlight
-#        is inert (2026-07-05). phoc's wlroots also sets composer-client
-#        brightness 1.0 after power-on (the SDM DSPP-dim fix, b182d86) ---
-#        the keeper handles only the sysfs backlight.
-#      - supervisor relaunches phoc only on DEATH, with fast-fail backoff;
-#        desktop-off clears desktop-mode first, so intentional teardown is
-#        not treated as a crash.
-#    Input (§4, 2026-07-06): phoc now runs backends hwcomposer,libinput.
-#    The libinput backend needs (a) seatd (wlr_session via libseat), and
-#    (b) /run/udev/data entries so libinput accepts devices --- udevd cannot
-#    run in the container (ro /sys), so det-input-udevdb (guest/
-#    setup-input.sh) hand-writes them per boot. Our wlroots patch takes
-#    EVIOCGRAB on every node libinput opens. Step 5d transfers ownership only
-#    after system_server is frozen. If setup-input.sh has not run yet, fall
-#    back to hwcomposer-only (display works, no input).
-#
-# 5d. Input handoff (§4): waiting for wayland-0 was a race because current
-# phoc creates it only ~30ms before libinput initialization. Milestone 6 gives
-# us a stronger boundary: system_server is already SIGSTOPped, so Android
-# cannot consume events. Verify that invariant, release the host grab, and
-# only then start phoc so it can take EVIOCGRAB immediately.
+# Do not start phoc with -E: waitid(P_PIDFD) is broken on this 4.14 kernel.
+# Transfer input only after proving system_server is frozen; wayland-0 is too late.
 ss_pid=$(pidof system_server 2>/dev/null)
 ss_state=
 [ -z "$ss_pid" ] || ss_state=$(awk '/^State:/{print $2; exit}' "/proc/$ss_pid/status" 2>/dev/null)
@@ -241,26 +158,16 @@ lc_state_write ENTERING "$generation" compositor running
     while [ -f "$DET/run/desktop-mode" ]; do
         echo "--- launch phoc (prior consecutive fast-fails: $fails) $(date)" >> "$CLOG"
         t0=$(date +%s)
-        # Root-only prep: the udev DB and seatd need root (write /run/udev,
-        # start a system unit), and melissa's XDG_RUNTIME_DIR must be created
-        # for her before phoc (which now runs UNPRIVILEGED --- see below) starts.
-        # Idempotent; re-runs harmlessly each relaunch.
+        # Prepare root-owned input state before launching unprivileged phoc.
         "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
             install -d -o melissa -g melissa -m 700 /run/user/1000
-            # phoc runs as melissa now, so its config must be world-readable ---
-            # it ships 0640 root:root and phoc SEGFAULTS on a failed parse.
+            # phoc segfaults instead of reporting an unreadable config.
             chmod a+r /etc/phoc.ini 2>/dev/null || true
             if [ -x /usr/local/sbin/det-input-udevdb ]; then
                 det-input-udevdb 2>/dev/null && det-platform service-start seatd 2>/dev/null
             fi' >> "$CLOG" 2>&1
-        # Compositor runs as melissa (uid 1000), NOT root: seatd hands it the
-        # input/drm fds (socket is group video, melissa is in it) and the GPU/
-        # dri/binder nodes are world-rw or 1000-owned (recon 2026-07-12).
-        # runuser -u keeps her supplementary groups (android_input for /dev/input);
-        # HOME/USER must be set explicitly (runuser -u does not start a login
-        # shell). WLR_BACKENDS is decided here from seatd's live state since the
-        # root prep above owns the start.
+        # det-platform preserves melissa's android_input supplementary group.
         "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- \
             /usr/local/bin/det-platform run-user melissa /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -300,19 +207,12 @@ lc_state_write ENTERING "$generation" compositor running
 ) &
 lc_pid_write compositor "$!" "$generation" || exit 1
 
-# 5e. Session clients: phosh (mobile shell) + squeekboard (OSK) on the
-# phoc socket, sharing one dbus session bus. The pidfd shim is MANDATORY
-# for phosh: glib child-watch dies on this kernel's half-backported pidfd
-# (pidfd_open works, waitid(P_PIDFD) EINVAL) and app launching would
-# break. Falls back to a bare foot terminal if phosh isn't installed.
+# The pidfd shim is required for Phosh child watches on this kernel.
 (
     while [ -f "$DET/run/desktop-mode" ]; do
         "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            # systemd guests get a real PAM/logind login session. This is the
-            # difference between merely drawing Phosh and applications seeing
-            # a first-class graphical desktop. Experimental OpenRC guests keep
-            # the direct launcher until their elogind path is qualified.
+            # OpenRC stays on the direct launcher until elogind is qualified.
             if [ "$(det-platform init)" = systemd ] &&
                     [ -f /etc/systemd/system/det-phosh.service ]; then
                 systemctl stop det-phosh.service 2>/dev/null || true
@@ -328,6 +228,22 @@ lc_pid_write compositor "$!" "$generation" || exit 1
     done
 ) &
 lc_pid_write client "$!" "$generation" || exit 1
+
+# Do not commit DESKTOP merely because the launcher loops exist. Phoc can stay
+# alive while wedged before wl_display_add_socket() (for example after a rapid
+# HWC re-entry), leaving SF stopped and Phosh timing out forever on a black
+# panel. Require the actual Wayland socket; rollback restores Android if the
+# compositor cannot become application-ready within 30 seconds.
+i=0
+until "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- \
+        /usr/bin/test -S /run/user/1000/wayland-0 2>/dev/null; do
+    i=$((i + 1))
+    [ "$i" -lt 150 ] || {
+        echo "FATAL: phoc did not publish wayland-0; rolling back to phone mode"
+        exit 1
+    }
+    sleep 0.2
+done
 lc_state_write DESKTOP "$generation" session committed
 trap - EXIT HUP INT TERM
 lc_lock_release

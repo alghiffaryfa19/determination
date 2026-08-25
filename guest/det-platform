@@ -184,19 +184,22 @@ install_deps() {
     case "$distro:$component" in
         debian:runtime)
             package_install_raw sudo dbus udev seatd pipewire pipewire-pulse wireplumber \
-                alsa-utils openssh-server wayland-protocols util-linux
+                alsa-utils openssh-server wayland-protocols util-linux \
+                wl-clipboard xdg-desktop-portal xdg-desktop-portal-wlr
             ;;
         arch:runtime)
             package_install_raw sudo dbus systemd seatd pipewire pipewire-pulse wireplumber \
-                alsa-utils openssh wayland-protocols util-linux shadow
+                alsa-utils openssh wayland-protocols util-linux shadow \
+                wl-clipboard xdg-desktop-portal xdg-desktop-portal-wlr
             ;;
         alpine:runtime)
             package_install_raw openrc dbus sudo eudev seatd pipewire pipewire-pulse wireplumber \
-                alsa-utils openssh-server wayland-protocols util-linux shadow
+                alsa-utils openssh-server wayland-protocols util-linux shadow \
+                wl-clipboard xdg-desktop-portal xdg-desktop-portal-wlr
             ;;
         debian:phosh)
             package_install_raw phosh squeekboard libinput-tools xkb-data fonts-cantarell \
-                gnome-settings-daemon-common adwaita-icon-theme
+                gnome-settings-daemon-common adwaita-icon-theme feedbackd
             ;;
         arch:phosh)
             package_install_raw phosh squeekboard libinput xkeyboard-config cantarell-fonts \
@@ -248,10 +251,10 @@ install_deps() {
         alpine:wlroots-phoc)
             package_install_raw build-base meson samurai git ca-certificates pkgconf gettext \
                 wayland-protocols wayland-dev libdrm-dev mesa-dev libinput-dev \
-                libxkbcommon-dev pixman-dev seatd-dev eudev-dev hwdata mesa-egl mesa-gles \
+                libxkbcommon-dev pixman-dev seatd libseat-dev eudev-dev hwdata hwdata-dev mesa-egl mesa-gles \
                 glslang libevdev-dev glib-dev gobject-introspection-dev elogind-dev \
-                gnome-desktop-dev gsettings-desktop-schemas mutter-dev libgmobile-dev \
-                json-glib-dev xwayland libxcb-dev xcb-util-wm-dev libdisplay-info-dev \
+                gnome-desktop-dev gsettings-desktop-schemas mutter-dev gmobile-dev \
+                json-glib-dev xwayland xwayland-dev libxcb-dev xcb-util-wm-dev libdisplay-info-dev \
                 libliftoff-dev foot font-dejavu dbus grim
             ;;
         *)

@@ -1,17 +1,6 @@
 #!/system/bin/sh
-# Determination host agent (spec §4 convenience layer). Runs as root on the
-# Android side, launched by guest-start. Watches a control directory that is
-# bind-mounted into the guest (host /data/determination/run/control ==
-# guest /mnt/det-control) and executes host-privileged actions the guest asks
-# for --- the only way to leave desktop mode / power the phone from INSIDE phosh,
-# where there is no root shell and Android's UI is grabbed away.
-#
-# Protocol: the guest drops an empty file named after the action; we consume
-# (remove) it, then act. Known actions:
-#   exit      -> desktop-off (return to phone mode)
-# Legacy file commands can only request exit. Reboot and power-off require the
-# authenticated guest-agent RPC and its explicit authority record.
-# Anything else is ignored (and cleared) so a typo can't wedge the loop.
+# Root bridge for guest requests through /mnt/det-control.
+# Legacy files may only request exit; power actions require authenticated RPC.
 
 set -u
 DET=/data/determination
@@ -21,16 +10,13 @@ mkdir -p "$CTRL" "$DET/log"
 CONN="$CTRL/connectivity"
 CACHE="$DET/run/connectivity-cache"
 mkdir -p "$CONN" "$CACHE"
-# guest uid 1000 == Android AID_SYSTEM on this device family. The protocol
-# directory contains mode 0600 requests, including Wi-Fi passphrases.
+# Guest uid 1000 maps to Android AID_SYSTEM; requests can contain secrets.
 chown 1000:1000 "$CONN" 2>/dev/null || true
 chmod 0770 "$CONN" 2>/dev/null || true
-# Rotate the append-forever log once it passes ~256K (keep the newest half).
 [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 262144 ] &&
     tail -c 131072 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 exec >>"$LOG" 2>&1
 
-# Single instance (survives desktop toggles; only a reboot clears it).
 if kill -0 "$(cat "$DET/run/hostagent.pid" 2>/dev/null)" 2>/dev/null; then
     exit 0
 fi
@@ -51,10 +37,7 @@ decode_arg() {
     sed -n "${2}p" "$1" | base64 -d 2>/dev/null
 }
 
-# Android shell-command Binder APIs pass stdout/stderr FDs into system_server.
-# The framework cannot write a magisk_file FD under /data/determination, even
-# though this root process can. Spool through shell_data_file, then copy the
-# completed result into the private guest response.
+# Binder shell commands cannot write magisk_file FDs; spool through shell_data_file.
 android_run() {
     android_tmp="/data/local/tmp/.det-connectivity.$$"
     "$@" >"$android_tmp" 2>&1
@@ -153,15 +136,12 @@ scan_connectivity() {
     done
 }
 
-# Sweep the control dir: consume every pending file, act on the known ones.
 scan() {
     scan_connectivity
     for f in "$CTRL"/*; do
         [ -e "$f" ] || continue
         cmd=${f##*/}
-        # Persistent protocol state shares this bind-mounted directory with
-        # legacy one-shot commands. Never unlink the authenticated RPC socket
-        # or the journalled audio ownership marker.
+        # Preserve persistent protocol state mixed with one-shot commands.
         case "$cmd" in
             detd.sock|audio-claimed|external-input.fifo|connectivity) continue ;;
         esac
@@ -178,15 +158,8 @@ scan() {
     done
 }
 
-# Event-driven wait (2026-07-10): the old loop slept 0.5s forever --- ~170k
-# fork+exec of `sleep` a day for a channel that fires a few times a session.
-# toybox inotifyd blocks until something is CREATED in $CTRL (`:n`) and runs
-# PROG per event; it does NOT exit on its own (verified: PROG rc and a
-# `| head -1` reader both leave it running to the timeout), so PROG kills
-# its parent --- first event tears the wait down instantly (rc 143). timeout
-# caps the wait at 15s as a safety rescan (covers the rare create-between-
-# scan-and-watch race). Command latency ~instant; idle cost is 2 short-lived
-# procs per 15s. Falls back to plain polling if inotifyd is ever absent.
+# inotifyd does not exit after its hook, so the hook kills the timed wait.
+# Timeout rescans cover the scan-before-watch race.
 WAKE="$DET/run/.hostagent-wake"
 if command -v inotifyd >/dev/null 2>&1; then
     printf '#!/system/bin/sh\nkill $PPID\n' > "$WAKE" && chmod 755 "$WAKE"
@@ -202,8 +175,7 @@ while :; do
     if wait_event "$idle_wait"; then
         idle_wait=15
     else
-        # Timeout-driven rescans back off to two minutes when idle; a create
-        # wakes immediately and resets the interval.
+        # Back off timeout rescans while creates still wake immediately.
         [ "$idle_wait" -lt 120 ] && idle_wait=$((idle_wait * 2))
     fi
 done

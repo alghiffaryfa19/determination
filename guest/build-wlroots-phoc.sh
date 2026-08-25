@@ -49,6 +49,12 @@ export CFLAGS=-I/usr/local/include LDFLAGS=-L/usr/local/lib
 B=/root/build
 mkdir -p "$B"
 
+refresh_linker_cache() {
+    # glibc guests maintain ld.so.cache; musl resolves the configured library
+    # paths directly and Alpine intentionally ships no ldconfig command.
+    command -v ldconfig >/dev/null 2>&1 && ldconfig || true
+}
+
 echo "== build dependencies =="
 # wlroots core + sway-era leftovers + phoc/GNOME bits + xwayland (phoc hard
 # requirement) + drm backend bits (libdisplay-info/liftoff) + runtime
@@ -101,6 +107,14 @@ cd "$B" && rm -rf libdroid
 git clone --depth 1 -b droidian "$LIBDROID_REPO"
 cd libdroid
 [ "$(git rev-parse HEAD)" = "$LIBDROID_COMMIT" ] || { echo "FATAL: libdroid pin mismatch" >&2; exit 1; }
+# libdroid installs one convenience systemd unit, but no runtime code uses
+# libsystemd. Its existing found() guard is unreachable because Meson's
+# dependency() defaults to required=true; make the service genuinely optional
+# for Alpine/OpenRC while retaining it on systemd guests.
+grep -q "dependency('systemd', required: false)" hals/meson.build ||
+    sed -i "s/dependency('systemd')/dependency('systemd', required: false)/" hals/meson.build
+grep -q "dependency('systemd', required: false)" hals/meson.build || {
+    echo "FATAL: libdroid optional-systemd patch anchor missing"; exit 1; }
 meson setup build --prefix=/usr/local -Dbuildtype=release
 ninja -C build && ninja -C build install
 
@@ -372,7 +386,7 @@ meson setup build --prefix=/usr/local -Dbuildtype=release \
     -Dbackends=drm,libinput,hwcomposer -Drenderers=gles2,android \
     -Dxwayland=enabled -Dexamples=false
 ninja -C build && ninja -C build install
-ldconfig
+refresh_linker_cache
 
 echo "== phoc (droidian group/102) =="
 cd "$B" && rm -rf phoc
@@ -429,11 +443,13 @@ grep -q 'det-console' "$F" || { echo "FATAL: det-console VT patch failed"; exit 
 meson setup build --prefix=/usr/local -Dbuildtype=release \
     -Dembed-wlroots=disabled -Dman=false -Dxwayland=enabled
 ninja -C build && ninja -C build install
-ldconfig
+refresh_linker_cache
 
 echo "== sanity =="
 export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/aarch64-linux-gnu
-ldd /usr/local/lib/aarch64-linux-gnu/libwlroots.so.12a | grep -E 'EGL|hwc2' | grep -q /usr/local/lib || {
+WLROOTS_LIB=$(find /usr/local/lib -type f -name 'libwlroots.so.12a' -print -quit)
+[ -n "$WLROOTS_LIB" ] || { echo "FATAL: installed libwlroots.so.12a not found"; exit 1; }
+ldd "$WLROOTS_LIB" | grep -E 'EGL|hwc2' | grep -q /usr/local/lib || {
     echo "WARN: hybris libs not resolving to /usr/local --- check LD_LIBRARY_PATH at runtime"; }
 /usr/local/bin/phoc --version
 echo "BUILD-WLROOTS-PHOC-OK --- run via toggle/desktop-on (never phoc -E)"

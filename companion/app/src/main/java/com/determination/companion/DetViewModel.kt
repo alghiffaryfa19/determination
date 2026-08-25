@@ -9,6 +9,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 
 enum class RootState { CHECKING, GRANTED, DENIED }
 
@@ -271,10 +273,22 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
                 onlineRelease = ReleaseRepository.fetch(updateManifestUrl)
             } catch (e: Exception) {
                 onlineRelease = null
-                onlineError = e.message ?: "update check failed"
+                onlineError = releaseLookupError(e)
             }
             busy = null
         }
+    }
+
+    private fun releaseLookupError(error: Exception): String = when (error) {
+        is UnknownHostException ->
+            "The release host could not be reached. Check your connection, then try again."
+        is SocketTimeoutException ->
+            "The release host took too long to respond. Try again in a moment."
+        is ReleaseHttpException -> when (error.statusCode) {
+            404 -> "No qualified release is published yet. Verification mode is still available."
+            else -> "The release host returned HTTP ${error.statusCode}. Try again later."
+        }
+        else -> error.message ?: "The release check failed. Try again in a moment."
     }
 
     fun selectInstallerDistro(id: String) {

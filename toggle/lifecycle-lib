@@ -79,9 +79,7 @@ lc_lock_acquire() {
     lc_tries=0
     while ! mkdir "$lc_lock" 2>/dev/null; do
         if [ ! -r "$lc_lock/owner" ]; then
-            # The lock owner writes its identity immediately after mkdir.
-            # Give that write one scheduling tick before treating the lock as
-            # abandoned.
+            # Avoid racing the owner record written immediately after mkdir.
             sleep 0.1
         fi
         if ! lc_lock_owner_live; then

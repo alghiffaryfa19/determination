@@ -1,0 +1,25 @@
+--- a/src/lxc/attach.c
++++ b/src/lxc/attach.c
+@@ -1063,19 +1063,13 @@
+ 	}
+ 
+         /* Remove current setting. */
+-	if (!c->set_config_item(c, "lxc.seccomp.profile", "") &&
+-	    !c->set_config_item(c, "lxc.seccomp", ""))
++	if (!c->set_config_item(c, "lxc.seccomp.profile", ""))
+ 		return false;
+ 
+ 	/* Fetch the current profile path over the cmd interface. */
+ 	path = c->get_running_config_item(c, "lxc.seccomp.profile");
+-	if (!path) {
+-		INFO("Failed to retrieve lxc.seccomp.profile");
+-
+-		path = c->get_running_config_item(c, "lxc.seccomp");
+-		if (!path)
+-			return log_info(true, "Failed to retrieve lxc.seccomp");
+-	}
++	if (!path)
++		return log_info(true, "Failed to retrieve lxc.seccomp.profile");
+ 
+ 	/* Copy the value into the new lxc_conf. */
+ 	bret = c->set_config_item(c, "lxc.seccomp.profile", path);

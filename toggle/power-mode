@@ -1,0 +1,73 @@
+#!/system/bin/sh
+# CPU/GPU performance profiles for guacamoleb (SM8150).
+#
+# Probed 2026-08-22: all CPU policies run schedutil; kgsl exposes writable
+# min/max_clock_mhz in MHz (Adreno 640 range 257-585). Thermal limits are
+# never touched - profiles only shape scheduler/frequency ceilings.
+set -u
+
+CPU_POL="/sys/devices/system/cpu/cpufreq/policy*"
+KGSL="/sys/class/kgsl/kgsl-3d0"
+
+gpu_max() { echo "$1" > "$KGSL/max_clock_mhz" 2>/dev/null; }
+for_each_policy() { # <var-name holding file> <value>
+    for p in $CPU_POL; do
+        [ -w "$p/$1" ] && echo "$2" > "$p/$1"
+    done
+}
+
+stock_cpu_max() {
+    for p in $CPU_POL; do
+        m=$(cat "$p/cpuinfo_max_freq" 2>/dev/null) &&
+            echo "$m" > "$p/scaling_max_freq"
+    done
+}
+
+cap_policy() { # <policy-dir> <target-khz> - nearest available freq <= target
+    avail=$(cat "$1/scaling_available_frequencies" 2>/dev/null)
+    best=
+    for f in $avail; do
+        [ "$f" -le "$2" ] || continue
+        [ -z "$best" ] && best=$f
+        [ "$f" -gt "$best" ] && best=$f
+    done
+    [ -n "$best" ] || best=$2
+    echo "$best" > "$1/scaling_max_freq"
+}
+
+case "${1:-status}" in
+sip)
+    # Pocket profile: little cluster stays stock-fast, mid/prime drop to the
+    # highest table step <= 1.8GHz (typing never lags, boosters go dark).
+    for_each_policy scaling_governor schedutil
+    p0max=$(cat /sys/devices/system/cpu/cpufreq/policy0/cpuinfo_max_freq 2>/dev/null)
+    [ -n "$p0max" ] && cap_policy /sys/devices/system/cpu/cpufreq/policy0 "$p0max"
+    for pol in $CPU_POL; do
+        case "$pol" in *policy0) continue ;; esac
+        cap_policy "$pol" 1804800
+    done
+    gpu_max 345
+    echo "power-mode: sip (little stock, big<=1.8GHz, gpu<=345MHz)" ;;
+balanced)
+    # Defaults as shipped by crDroid.
+    for_each_policy scaling_governor schedutil
+    stock_cpu_max
+    gpu_max 585
+    echo "power-mode: balanced (schedutil, stock ceilings)" ;;
+performance)
+    for_each_policy scaling_governor performance
+    stock_cpu_max
+    gpu_max 585
+    echo "power-mode: performance (governors pinned, gpu full range)" ;;
+status)
+    g0=$(cat /sys/devices/system/cpu/cpufreq/policy0/scaling_governor 2>/dev/null)
+    g4=$(cat /sys/devices/system/cpu/cpufreq/policy4/scaling_governor 2>/dev/null)
+    gm=$(cat "$KGSL/max_clock_mhz" 2>/dev/null)
+    # dev_freq is absent on 4.14; gpuclk reports Hz there.
+    gc=$(cat "$KGSL/dev_freq" 2>/dev/null ||
+        awk '{ printf "%d", $1/1000000 }' "$KGSL/gpuclk" 2>/dev/null)
+    echo "cpu-gov(p0)=$g0 cpu-gov(p4)=$g4 gpu-max=${gm}MHz gpu-now=${gc:-?}MHz" ;;
+*)
+    echo "usage: power-mode sip|balanced|performance|status" >&2
+    exit 2 ;;
+esac

@@ -40,6 +40,16 @@ Magisk module + Zygisk - never a ROM, never touches /system.
 - Commit as work lands; author `melissa <theonest262@gmail.com>`.
 - `~/op7-port/` + pmOS = mainline kernel track. Don't mix with Determination.
 
+### Comment discipline
+
+- Comment why only when the code cannot make it obvious. Do not narrate the code.
+- Keep routine comments to one line. Put incident history, dates, evidence, and
+  extended rationale in docs or commit messages.
+- Longer comments are reserved for dangerous invariants, hardware quirks, and
+  constraints whose removal could cause data loss, boot failure, or a device wedge.
+- During reviews, delete stale or redundant comments instead of preserving them
+  as archaeology.
+
 ## Key technical facts
 
 **Guest compositor stack:** phoc 0.47 (droidian `group/102/keypad-slide-lights`)

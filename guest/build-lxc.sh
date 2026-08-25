@@ -41,6 +41,15 @@ cd "$WORK"
 }
 cd "lxc-$LXCVER"
 
+# LXC 4.0.12's fetch_seccomp (attach.c) still references the legacy bare
+# "lxc.seccomp" key, which was dropped from the config jump table. Every
+# lxc-attach therefore emits "Unsupported config key \"lxc.seccomp\"" on
+# stderr (then falls back to a WARN and continues). Drop the legacy fallback.
+# Idempotent: the guard string disappears once the patch is applied.
+if grep -q 'c->set_config_item(c, "lxc.seccomp", "")' src/lxc/attach.c; then
+    patch -p1 < "$REPO/guest/lxc-4.0.12-no-legacy-seccomp.patch"
+fi
+
 [ -f Makefile ] || ./configure --host=aarch64-linux-gnu \
     --prefix=/data/determination/lxc \
     --with-config-path=/data/determination \

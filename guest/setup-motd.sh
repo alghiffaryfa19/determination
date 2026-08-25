@@ -10,6 +10,19 @@ CODENAME=${2:-}
 
 [ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root" >&2; exit 1; }
 
+# The soul greets first. Colors survive ssh since this is written into the
+# static MOTD, not printed per-login.
+ascii=/etc/determination.ascii
+if [ -r "$ascii" ]; then
+    {
+        printf '\033[31m'
+        cat "$ascii"
+        printf '\033[0m\n v%s "%s"\n\n' "$VERSION" "${CODENAME:-~}"
+    } > /etc/motd
+else
+    printf 'Determination v%s "%s"\n\n' "$VERSION" "${CODENAME:-~}" > /etc/motd
+fi
+
 # SSH inherits the local terminal's TERM. Terra uses Kitty, and without its
 # terminfo entry even basic commands such as clear fail with "unknown terminal
 # type". Install the tiny definition package once; subsequent runs are no-ops.

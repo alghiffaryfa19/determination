@@ -4,7 +4,9 @@ import android.content.Context
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.IOException
 import java.net.HttpURLConnection
+import java.net.UnknownHostException
 import java.net.URL
 import java.security.MessageDigest
 
@@ -64,15 +66,21 @@ data class OnlineRelease(
     val artifacts: List<OnlineArtifact>,
 )
 
+class ReleaseHttpException(val statusCode: Int) :
+    IOException("update server returned HTTP $statusCode")
+
 /** HTTPS-only release metadata and hash-verified artifact downloads. */
 object ReleaseRepository {
     private val SUPPORTED_SCHEMAS = setOf(1, 2)
     private const val MAX_MANIFEST_BYTES = 256 * 1024
     private const val MAX_ARTIFACT_BYTES = 4L * 1024 * 1024 * 1024
     private const val MAX_REDIRECTS = 5
+    private const val DNS_ATTEMPTS = 3
 
     fun fetch(manifestUrl: String): OnlineRelease {
-        val bytes = readHttps(manifestUrl, MAX_MANIFEST_BYTES.toLong())
+        val bytes = retryDnsLookup {
+            readHttps(manifestUrl, MAX_MANIFEST_BYTES.toLong())
+        }
         val root = JSONObject(bytes.toString(Charsets.UTF_8))
         require(root.getInt("schema") in SUPPORTED_SCHEMAS) { "unsupported update schema" }
         val artifactsJson = root.getJSONArray("artifacts")
@@ -192,7 +200,12 @@ object ReleaseRepository {
             connection.connectTimeout = 15_000
             connection.readTimeout = 45_000
             connection.setRequestProperty("User-Agent", "Determination/${BuildConfig.VERSION_NAME}")
-            val code = connection.responseCode
+            val code = try {
+                connection.responseCode
+            } catch (e: Exception) {
+                connection.disconnect()
+                throw e
+            }
             if (code in 300..399) {
                 val next = connection.getHeaderField("Location")
                     ?: error("update redirect had no location")
@@ -200,11 +213,27 @@ object ReleaseRepository {
                 require(redirect < MAX_REDIRECTS) { "too many update redirects" }
                 current = URL(URL(current), next).toString()
             } else {
-                require(code in 200..299) { "update server returned HTTP $code" }
+                if (code !in 200..299) {
+                    connection.disconnect()
+                    throw ReleaseHttpException(code)
+                }
                 return connection
             }
         }
         error("too many update redirects")
+    }
+
+    /** Android occasionally reports a transient DNS miss while connectivity settles. */
+    private fun <T> retryDnsLookup(block: () -> T): T {
+        repeat(DNS_ATTEMPTS) { attempt ->
+            try {
+                return block()
+            } catch (e: UnknownHostException) {
+                if (attempt == DNS_ATTEMPTS - 1) throw e
+                Thread.sleep(750L * (attempt + 1))
+            }
+        }
+        error("unreachable")
     }
 
     private fun requireHttps(value: String) {
