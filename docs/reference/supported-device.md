@@ -15,13 +15,9 @@ Last reviewed: 2026-07-30
 | Mapper | QTI mapper and gralloc 4 |
 | Kernel family | downstream 4.14.357 OpenELA-based build |
 
-Internal Phosh desktop mode is proven on this configuration. It is an exclusive
-panel mode and pauses Android framework services. Direct audio and concurrent
-external convergence remain hardware qualification work.
 
 ## Not supported yet
 
 AIDL composer, Mali, different Qualcomm generations, GKI kernels, alternate
-boot layouts, and other ROM/device combinations are porting work. A generated
-profile is not a support claim. Read [universalisation](../universalisation.md)
+boot layouts, and other ROM/device combinations are porting work Read [universalisation](../universalisation.md)
 for the current portability limits.
