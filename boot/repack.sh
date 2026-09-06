@@ -11,7 +11,14 @@ set -eu
 cd "$(dirname "$0")"
 
 STOCK="${1:?usage: repack.sh <stock-boot.img> [kernel]}"
-KERNEL="${2:-../kernel/out/arch/arm64/boot/Image.gz-dtb}"
+KERNEL="${2:-}"
+if [ -z "$KERNEL" ]; then
+    [ -f ../kernel/out/kernel-image.path ] || {
+        echo "Pass the kernel image explicitly, or complete kernel/build.sh first." >&2
+        exit 1
+    }
+    IFS= read -r KERNEL < ../kernel/out/kernel-image.path
+fi
 
 command -v magiskboot >/dev/null || {
     echo "magiskboot not on PATH. Get it: download Magisk apk," >&2
@@ -27,6 +34,13 @@ cp "$KERNEL" "$WORK/kernel-new"
 
 cd "$WORK"
 magiskboot unpack boot.img
+# A GKI boot image must not acquire an appended legacy DTB.
+if [ -s kernel_dtb ]; then
+    case "$KERNEL" in
+        */Image.gz-dtb) ;;
+        *) echo "Original kernel has an appended DTB; use the matching legacy kernel format." >&2; exit 1 ;;
+    esac
+fi
 mv kernel-new kernel
 magiskboot repack boot.img
 cd - >/dev/null
