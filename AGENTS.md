@@ -50,6 +50,17 @@ Magisk module + Zygisk - never a ROM, never touches /system.
 - During reviews, delete stale or redundant comments instead of preserving them
   as archaeology.
 
+## Graphics invariant — explicit user requirement
+
+Dethyprland/Hyprland and Sxmo must use vendor EGL/GLES through **libhybris**,
+Android gralloc allocations with complete native handles and sync fences, and
+libhybris/hwcomposer for internal presentation. Do not substitute Mesa/Zink,
+Turnip, raw KMS, or a nested KWin session to claim delivery. Native graphics
+results below are historical experiments, not the product implementation path.
+Modern Hyprland uses Aquamarine, not the Droidian wlroots ABI; implement and
+validate the needed backend/renderer integration rather than enabling an
+incompatible session manifest. `docs/graphics-architecture.md` governs this.
+
 ## Key technical facts
 
 **Guest compositor stack:** phoc 0.47 (droidian `group/102/keypad-slide-lights`)
