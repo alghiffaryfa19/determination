@@ -29,8 +29,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.determination.companion.CATALOG
-import com.determination.companion.COMPOSITORS
-import com.determination.companion.CompositorStatus
 import com.determination.companion.DetViewModel
 import com.determination.companion.RootState
 
@@ -61,8 +59,7 @@ fun SoftwareScreen(
 
         DistroSection(vm)
 
-        val chooseCompositor = COMPOSITORS.size > 1
-        if (wide && chooseCompositor) {
+        if (wide) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     CompositorSection(vm)
@@ -72,7 +69,7 @@ fun SoftwareScreen(
                 }
             }
         } else {
-            if (chooseCompositor) CompositorSection(vm)
+            CompositorSection(vm)
             CatalogSection(vm)
         }
     }
@@ -125,9 +122,24 @@ private fun DistroSection(vm: DetViewModel) {
 private fun CompositorSection(vm: DetViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         SectionLabel("Session · compositor")
-        COMPOSITORS.forEach { c ->
+        Text(
+            "Selection applies on the next desktop entry. Unavailable ports cannot be selected.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (vm.sessions.isEmpty()) {
+            GlassCard {
+                Text(
+                    "No session manifests on the device. Reinstall the Determination module to add them.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            return
+        }
+        vm.sessions.forEach { c ->
             val selected = vm.compositor == c.id
-            val incompatible = c.status == CompositorStatus.INCOMPATIBLE
+            val selectable = c.qualification in SELECTABLE_QUALIFICATIONS
             GlassCard {
                 Row(
                     Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -135,34 +147,38 @@ private fun CompositorSection(vm: DetViewModel) {
                 ) {
                     RadioButton(
                         selected = selected,
-                        onClick = { if (!incompatible) vm.selectCompositor(c.id) },
-                        enabled = !incompatible && vm.rootState == RootState.GRANTED,
+                        onClick = { vm.selectSession(c.id) },
+                        enabled = selectable && !selected && vm.busy == null &&
+                            vm.rootState == RootState.GRANTED,
                     )
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(c.title, style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold)
                             Spacer(Modifier.width(8.dp))
-                            when (c.status) {
-                                CompositorStatus.ACTIVE -> Icon(
+                            when {
+                                c.qualification == "qualified" -> Icon(
                                     Icons.Rounded.CheckCircle, "verified",
                                     Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                CompositorStatus.EXPERIMENTAL -> Icon(
+                                selectable -> Icon(
                                     Icons.Rounded.Science, "experimental",
                                     Modifier.size(16.dp), tint = MaterialTheme.colorScheme.tertiary)
-                                CompositorStatus.INCOMPATIBLE -> Icon(
-                                    Icons.Rounded.Block, "incompatible",
+                                else -> Icon(
+                                    Icons.Rounded.Block, "unavailable",
                                     Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
                             }
                         }
                         Text(
-                            c.blurb,
+                            c.description.ifBlank { c.reason },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        val pkg = c.aptPkg
-                        if (pkg != null && vm.guestUp && vm.pkgStatus[pkg] != "installed") {
-                            InstallButton(vm, pkg, label = "Install ${c.title}")
+                        if (!selectable) {
+                            Text(
+                                c.reason.ifBlank { "${c.title} is ${c.qualification}" },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
                         }
                     }
                 }
@@ -170,6 +186,8 @@ private fun CompositorSection(vm: DetViewModel) {
         }
     }
 }
+
+private val SELECTABLE_QUALIFICATIONS = setOf("qualified", "proven", "experimental", "diagnostic")
 
 @Composable
 private fun CatalogSection(vm: DetViewModel) {

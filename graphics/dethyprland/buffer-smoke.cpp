@@ -5,10 +5,21 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <dirent.h>
 #include <stdexcept>
 
 static void require(bool ok, const char* why) {
     if (!ok) throw std::runtime_error(why);
+}
+
+static int openFdCount() {
+    DIR* dir = opendir("/proc/self/fd");
+    require(dir != nullptr, "open fd inventory");
+    int count = 0;
+    while (const auto* entry = readdir(dir))
+        if (entry->d_name[0] != '.') ++count;
+    closedir(dir);
+    return count;
 }
 
 int main() {
@@ -44,8 +55,24 @@ int main() {
         auto bindImage = reinterpret_cast<PFNGLEGLIMAGETARGETRENDERBUFFERSTORAGEOESPROC>(
             eglGetProcAddress("glEGLImageTargetRenderbufferStorageOES"));
         require(bindImage, "native image renderbuffer entry point");
-        {
+        bool invalidGeometryRejected = false;
+        try {
+            Dethyprland::HybrisBuffer invalid(display, 0, 64);
+        } catch (const std::runtime_error&) {
+            invalidGeometryRejected = true;
+        }
+        require(invalidGeometryRejected, "invalid geometry was accepted");
+        int steadyFds = -1;
+        for (int round = 0; round < 10; ++round) {
+          {
             Dethyprland::HybrisBuffer buffer(display, 64, 64);
+            bool invalidFenceRejected = false;
+            try {
+                buffer.waitReleaseFence(-2);
+            } catch (const std::runtime_error&) {
+                invalidFenceRejected = true;
+            }
+            require(invalidFenceRejected, "invalid fence was accepted");
             int ints = 0, fds = 0;
             buffer.handleCounts(ints, fds);
             require(fds > 0 && ints >= 0, "complete Android native handle");
@@ -79,8 +106,14 @@ int main() {
             }
             glDeleteFramebuffers(1, &fbo);
             glDeleteRenderbuffers(1, &rbo);
+          }
+          const int fds = openFdCount();
+          std::printf("round=%d open_fds=%d\n", round + 1, fds);
+          // Ignore lazy driver initialization before enforcing steady-state ownership.
+          if (round == 1) steadyFds = fds;
+          if (round > 1) require(fds == steadyFds, "fd count changed after warmup");
         }
-        std::puts("PASS: Dethyprland native-buffer foundation, 120 vendor-render/fence/readback cycles");
+        std::puts("PASS: Dethyprland native-buffer foundation, 1200 vendor-render/fence/readback cycles, stable fds, invalid geometry/fence rejected");
         std::puts("NOT QUALIFIED: Aquamarine output, Hyprland renderer integration, HWC and input remain");
         result = 0;
     } catch (const std::exception& error) {

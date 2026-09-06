@@ -1,0 +1,12 @@
+id=cage
+title=Cage
+description=Single-application appliance session on the same wlroots hwcomposer backend as Phosh.
+backend=libhybris-hwcomposer
+renderer=vendor-hybris
+allocator=android-gralloc
+presentation=internal-direct
+input=evdev-grab
+compositor=/usr/bin/cage
+requires=display.internal.hwc,renderer.vendor-hybris,input.touch.internal
+qualification=experimental
+reason=same backend family as phosh but no on-device input or teardown qualification yet

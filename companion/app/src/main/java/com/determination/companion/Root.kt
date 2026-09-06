@@ -32,6 +32,19 @@ object Root {
         val name: String,
     )
 
+    /** One session manifest from $DET/etc/sessions, already honesty-filtered. */
+    data class SessionChoice(
+        val id: String,
+        val title: String,
+        val description: String,
+        val backend: String,
+        val renderer: String,
+        val qualification: String,
+        val reason: String,
+        val limitations: List<String>,
+    )
+
+
     private const val MARK = "__DET_DONE__"
     private var shell: Process? = null
     private var stdin: BufferedWriter? = null
@@ -137,6 +150,9 @@ object Root {
             up=${'$'}(cut -d. -f1 /proc/uptime 2>/dev/null || echo 0)
             echo "uptime=${'$'}((up / 3600))h ${'$'}(( (up % 3600) / 60 ))m"
             echo "datafree=${'$'}(df -h /data 2>/dev/null | awk 'NR==2{print ${'$'}4}')"
+            echo "tstate=${'$'}(sed -n 's/^state=//p' $DET/run/transition.state 2>/dev/null | tail -n 1)"
+            echo "tstep=${'$'}(sed -n 's/^step=//p' $DET/run/transition.state 2>/dev/null | tail -n 1)"
+            echo "session=${'$'}(cat $DET/etc/compositor 2>/dev/null || echo phosh)"
         """.trimIndent()
         val r = run(script, 12)
         return parseKv(r.out)
@@ -183,6 +199,34 @@ object Root {
                 "chown 1000:1000 ${shellQuote(destination)}; " +
                 "chmod 0644 ${shellQuote(destination)}",
             30,
+        )
+    }
+
+    /**
+     * Dock auto-summon policy (§8.3): the phone enters desktop mode on its
+     * own panel when a remembered trigger has been stable for a grace period,
+     * and optionally returns to phone when it disappears.
+     */
+    fun dockPolicy(): Map<String, String> =
+        parseKv(run("cat $DET/etc/dock.conf 2>/dev/null", 8).out)
+
+    fun setDockPolicy(trigger: String, autoExit: Boolean): Result {
+        if (trigger !in setOf("off", "charger", "display"))
+            return Result(false, "", "invalid dock trigger")
+        val body = "trigger=$trigger\ngrace_sec=10\nexit_grace_sec=20\n" +
+            "min_battery=15\nauto_exit=${if (autoExit) "1" else "0"}\n"
+        val write = "mkdir -p $DET/etc; printf %s ${shellQuote(body)} > " +
+            "$DET/etc/dock.conf.new; chmod 0644 $DET/etc/dock.conf.new; " +
+            "mv -f $DET/etc/dock.conf.new $DET/etc/dock.conf"
+        val stop = "kill \$(cat $DET/run/dock-watch.pid 2>/dev/null) 2>/dev/null; " +
+            "rm -f $DET/run/dock-watch.pid $DET/run/dock-watch.fired"
+        // Start it right away so the user does not need a reboot.
+        val start = "if ! kill -0 \$(cat $DET/run/dock-watch.pid 2>/dev/null) " +
+            "2>/dev/null; then setsid $DET/bin/dock-watch >/dev/null 2>&1 & " +
+            "echo \$! > $DET/run/dock-watch.pid; fi"
+        return run(
+            if (trigger == "off") "$write; $stop" else "$write; $start",
+            15,
         )
     }
 
@@ -561,6 +605,53 @@ object Root {
         ).out
     )
 
+    /**
+     * Session manifests as deployed on the device. The picker renders these
+     * verbatim: qualification labels and reasons come from the manifest, not
+     * from hardcoded app lists, so an unqualified session can never look
+     * selectable just because its package exists.
+     */
+    fun sessions(): List<SessionChoice> {
+        val r = run(
+            "for f in $DET/etc/sessions/*.session; do " +
+                "[ -f \"\$f\" ] || continue; " +
+                "echo \"===\$(basename \"\$f\" .session)\"; cat \"\$f\"; done",
+            10,
+        )
+        val sessions = mutableListOf<SessionChoice>()
+        var id = ""
+        val fields = linkedMapOf<String, String>()
+        fun flush() {
+            if (id.isBlank()) return
+            sessions += SessionChoice(
+                id = id,
+                title = fields["title"] ?: id,
+                description = fields["description"] ?: "",
+                backend = fields["backend"] ?: "",
+                renderer = fields["renderer"] ?: "",
+                qualification = fields["qualification"] ?: "planned",
+                reason = fields["reason"] ?: "",
+                limitations = (fields["limitations"] ?: "")
+                    .split(',').map { it.trim() }.filter { it.isNotEmpty() },
+            )
+        }
+        for (line in r.out.lineSequence()) {
+            if (line.startsWith("===")) {
+                flush()
+                id = line.removePrefix("===").trim()
+                fields.clear()
+                continue
+            }
+            val i = line.indexOf('=')
+            if (i > 0) fields[line.substring(0, i)] = line.substring(i + 1).trim()
+        }
+        flush()
+        return sessions.sortedWith(
+            compareByDescending<SessionChoice> { it.qualification == "qualified" }
+                .thenBy { it.id },
+        )
+    }
+
     /** Logical package status for many packages: one guest round-trip. */
     fun dpkgStatus(pkgs: List<String>): Map<String, String> {
         if (pkgs.isEmpty()) return emptyMap()
@@ -594,16 +685,17 @@ object Root {
     }
 
     /**
-     * Session/compositor preference. Only phoc/phosh is wired into desktop-on
-     * today; the choice is persisted at $DET/etc/compositor for the session
-     * launcher to honor as alternatives land.
+     * Session/compositor preference, honored by toggle/session-select at the
+     * next desktop-on. Experimental sessions need explicit selection here;
+     * planned/incompatible ones refuse host-side regardless.
      */
     fun getCompositor(): String =
         run("cat $DET/etc/compositor 2>/dev/null", 8).out.trim().ifBlank { "phosh" }
 
     fun setCompositor(id: String): Result {
-        val safe = id.filter { it.isLetterOrDigit() || it == '-' }
-        return run("mkdir -p $DET/etc && echo '$safe' > $DET/etc/compositor", 8)
+        if (!id.matches(Regex("[a-z0-9-]+")))
+            return Result(false, "", "Invalid session id")
+        return run("$BIN/session-set '$id'", 8)
     }
 
     fun externalPresenterSmoke(): Result = run("$BIN/external-presenter smoke", 45)

@@ -44,36 +44,86 @@ if [ "$(getprop sys.boot_completed)" = "1" ]; then
     ' </dev/null >/dev/null 2>&1 &
 fi
 
-# Terminate clients before phoc so wlroots releases composer cleanly.
+# Teardown targets come from desktop-on's session.active record; defaults = phosh.
+active_field() {
+    sed -n "s/^$1=//p" "$DET/run/session.active" 2>/dev/null | head -n 1
+}
+active_id=$(active_field id)
+active_compositor=$(active_field compositor)
+active_shell=$(active_field shell)
+active_backend=$(active_field backend)
+if [ -z "$active_compositor" ]; then
+    active_record=$("$DET/bin/session-select" 2>/dev/null) || active_record=
+    if [ -n "$active_record" ]; then
+        active_id=$(printf '%s\n' "$active_record" | sed -n 's/^id=//p' | head -n 1)
+        active_compositor=$(printf '%s\n' "$active_record" | sed -n 's/^compositor=//p' | head -n 1)
+        active_shell=$(printf '%s\n' "$active_record" | sed -n 's/^shell=//p' | head -n 1)
+        active_backend=$(printf '%s\n' "$active_record" | sed -n 's/^backend=//p' | head -n 1)
+    fi
+fi
+: "${active_id:=phosh}"
+: "${active_compositor:=/usr/local/bin/phoc}"
+comp_name=${active_compositor##*/}
+
+# Terminate clients before the compositor so wlroots releases composer cleanly.
 lc_state_write EXITING "$generation" compositor running
-"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c \
-    'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; \
-     [ "$(det-platform init 2>/dev/null)" != systemd ] || \
-         systemctl stop det-phosh.service 2>/dev/null || true' 2>/dev/null
-"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c \
-    'pkill -TERM phosh; pkill -TERM squeekboard; pkill -TERM foot; true' 2>/dev/null
-# Guest processes are visible in the host PID namespace.
+if [ "$active_backend" = gralloc-minigbm ]; then
+    # Stop the unit first or systemd respawns what we just killed.
+    "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c \
+        'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; \
+         systemctl stop det-plasma.service 2>/dev/null; true' 2>/dev/null
+fi
+if [ "${active_shell##*/}" = phosh ]; then
+    "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c \
+        'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; \
+         [ "$(det-platform init 2>/dev/null)" != systemd ] || \
+             systemctl stop det-phosh.service 2>/dev/null || true' 2>/dev/null
+fi
+"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
+    export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    for client in "$1" squeekboard foot ${2:+plasmashell}; do
+        [ -n "$client" ] && pkill -TERM "$client"
+    done
+    true' client-kill "${active_shell##*/}" "$active_backend" 2>/dev/null
 i=0
-while pgrep -x phosh >/dev/null 2>&1 || pgrep -x foot >/dev/null 2>&1; do
+while pgrep -x "${active_shell##*/}" >/dev/null 2>&1 || pgrep -x foot >/dev/null 2>&1 ||
+      { [ "$active_backend" = gralloc-minigbm ] && pgrep -x plasmashell >/dev/null 2>&1; }; do
     i=$((i+1)); [ $i -gt 15 ] && { echo "WARN: clients still up after 1.5s --- proceeding"; break; }
     sleep 0.1
 done
-"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /usr/bin/pkill -TERM phoc 2>/dev/null
+"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /usr/bin/pkill -TERM "$comp_name" 2>/dev/null
 lc_pid_signal compositor TERM "$signal_generation"
 lc_pid_signal client TERM "$signal_generation"
-# phoc must be gone before SF binds the single-client HAL.
+# The compositor must be gone before SF binds the single-client HAL.
 i=0
-while pgrep -x phoc >/dev/null 2>&1; do
+while pgrep -x "$comp_name" >/dev/null 2>&1; do
     i=$((i+1)); [ $i -gt 30 ] && {
-        echo "RECOVERY: phoc still owns resources after TERM; refusing SF start"
-        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /usr/bin/pkill -KILL phoc 2>/dev/null
+        echo "RECOVERY: $comp_name still owns resources after TERM; refusing SF start"
+        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /usr/bin/pkill -KILL "$comp_name" 2>/dev/null
         sleep 0.5
-        pgrep -x phoc >/dev/null 2>&1 && { lc_state_write RECOVERY "$generation" compositor ambiguous; exit 1; }
+        pgrep -x "$comp_name" >/dev/null 2>&1 && { lc_state_write RECOVERY "$generation" compositor ambiguous; exit 1; }
         break
     }
     sleep 0.1
 done
+rm -f "$DET/run/session.active"
 sleep 0.5
+
+# Raw-KMS sessions stopped the composer HAL and wedge the color HALs; restore
+# both BEFORE system_server respawns (sequence from native-restore).
+if [ "$active_backend" = gralloc-minigbm ]; then
+    echo detect > /sys/class/drm/card0-Virtual-1/status 2>/dev/null
+    if [ "$(getprop init.svc.vendor.hwcomposer-2-4)" != "running" ]; then
+        start vendor.hwcomposer-2-4
+        sleep 2
+    fi
+    stop vendor.livedisplay-hal 2>/dev/null
+    stop display-color-hal-1-0 2>/dev/null
+    sleep 1
+    start display-color-hal-1-0 2>/dev/null
+    sleep 1
+    start vendor.livedisplay-hal 2>/dev/null
+fi
 
 # Restore journalled Android audio ownership without blocking display recovery.
 lc_state_write EXITING "$generation" audio running

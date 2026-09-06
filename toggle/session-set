@@ -1,0 +1,22 @@
+#!/system/bin/sh
+set -eu
+ROOT=${DET_SESSION_SELECT_ROOT:-${DET:-/data/determination}}
+id=${1:-}
+fail() { echo "session-set: $*" >&2; exit 2; }
+[ "$#" -eq 1 ] || fail 'usage: session-set <id>'
+case "$id" in ''|*[!a-z0-9-]*) fail 'invalid session id' ;; esac
+manifest="$ROOT/etc/sessions/$id.session"
+[ -r "$manifest" ] || fail "missing manifest: $id"
+field() { sed -n "s/^$1=//p" "$manifest"; }
+[ "$(field id)" = "$id" ] || fail 'manifest id mismatch'
+case "$(field qualification)" in
+    qualified|proven|experimental|diagnostic) ;;
+    *) fail "$(field reason)" ;;
+esac
+case "$(field compositor)" in /*) ;; *) fail 'invalid compositor path' ;; esac
+# This is a preference only: never mutate the active session or display owner.
+tmp="$ROOT/etc/.compositor.$$"
+trap 'rm -f "$tmp"' EXIT HUP INT TERM
+(umask 022; set -C; printf '%s\n' "$id" > "$tmp")
+mv -f "$tmp" "$ROOT/etc/compositor"
+echo "selected=$id"

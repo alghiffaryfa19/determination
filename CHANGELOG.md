@@ -22,6 +22,14 @@ different and are recorded in the release manifest.
   artifact, replacing the unrelated bring-up-era component versions.
 - Internal phone-to-desktop handoff with SurfaceFlinger release, exclusive
   input transfer, and restoration to Android.
+- Manifest-driven session selection for internal desktop mode: the companion
+  picker (or `$DET/etc/compositor`) chooses among deployed
+  `$DET/etc/sessions/*.session` manifests, `toggle/session-select` enforces
+  qualification honesty with a phosh fallback, `det-session-launch` carries
+  the shared compositor/client environment contract, and desktop-on/off grow
+  raw-KMS branches (composer HAL stop/restore, logind PAM session, DRM udev
+  DB, touchpanel resume) so Plasma Mobile/KWin launches through the same
+  toggle as phosh.
 - Non-root Debian desktop session with Phosh and companion/QS controls.
 - Stable desktop-mode networking through the `system_server` freezer path.
 - Native Turnip/KGSL + minigbm graphics path, raw KMS scanout, and Plasma

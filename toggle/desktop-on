@@ -6,6 +6,8 @@ DET=${DET:-/data/determination}
 LOG=$DET/log/toggle.log
 . "$DET/bin/device-config"
 . "$DET/bin/lifecycle-lib"
+# guacamoleb recon: composer service name is stable across this Android line.
+HWC_SVC=vendor.hwcomposer-2-4
 [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 262144 ] &&
     tail -c 131072 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 exec >>"$LOG" 2>&1
@@ -35,11 +37,33 @@ rollback() {
         lc_pid_signal suppressor TERM "$generation"
         lc_pid_signal ss-freezer TERM "$generation"
         lc_pid_signal evgrab TERM "$generation"
+        # Raw-KMS entry stops the composer HAL; put it back before SF.
+        if [ "${sess_backend:-}" = gralloc-minigbm ]; then
+            echo detect > /sys/class/drm/card0-Virtual-1/status 2>/dev/null
+            [ "$(getprop init.svc.$HWC_SVC)" = running ] || start $HWC_SVC 2>/dev/null || true
+            sleep 1
+        fi
         if [ -x "$DET/bin/det-audio-route" ] &&
            [ -f "$DET/run/audio-route.state" ]; then
             "$DET/bin/det-audio-route" restore || true
         fi
         start surfaceflinger 2>/dev/null || true
+        # Raw-KMS entry can leave bootanim wedged on its final frame; keep
+        # signalling exit until SF draws over it (same dance as desktop-off).
+        if [ "$(getprop sys.boot_completed)" = "1" ]; then
+            setsid sh -c '
+                end=$(( $(date +%s) + 240 ))
+                while [ "$(date +%s)" -lt "$end" ]; do
+                    if [ "$(getprop init.svc.bootanim)" = "running" ]; then
+                        setprop service.bootanim.exit 1
+                        setprop service.bootanim.progress 1
+                        sleep 3
+                        [ "$(getprop init.svc.bootanim)" = "running" ] && stop bootanim
+                    fi
+                    sleep 1
+                done
+            ' </dev/null >/dev/null 2>&1 &
+        fi
         lc_state_write RECOVERY "$generation" rollback failed || true
     fi
     lc_lock_release
@@ -134,6 +158,36 @@ if [ -x "$DET/bin/det-audio-route" ] &&
         echo "WARN: direct audio claim failed; desktop continues muted"
 fi
 
+# Resolve the session preference; refusals fall back to qualified phosh.
+SESSION_RECORD=$("$DET/bin/session-select") || SESSION_RECORD=
+[ -n "$SESSION_RECORD" ] || { echo "session-select produced no record"; exit 1; }
+record_field() {
+    printf '%s\n' "$SESSION_RECORD" | sed -n "s/^$1=//p" | head -n 1
+}
+sess_id=$(record_field id)
+sess_compositor=$(record_field compositor)
+sess_args=$(record_field compositor_args)
+sess_shell=$(record_field shell)
+sess_backend=$(record_field backend)
+case "$sess_compositor" in /*) ;; *) echo "session compositor path invalid"; exit 1 ;; esac
+umask 077
+printf '%s\n' "$SESSION_RECORD" > "$DET/run/session.active.new.$$" &&
+    mv -f "$DET/run/session.active.new.$$" "$DET/run/session.active"
+
+# Raw-KMS sessions (KWin) own DRM directly and need the composer HAL gone.
+if [ "$sess_backend" = gralloc-minigbm ]; then
+    stop $HWC_SVC 2>/dev/null || true
+    i=0
+    while [ "$(getprop init.svc.$HWC_SVC)" != "stopped" ]; do
+        i=$((i+1)); [ $i -gt 10 ] && { echo "composer HAL did not stop"; exit 1; }
+        sleep 0.5
+    done
+    # sde_connector applies props.brightness at first frame; seed pre-commit.
+    echo 500 > /sys/class/backlight/panel0-backlight/brightness 2>/dev/null || true
+    # KWin treats the SDE writeback connector as a real second output.
+    echo off > /sys/class/drm/card0-Virtual-1/status 2>/dev/null
+fi
+
 # Do not start phoc with -E: waitid(P_PIDFD) is broken on this 4.14 kernel.
 # Transfer input only after proving system_server is frozen; wayland-0 is too late.
 ss_pid=$(pidof system_server 2>/dev/null)
@@ -141,8 +195,12 @@ ss_state=
 [ -z "$ss_pid" ] || ss_state=$(awk '/^State:/{print $2; exit}' "/proc/$ss_pid/status" 2>/dev/null)
 case "$ss_state" in
     T|t)
-        lc_pid_signal evgrab TERM "$generation"
-        rm -f "$DET/run/evgrab.legacy.pid"
+        # Raw-KMS sessions open evdev while the grab is held and only receive
+        # events once it drops --- release after their socket comes up instead.
+        if [ "$sess_backend" != gralloc-minigbm ]; then
+            lc_pid_signal evgrab TERM "$generation"
+            rm -f "$DET/run/evgrab.legacy.pid"
+        fi
         echo "input boundary handed to guest --- system_server frozen $(date)"
         ;;
     *)
@@ -150,15 +208,86 @@ case "$ss_state" in
         exit 1
         ;;
 esac
+
 CLOG="$DET/log/compositor.log"
 : > "$CLOG"
 lc_state_write ENTERING "$generation" compositor running
+echo "selected session: $sess_id (compositor=$sess_compositor shell=${sess_shell:-none} backend=$sess_backend)"
+if [ "$sess_backend" = gralloc-minigbm ]; then
+# KWin path: systemd unit with a PAM/logind session (its DRM backend refuses
+# devices without one); det-plasma-session owns Mesa env and client spawn.
+(
+    # Everything this loop does lands in CLOG, including its own early death.
+    exec >> "$CLOG" 2>&1
+    echo "=== compositor supervisor pid=$$ start $(date)"
+    fails=0
+    while [ -f "$DET/run/desktop-mode" ]; do
+        echo "--- launch $sess_id (prior consecutive fast-fails: $fails) $(date)"
+        t0=$(date +%s)
+        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
+            export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+            trap "echo env-prep: TERM-trap >> /tmp/envprep.log" TERM HUP INT
+            tries=0
+            until [ -s /run/det-plasma.env ]; do
+                tries=$((tries+1))
+                [ "$tries" -le 3 ] || { echo "env-prep: giving up"; break; }
+                echo "env-prep: attempt $tries"
+                [ -x /usr/local/sbin/det-input-udevdb ] && det-input-udevdb 2>/dev/null
+                # KWin needs a udev DB entry for the DRM card or TakeDevice ENODEV.
+                mkdir -p /run/udev/data
+                for c in /sys/class/drm/card[0-9]; do
+                    [ -e "$c/dev" ] || continue
+                    printf "E:ID_SEAT=seat0\nG:seat\nG:master-of-seat\nQ:seat\nQ:master-of-seat\nI:1\n" \
+                        > "/run/udev/data/c$(cat "$c/dev")"
+                done
+                systemctl start systemd-logind 2>/dev/null || true
+                # Nightlight plugin segfaults under the Aug-9 patched libkwin
+                # (ABI skew with system libKF6ConfigCore); keep it off.
+                install -d -o melissa -g melissa -m 700 /home/melissa/.config
+                grep -q nightlightEnabled /home/melissa/.config/kwinrc 2>/dev/null ||
+                    printf "[Plugins]\nnightlightEnabled=false\n" \
+                        > /home/melissa/.config/kwinrc
+                chown melissa:melissa /home/melissa/.config/kwinrc 2>/dev/null || true
+                case "$(basename "$1")" in
+                    plasmashell|det-plasma-client) client=plasmashell ;;
+                    *)                             client=foot ;;
+                esac
+                printf "DET_GRAPHICS_RENDERER=mesa\nDET_PLASMA_CLIENT=%s\n" "$client" \
+                    > /run/det-plasma.env
+                chmod 0644 /run/det-plasma.env
+                sleep 1
+            done
+            echo "env-prep: done client=$client try=$tries"' \
+            plasma-env "$sess_shell" >> "$CLOG" 2>&1
+        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
+            export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+            systemctl restart det-plasma.service || exit 10
+            while systemctl is-active --quiet det-plasma.service; do sleep 1; done
+            journalctl -u det-plasma.service -n 100 --no-pager 2>/dev/null || true
+        ' >> "$CLOG" 2>&1
+        rc=$?
+        dur=$(( $(date +%s) - t0 ))
+        [ -f "$DET/run/desktop-mode" ] || { echo "$sess_id exited rc=$rc after ${dur}s --- desktop mode off, stopping $(date)" >> "$CLOG"; break; }
+        if [ "$dur" -lt 5 ]; then
+            fails=$((fails+1))
+            back=$fails; [ "$back" -gt 10 ] && back=10
+            echo "FAST-FAIL: $sess_id died in ${dur}s rc=$rc (consecutive=$fails); backing off ${back}s $(date)" >> "$CLOG"
+            sleep "$back"
+        else
+            echo "$sess_id exited rc=$rc after ${dur}s (ran long --- not a fast-fail); relaunching $(date)" >> "$CLOG"
+            fails=0
+            sleep 1
+        fi
+    done
+) &
+lc_pid_write compositor "$!" "$generation" || exit 1
+else
 (
     fails=0
     while [ -f "$DET/run/desktop-mode" ]; do
-        echo "--- launch phoc (prior consecutive fast-fails: $fails) $(date)" >> "$CLOG"
+        echo "--- launch $sess_id (prior consecutive fast-fails: $fails) $(date)" >> "$CLOG"
         t0=$(date +%s)
-        # Prepare root-owned input state before launching unprivileged phoc.
+        # Prepare root-owned input state before launching unprivileged compositor.
         "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
             install -d -o melissa -g melissa -m 700 /run/user/1000
@@ -168,82 +297,95 @@ lc_state_write ENTERING "$generation" compositor running
                 det-input-udevdb 2>/dev/null && det-platform service-start seatd 2>/dev/null
             fi' >> "$CLOG" 2>&1
         # det-platform preserves melissa's android_input supplementary group.
-        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- \
-            /usr/local/bin/det-platform run-user melissa /bin/sh -c '
+        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            export HOME=/home/melissa USER=melissa LOGNAME=melissa
-            export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/aarch64-linux-gnu
-            export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
-            export EGL_PLATFORM=hwcomposer HYBRIS_EGLPLATFORM=hwcomposer ANDROID_ROOT=/system TMPDIR=/tmp
-            export XDG_RUNTIME_DIR=/run/user/1000 LANG=C.UTF-8
-            if det-platform service-active seatd; then
-                WLR_BACKENDS=hwcomposer,libinput
-            else
-                WLR_BACKENDS=hwcomposer
-            fi
-            export WLR_BACKENDS LIBSEAT_BACKEND=seatd
-            [ -r /etc/determination-device.conf ] && . /etc/determination-device.conf
-            [ -z "${DET_PANEL_REFRESH_MHZ:-}" ] ||
-                export WLR_HWC_REFRESH_MHZ="$DET_PANEL_REFRESH_MHZ"
-            [ -f /usr/local/lib/det-pidfd-shim.so ] &&
-                export LD_PRELOAD=/usr/local/lib/det-pidfd-shim.so
-            rm -f "$XDG_RUNTIME_DIR"/wayland-0 "$XDG_RUNTIME_DIR"/wayland-0.lock
-            exec stdbuf -oL -eL /usr/local/bin/phoc -C /etc/phoc.ini
-        ' >> "$CLOG" 2>&1
+            exec det-platform run-user melissa \
+                /usr/local/bin/det-session-launch compositor "$1" ${2:-}
+        ' compositor-shim "$sess_compositor" "$sess_args" >> "$CLOG" 2>&1
         rc=$?
         dur=$(( $(date +%s) - t0 ))
-        [ -f "$DET/run/desktop-mode" ] || { echo "phoc exited rc=$rc after ${dur}s --- desktop mode off, stopping $(date)" >> "$CLOG"; break; }
+        [ -f "$DET/run/desktop-mode" ] || { echo "$sess_id exited rc=$rc after ${dur}s --- desktop mode off, stopping $(date)" >> "$CLOG"; break; }
         if [ "$dur" -lt 5 ]; then
             fails=$((fails+1))
             back=$fails; [ "$back" -gt 10 ] && back=10
-            echo "FAST-FAIL: phoc died in ${dur}s rc=$rc (consecutive=$fails); backing off ${back}s $(date)" >> "$CLOG"
+            echo "FAST-FAIL: $sess_id died in ${dur}s rc=$rc (consecutive=$fails); backing off ${back}s $(date)" >> "$CLOG"
             sleep "$back"
         else
-            echo "phoc exited rc=$rc after ${dur}s (ran long --- not a fast-fail); relaunching $(date)" >> "$CLOG"
+            echo "$sess_id exited rc=$rc after ${dur}s (ran long --- not a fast-fail); relaunching $(date)" >> "$CLOG"
             fails=0
             sleep 1
         fi
     done
 ) &
+fi
 lc_pid_write compositor "$!" "$generation" || exit 1
 
 # The pidfd shim is required for Phosh child watches on this kernel.
+if [ "$sess_backend" != gralloc-minigbm ]; then
 (
-    while [ -f "$DET/run/desktop-mode" ]; do
-        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
-            export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            # OpenRC stays on the direct launcher until elogind is qualified.
-            if [ "$(det-platform init)" = systemd ] &&
-                    [ -f /etc/systemd/system/det-phosh.service ]; then
-                systemctl stop det-phosh.service 2>/dev/null || true
-                det-platform service-start det-phosh || exit 10
-                while det-platform service-active det-phosh; do sleep 1; done
-                journalctl -u det-phosh.service -n 100 --no-pager 2>/dev/null || true
-                exit 11
-            fi
-            exec det-platform run-user melissa /usr/local/bin/det-phosh-session
-        ' >> "$CLOG" 2>&1
-        [ -f "$DET/run/desktop-mode" ] || break
-        sleep 2
-    done
+    case "${sess_shell##*/}" in
+    phosh)
+        # Qualified path: dedicated launcher, systemd user unit when present.
+        while [ -f "$DET/run/desktop-mode" ]; do
+            "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
+                export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+                # OpenRC stays on the direct launcher until elogind is qualified.
+                if [ "$(det-platform init)" = systemd ] &&
+                        [ -f /etc/systemd/system/det-phosh.service ]; then
+                    systemctl stop det-phosh.service 2>/dev/null || true
+                    det-platform service-start det-phosh || exit 10
+                    while det-platform service-active det-phosh; do sleep 1; done
+                    journalctl -u det-phosh.service -n 100 --no-pager 2>/dev/null || true
+                    exit 11
+                fi
+                exec det-platform run-user melissa /usr/local/bin/det-phosh-session
+            ' >> "$CLOG" 2>&1
+            [ -f "$DET/run/desktop-mode" ] || break
+            sleep 2
+        done
+        ;;
+    *)
+        # Generic shells: plain Wayland client; empty shell -> foot fallback.
+        while [ -f "$DET/run/desktop-mode" ]; do
+            "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
+                export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+                exec det-platform run-user melissa \
+                    /usr/local/bin/det-session-launch client "$1"
+            ' client-shim "$sess_shell" >> "$CLOG" 2>&1
+            [ -f "$DET/run/desktop-mode" ] || break
+            sleep 2
+        done
+        ;;
+    esac
 ) &
 lc_pid_write client "$!" "$generation" || exit 1
+fi
 
-# Do not commit DESKTOP merely because the launcher loops exist. Phoc can stay
-# alive while wedged before wl_display_add_socket() (for example after a rapid
-# HWC re-entry), leaving SF stopped and Phosh timing out forever on a black
-# panel. Require the actual Wayland socket; rollback restores Android if the
-# compositor cannot become application-ready within 30 seconds.
+# DESKTOP commits only on a real Wayland socket, not just live launcher loops.
+case "$sess_backend" in
+gralloc-minigbm) GUEST_SOCKET=/run/user/1000/wayland-0 ;;
+*)               GUEST_SOCKET=/run/user/1000/wayland-0 ;;
+esac
 i=0
 until "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- \
-        /usr/bin/test -S /run/user/1000/wayland-0 2>/dev/null; do
+        /usr/bin/test -S "$GUEST_SOCKET" 2>/dev/null; do
     i=$((i + 1))
     [ "$i" -lt 150 ] || {
-        echo "FATAL: phoc did not publish wayland-0; rolling back to phone mode"
+        echo "FATAL: $sess_id did not publish $GUEST_SOCKET; rolling back to phone mode"
         exit 1
     }
     sleep 0.2
 done
+
+# Raw-KMS compositors opened evdev under our grab; only now do events flow.
+if [ "$sess_backend" = gralloc-minigbm ]; then
+    lc_pid_signal evgrab TERM "$generation"
+    rm -f "$DET/run/evgrab.legacy.pid"
+    sleep 3
+    # SF stop suspends the oplus touchpanel into gesture mode; kwin's raw-KMS
+    # unblank cannot resume it (oplus atomic notifier compiled out). Manual fire.
+    echo 1 > /sys/kernel/oplus_display/notify_panel_blank 2>/dev/null || true
+fi
 lc_state_write DESKTOP "$generation" session committed
 trap - EXIT HUP INT TERM
 lc_lock_release
@@ -251,4 +393,4 @@ if [ -x "$DET/bin/external-input" ]; then
     "$DET/bin/external-input" start >/dev/null 2>&1 ||
         echo "WARN: USB/Bluetooth peripheral bridge did not start"
 fi
-echo "desktop mode up (phoc + phosh session; log/compositor.log)"
+echo "desktop mode up ($sess_id session; log/compositor.log)"

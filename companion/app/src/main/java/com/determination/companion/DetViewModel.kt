@@ -22,25 +22,6 @@ data class CatalogApp(
     val category: String,
 )
 
-data class CompositorChoice(
-    val id: String,
-    val title: String,
-    val blurb: String,
-    val status: CompositorStatus,
-    val aptPkg: String? = null,
-)
-
-enum class CompositorStatus { ACTIVE, EXPERIMENTAL, INCOMPATIBLE }
-
-val COMPOSITORS = listOf(
-    CompositorChoice(
-        "phosh", "Phosh · phoc",
-        "The verified stack: phoc 0.47 on the droidian wlroots hwcomposer backend, " +
-            "phosh mobile shell, squeekboard OSK. This is what desktop mode runs.",
-        CompositorStatus.ACTIVE,
-    ),
-)
-
 val CATALOG = listOf(
     CatalogApp("firefox-esr", "Firefox ESR", "Full desktop browser", "Browsers"),
     CatalogApp("chromium", "Chromium", "Blink engine, wayland-native", "Browsers"),
@@ -128,8 +109,23 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
     var pkgStatus by mutableStateOf<Map<String, String>>(emptyMap()); private set
     var guestUp by mutableStateOf(false); private set
     var compositor by mutableStateOf("phosh"); private set
+    var sessions by mutableStateOf<List<Root.SessionChoice>>(emptyList()); private set
     var installingPkg by mutableStateOf<String?>(null); private set
     var guestDistros by mutableStateOf<List<Root.GuestDistro>>(emptyList()); private set
+
+    // Dock auto-summon (§8.3): enter desktop when the phone docks.
+    var dock by mutableStateOf<Map<String, String>>(emptyMap()); private set
+
+    fun setDockPolicy(trigger: String, autoExit: Boolean) {
+        if (busy != null) return
+        busy = "dock"
+        viewModelScope.launch(Dispatchers.IO) {
+            val r = Root.setDockPolicy(trigger, autoExit)
+            if (!r.ok) message = r.err.ifBlank { r.out }.ifBlank { "Could not save dock policy" }
+            dock = Root.dockPolicy()
+            busy = null
+        }
+    }
 
     var externalDisplay by mutableStateOf(ExternalDisplayState.read(app)); private set
     var externalRenderer by mutableStateOf("auto"); private set
@@ -497,10 +493,11 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val info = Root.sessionInfo()
             guestDistros = Root.guestDistros()
+            sessions = Root.sessions()
             compositor = (info["compositor"] ?: "").ifBlank { "phosh" }
             guestUp = info["guestup"] == "yes"
             pkgStatus =
-                if (guestUp) Root.dpkgStatus(CATALOG.map { it.pkg } + COMPOSITORS.mapNotNull { it.aptPkg })
+                if (guestUp) Root.dpkgStatus(CATALOG.map { it.pkg })
                 else emptyMap()
             busy = null
         }
@@ -552,7 +549,7 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val r = Root.aptInstall(pkg)
             message = if (r.ok) "$pkg installed" else "install failed: ${r.out.ifBlank { r.err }}"
-            pkgStatus = Root.dpkgStatus(CATALOG.map { it.pkg } + COMPOSITORS.mapNotNull { it.aptPkg })
+            pkgStatus = Root.dpkgStatus(CATALOG.map { it.pkg })
             installingPkg = null
         }
     }
@@ -562,16 +559,38 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val r = Root.aptRemove(pkg)
             message = if (r.ok) "$pkg removed" else "remove failed: ${r.out.ifBlank { r.err }}"
-            pkgStatus = Root.dpkgStatus(CATALOG.map { it.pkg } + COMPOSITORS.mapNotNull { it.aptPkg })
+            pkgStatus = Root.dpkgStatus(CATALOG.map { it.pkg })
             installingPkg = null
         }
     }
 
-    fun selectCompositor(id: String) {
+    fun selectSession(id: String) {
+        if (busy != null || rootState != RootState.GRANTED) return
+        val session = sessions.firstOrNull { it.id == id } ?: return
+        when (session.qualification) {
+            "qualified", "proven", "experimental", "diagnostic" -> Unit
+            else -> {
+                message = session.reason.ifBlank {
+                    "${session.title} is ${session.qualification}; it cannot be selected"
+                }
+                return
+            }
+        }
+        busy = "session-$id"
         viewModelScope.launch(Dispatchers.IO) {
-            Root.setCompositor(id)
-            compositor = id
-            if (id != "phosh") message = "Preference stored : session wiring for $id is still pending"
+            try {
+                val result = Root.setCompositor(id)
+                if (result.ok) {
+                    compositor = id
+                    message = "${session.title} selected for next desktop entry" +
+                        if (session.qualification in setOf("experimental", "diagnostic"))
+                            " · ${session.reason.ifBlank { session.qualification }}" else ""
+                } else {
+                    message = "Session selection failed: ${result.err.ifBlank { result.out }}"
+                }
+            } finally {
+                busy = null
+            }
         }
     }
 

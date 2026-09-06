@@ -1,10 +1,14 @@
+#include "determination/control/capability.hpp"
+#include "determination/control/journal.hpp"
 #include "determination/control/observability.hpp"
 #include "determination/control/protocol.hpp"
 #include "determination/control/policy.hpp"
+#include "determination/control/sessions.hpp"
 #include "determination/control/state.hpp"
 #include "determination/control/system.hpp"
 #include "determination/control/transition.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <cerrno>
 #include <csignal>
@@ -37,6 +41,7 @@ void handle_signal(int)
 struct Options {
     std::string root = "/data/determination";
     std::string socket;
+    std::string sessions_dir;
     bool observe_only = true;
 };
 
@@ -69,6 +74,8 @@ bool parse_options(int argc, char **argv, Options *options)
     }
     if (options->root.empty() || options->root.front() != '/') return false;
     if (options->socket.empty()) options->socket = options->root + "/run/detd.sock";
+    if (options->sessions_dir.empty())
+        options->sessions_dir = options->root + "/etc/sessions";
     return true;
 }
 
@@ -117,7 +124,7 @@ Packet response_for(const Packet &request, const Options &options,
     switch (operation) {
     case Operation::Hello:
         response.payload = "{\"service\":\"detd\",\"protocol_major\":1,"
-                           "\"protocol_minor\":1,\"observe_only\":" +
+                           "\"protocol_minor\":2,\"observe_only\":" +
                            std::string(options.observe_only ? "true" : "false") + "}";
         break;
     case Operation::Ping:
@@ -130,9 +137,95 @@ Packet response_for(const Packet &request, const Options &options,
     case Operation::Doctor:
         response.payload = doctor_payload(observability, state);
         break;
-    case Operation::Capabilities:
-        response.payload = capabilities_payload(observability, guest_endpoint);
+    case Operation::Capabilities: {
+        const std::string base =
+            capabilities_payload(observability, guest_endpoint);
+        CapabilityGraphOptions graph_options{options.root, guest_endpoint};
+        response.payload = base.substr(0, base.size() - 1U) +
+            ",\"graph\":" + capabilities_graph_json(
+                capability_graph(graph_options)) + "}";
         break;
+    }
+    case Operation::HealthList:
+        response.payload = health_payload(observability, state);
+        break;
+    case Operation::SessionList: {
+        CapabilityGraphOptions graph_options{options.root, guest_endpoint};
+        response.payload = sessions_json(
+            load_sessions(options.sessions_dir), graph_options);
+        break;
+    }
+    case Operation::SessionValidate: {
+        const std::string id = request.payload;
+        if (id.empty() || id.find_first_not_of(
+                "abcdefghijklmnopqrstuvwxyz0123456789-") != std::string::npos) {
+            response.header.status = static_cast<std::int32_t>(Status::InvalidRequest);
+            response.payload = "{\"error\":\"invalid session id\"}";
+            break;
+        }
+        const auto files = load_sessions(options.sessions_dir);
+        const auto found = std::find_if(
+            files.begin(), files.end(),
+            [&](const SessionFile &file) { return file.manifest.id == id; });
+        if (found == files.end()) {
+            response.header.status = static_cast<std::int32_t>(Status::InvalidRequest);
+            response.payload = "{\"error\":\"unknown session\"}";
+            break;
+        }
+        CapabilityGraphOptions graph_options{options.root, guest_endpoint};
+        response.payload = sessions_json({*found}, graph_options);
+        break;
+    }
+    case Operation::OperationQuery: {
+        std::uint64_t id = 0;
+        if (!request.payload.empty()) {
+            char *end = nullptr;
+            id = std::strtoull(request.payload.c_str(), &end, 10);
+            if (!end || *end != '\0') {
+                response.header.status = static_cast<std::int32_t>(Status::InvalidRequest);
+                response.payload = "{\"error\":\"operation id must be numeric\"}";
+                break;
+            }
+        }
+        OperationJournal journal(options.root + "/state/operations.jsonl");
+        const auto entries =
+            journal.query(id, OperationJournal::kDefaultQueryLimit);
+        std::ostringstream output;
+        output << "{\"schema\":2,\"active\":" << state_json(state)
+               << ",\"operations\":[";
+        for (std::size_t index = 0; index < entries.size(); ++index) {
+            if (index != 0) output << ',';
+            output << journal_entry_json(entries[index]);
+        }
+        output << "]}";
+        response.payload = output.str();
+        break;
+    }
+    case Operation::OperationCancel: {
+        // Cancellation is a privileged safety action: root admin endpoint only.
+        if (endpoint != Endpoint::Admin || peer_uid != 0) {
+            response.header.status = static_cast<std::int32_t>(Status::PermissionDenied);
+            response.payload = "{\"error\":\"cancel requires root admin peer\"}";
+            break;
+        }
+        // Observe-only daemons reject naturally: nothing can be in flight.
+        std::uint64_t id = 0;
+        if (!request.payload.empty()) {
+            char *end = nullptr;
+            id = std::strtoull(request.payload.c_str(), &end, 10);
+            if (!end || *end != '\0' || id == 0) {
+                response.header.status = static_cast<std::int32_t>(Status::InvalidRequest);
+                response.payload = "{\"error\":\"operation id must be numeric\"}";
+                break;
+            }
+        }
+        const TransitionCancelResult cancelled = controller->cancel(id);
+        response.header.status = static_cast<std::int32_t>(cancelled.status);
+        response.header.generation = cancelled.state.generation;
+        response.payload = "{\"message\":\"" + json_escape(cancelled.message) +
+                           "\",\"state\":" + state_json(cancelled.state) + "}";
+        break;
+    }
     case Operation::MetricsSnapshot:
         response.payload = metrics_payload(observability, state);
         break;
@@ -284,6 +377,7 @@ int main(int argc, char **argv)
         std::cerr << "detd: create state directories: " << error << '\n';
         return 1;
     }
+    OperationJournal journal(options.root + "/state/operations.jsonl");
 
     const std::string lock_path = options.root + "/run/detd.lock";
     const int lock = open(lock_path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0640);
@@ -293,7 +387,8 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    TransitionController controller(options.root, !options.observe_only);
+    TransitionController controller(options.root, !options.observe_only,
+                                          &journal);
     if (!controller.initialise(&error)) {
         std::cerr << "detd: initialise state: " << error << '\n';
         close(lock);
@@ -324,7 +419,7 @@ int main(int argc, char **argv)
     sigaction(SIGINT, &action, nullptr);
     signal(SIGPIPE, SIG_IGN);
 
-    std::cout << "detd: protocol 1.1 "
+    std::cout << "detd: protocol 1.2 "
               << (options.observe_only ? "observe-only" : "transitions-enabled")
               << " on " << options.socket << '\n';
     while (running.load()) {

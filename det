@@ -312,11 +312,14 @@ compat)
             fi
             for file in det-phosh-session det-compat-check det-audio-session \
                         det-firefox-content-defaults setup-compatibility.sh \
-                        det-phosh.service setup-identity.sh det-sliderd; do
+                        det-phosh.service setup-identity.sh det-sliderd \
+                        det-session-launch det-plasma-session det-plasma-client \
+                        det-plasma.service; do
                 adb push "guest/$file" "/data/local/tmp/$file" >/dev/null
             done
             adb push toggle/desktop-on /data/local/tmp/determination-desktop-on >/dev/null
             adb push toggle/desktop-off /data/local/tmp/determination-desktop-off >/dev/null
+            adb push toggle/session-select /data/local/tmp/determination-session-select >/dev/null
             adb shell "su -c 'ROOT=\$(readlink -f $G/active-guest); \
                 install -m 0755 /data/local/tmp/det-phosh-session \$ROOT/usr/local/bin/det-phosh-session; \
                 install -m 0755 /data/local/tmp/det-compat-check \$ROOT/usr/local/bin/det-compat-check; \
@@ -328,6 +331,11 @@ compat)
                 install -m 0755 /data/local/tmp/det-sliderd \$ROOT/usr/local/bin/det-sliderd; \
                 install -m 0755 /data/local/tmp/determination-desktop-on $G/bin/desktop-on; \
                 install -m 0755 /data/local/tmp/determination-desktop-off $G/bin/desktop-off; \
+                install -m 0755 /data/local/tmp/determination-session-select $G/bin/session-select; \
+                install -m 0755 /data/local/tmp/det-session-launch \$ROOT/usr/local/bin/det-session-launch; \
+                install -m 0755 /data/local/tmp/det-plasma-session \$ROOT/usr/local/bin/det-plasma-session; \
+                install -m 0755 /data/local/tmp/det-plasma-client \$ROOT/usr/local/bin/det-plasma-client; \
+                install -m 0644 /data/local/tmp/det-plasma.service \$ROOT/etc/systemd/system/det-plasma.service; \
                 $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh /usr/local/sbin/setup-identity.sh \"$DET_VERSION\" \"$DET_CODENAME\"; \
                 $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh -c \"/usr/local/sbin/setup-compatibility.sh; if ! pgrep -x firefox-esr >/dev/null 2>&1; then /usr/local/bin/det-platform run-user melissa env HOME=/home/melissa USER=melissa LOGNAME=melissa /usr/local/bin/det-firefox-content-defaults; fi\"'"
             ;;

@@ -35,11 +35,19 @@ owned by HWC, or recycle it after a failed fence wait.
 
 ## Source baseline
 
-`guest/fetch-dethyprland.sh <destination>` fetches Hyprland v0.54.3 and the
+`guest/fetch-dethyprland.sh <destination>` fetches Hyprland v0.49.0 and the
 Aquamarine/Hyprland libraries pinned by its flake lock. It refuses dirty or
 unexpected existing checkouts. It does not install an upstream DRM compositor
-and pretend that it supports Android. This baseline requires a C++26-capable
-compiler and newer Wayland/input development dependencies than stock trixie.
+and pretend that it supports Android. This Aquamarine baseline matches trixie's
+Wayland/xkbcommon development packages. `guest/build-dethyprland.sh` builds into
+`/opt/dethyprland`, isolated from the working desktop. Clang 19 and the pinned
+Hyprland libraries, including Aquamarine, were built/installed on the phone;
+the Hyprland executable build is unfinished. No session was enabled.
+
+The expanded on-device gate passed 1,200 render/fence/readback cycles across ten
+allocations, with a stable 12 open fds. Invalid geometry/fence values were
+rejected. SurfaceFlinger remained running with the same PID. Evidence:
+`artifacts/dethyprland-buffer-retest.txt`.
 
 ## Remaining implementation gates
 

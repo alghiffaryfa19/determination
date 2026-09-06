@@ -9,7 +9,7 @@ VERSION=$(grep_prop versionCode "$MODPATH/module.prop")
 SETS="$DET/versions"
 STAGE="$SETS/.stage-$VERSION-$$"
 TARGET="$SETS/$VERSION"
-mkdir -p "$STAGE/bin" "$STAGE/guest-tools" "$DET/etc" "$DET/log" "$DET/run" "$DET/lxc" "$SETS"
+mkdir -p "$STAGE/bin" "$STAGE/guest-tools" "$STAGE/sessions" "$DET/etc" "$DET/log" "$DET/run" "$DET/lxc" "$SETS"
 trap 'rm -rf "$STAGE"' EXIT
 [ ! -e "$TARGET" ] || abort "! payload version $VERSION is already staged"
 
@@ -22,13 +22,13 @@ fi
 GUEST_ROOT=$(readlink -f "$DET/active-guest" 2>/dev/null)
 [ -n "$GUEST_ROOT" ] || GUEST_ROOT="$DET/guest"
 
-for f in evgrab det-input-forwarder detd detctl det-audio-probe det-audio-owner det-audio-route det-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro guest-start desktop-on desktop-off run-transition external-presenter external-input native-plasma native-kms-gate native-restore det-hostagent det-color-compat cycle-stress.sh; do
+for f in evgrab det-input-forwarder detd detctl det-audio-probe det-audio-owner det-audio-route det-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro guest-start desktop-on desktop-off session-select session-set run-transition external-presenter external-input native-plasma native-kms-gate native-restore det-hostagent det-color-compat cycle-stress.sh; do
     [ -f "$MODPATH/tools/$f" ] || abort "! missing $f in zip"
     cp -f "$MODPATH/tools/$f" "$STAGE/bin/$f"
     chmod 0755 "$STAGE/bin/$f"
 done
 cp -f "$MODPATH/tools/lxc-config-base" "$STAGE/lxc-config-base"
-for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke det-input-actions det-media-action det-connectivity det-connectivity-menu det-platform det-phosh-session det-compat-check det-firefox-content-defaults; do
+for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke det-input-actions det-media-action det-connectivity det-connectivity-menu det-platform det-phosh-session det-compat-check det-firefox-content-defaults det-session-launch det-plasma-session det-plasma-client; do
   if [ -f "$MODPATH/guest-tools/$f" ]; then
     cp -f "$MODPATH/guest-tools/$f" "$STAGE/guest-tools/$f"
     chmod 0755 "$STAGE/guest-tools/$f"
@@ -61,6 +61,15 @@ if [ -f "$MODPATH/guest-tools/det-phosh.service" ]; then
         cp -f "$MODPATH/guest-tools/det-phosh.service" \
             "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
         chmod 0644 "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
+    fi
+fi
+if [ -f "$MODPATH/guest-tools/det-plasma.service" ]; then
+    cp -f "$MODPATH/guest-tools/det-plasma.service" "$STAGE/guest-tools/det-plasma.service"
+    chmod 0644 "$STAGE/guest-tools/det-plasma.service"
+    if [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
+        cp -f "$MODPATH/guest-tools/det-plasma.service" \
+            "$GUEST_ROOT/etc/systemd/system/det-plasma.service"
+        chmod 0644 "$GUEST_ROOT/etc/systemd/system/det-plasma.service"
     fi
 fi
 if [ -f "$MODPATH/guest-tools/det-input-udevdb" ]; then
@@ -96,6 +105,16 @@ if [ -f "$MODPATH/guest-tools/90-determination-direct.conf" ]; then
         "$STAGE/guest-tools/90-determination-direct.conf"
     chmod 0644 "$STAGE/guest-tools/90-determination-direct.conf"
 fi
+
+# Session manifests are repo-owned declarations (the selection itself lives in
+# $DET/etc/compositor), so every install refreshes them wholesale.
+for f in "$MODPATH"/sessions/*.session; do
+    [ -f "$f" ] || continue
+    mkdir -p "$STAGE/sessions" "$DET/etc/sessions"
+    cp -f "$f" "$STAGE/sessions/${f##*/}"
+    cp -f "$f" "$DET/etc/sessions/${f##*/}"
+    chmod 0644 "$STAGE/sessions/${f##*/}" "$DET/etc/sessions/${f##*/}"
+done
 
 # Verify the complete staged set before one atomic pointer change. Keep the
 # prior target intact for recovery; runtime paths resolve through current/.

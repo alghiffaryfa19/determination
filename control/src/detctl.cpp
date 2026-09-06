@@ -26,9 +26,10 @@ struct Options {
 void usage(const char *program)
 {
     std::cerr << "usage: " << program << " [--root PATH] [--socket PATH] "
-              << "hello|ping|status|doctor|capabilities|metrics|mode [phone|desktop] "
+              << "hello|ping|status|doctor|capabilities|health|metrics|sessions "
+                 "[id]|ops [id]|cancel [id]|mode [phone|desktop] "
               << "|recover|boot-profile [phone|linux-first]|boot-apply "
-                 "[--wait] [--deadline SECONDS] [--json]\n";
+                  "[--wait] [--deadline SECONDS] [--json]\n";
 }
 
 bool parse(int argc, char **argv, Options *options)
@@ -67,6 +68,41 @@ bool parse(int argc, char **argv, Options *options)
         } else if (!command_seen && argument == "metrics") {
             options->operation = Operation::MetricsSnapshot;
             command_seen = true;
+        } else if (!command_seen && argument == "health") {
+            options->operation = Operation::HealthList;
+            command_seen = true;
+        } else if (!command_seen && argument == "sessions") {
+            command_seen = true;
+            if (index + 1 < argc) {
+                const std::string id = argv[index + 1];
+                if (!id.empty() &&
+                    id.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789-") ==
+                        std::string::npos) {
+                    options->operation = Operation::SessionValidate;
+                    options->payload = argv[++index];
+                }
+            }
+            if (options->operation == Operation::Status)
+                options->operation = Operation::SessionList;
+        } else if (!command_seen && argument == "ops") {
+            command_seen = true;
+            options->operation = Operation::OperationQuery;
+            if (index + 1 < argc) {
+                const std::string id = argv[++index];
+                if (id.find_first_not_of("0123456789") != std::string::npos)
+                    return false;
+                options->payload = id;
+            }
+        } else if (!command_seen && argument == "cancel") {
+            command_seen = true;
+            options->operation = Operation::OperationCancel;
+            options->deadline_ms = 30'000;
+            if (index + 1 < argc) {
+                const std::string id = argv[++index];
+                if (id.find_first_not_of("0123456789") != std::string::npos)
+                    return false;
+                options->payload = id;
+            }
         } else if (!command_seen && argument == "mode") {
             command_seen = true;
             if (index + 1 < argc && (std::string(argv[index + 1]) == "phone" ||

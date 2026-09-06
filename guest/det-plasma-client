@@ -21,7 +21,8 @@ QT_QPA_PLATFORM=offscreen plasma-mobile-envmanager --apply-settings || true
 
 # Rebuild the KService cache or the homescreen/app drawer shows no apps ---
 # nothing else in this minimal session (no full startplasma) ever builds it.
-kbuildsycoca6 >/var/log/kbuildsycoca.log 2>&1 || true
+# Log must live somewhere melissa can write (/var/log is root-only).
+kbuildsycoca6 --noincremental > "${XDG_RUNTIME_DIR:-/tmp}/kbuildsycoca.log" 2>&1 || true
 
 # kactivitymanagerd first (dbus activation raced and crashed it last run);
 # the mobile corona wants it.

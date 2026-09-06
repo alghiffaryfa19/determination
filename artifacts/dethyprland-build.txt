@@ -1,0 +1,108 @@
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following NEW packages will be installed:
+  clang-tools-19
+0 upgraded, 1 newly installed, 0 to remove and 8 not upgraded.
+Need to get 8105 kB of archives.
+After this operation, 44.4 MB of additional disk space will be used.
+Get:1 https://deb.debian.org/debian trixie/main arm64 clang-tools-19 arm64 1:19.1.7-3+b1 [8105 kB]
+dpkg-preconfigure: unable to re-open stdin: No such file or directory
+Fetched 8105 kB in 2s (3639 kB/s)
+Selecting previously unselected package clang-tools-19.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 180244 files and directories currently installed.)
+Preparing to unpack .../clang-tools-19_1%3a19.1.7-3+b1_arm64.deb ...
+Unpacking clang-tools-19 (1:19.1.7-3+b1) ...
+Setting up clang-tools-19 (1:19.1.7-3+b1) ...
+Processing triggers for man-db (2.13.1-1) ...
+-- Configuring hyprwayland-scanner in Release with CMake
+-- Checking deps...
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /root/build/dethyprland/hyprwayland-scanner/build-det
+[0/2] Re-checking globbed directories...
+ninja: no work to do.
+-- Install configuration: "Release"
+-- Up-to-date: /opt/dethyprland/bin/hyprwayland-scanner
+-- Up-to-date: /opt/dethyprland/lib/pkgconfig/hyprwayland-scanner.pc
+-- Up-to-date: /opt/dethyprland/lib/cmake/hyprwayland-scanner/hyprwayland-scanner-config.cmake
+-- Up-to-date: /opt/dethyprland/lib/cmake/hyprwayland-scanner/hyprwayland-scanner-config-version.cmake
+-- Configuring hyprutils in Release
+-- Configuring done (0.1s)
+-- Generating done (0.1s)
+-- Build files have been written to: /root/build/dethyprland/hyprutils/build-det
+[0/2] Re-checking globbed directories...
+ninja: no work to do.
+-- Install configuration: "Release"
+-- Up-to-date: /opt/dethyprland/lib/libhyprutils.so.0.7.1
+-- Up-to-date: /opt/dethyprland/lib/libhyprutils.so.6
+-- Up-to-date: /opt/dethyprland/lib/libhyprutils.so
+-- Up-to-date: /opt/dethyprland/include/hyprutils
+-- Up-to-date: /opt/dethyprland/include/hyprutils/utils
+-- Up-to-date: /opt/dethyprland/include/hyprutils/utils/ScopeGuard.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/math
+-- Up-to-date: /opt/dethyprland/include/hyprutils/math/Region.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/math/Box.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/math/Misc.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/math/Edges.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/math/Mat3x3.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/math/Vector2D.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/string
+-- Up-to-date: /opt/dethyprland/include/hyprutils/string/ConstVarList.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/string/VarList.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/string/String.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/animation
+-- Up-to-date: /opt/dethyprland/include/hyprutils/animation/BezierCurve.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/animation/AnimatedVariable.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/animation/AnimationConfig.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/animation/AnimationManager.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/signal
+-- Up-to-date: /opt/dethyprland/include/hyprutils/signal/Listener.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/signal/Signal.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/path
+-- Up-to-date: /opt/dethyprland/include/hyprutils/path/Path.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/memory
+-- Up-to-date: /opt/dethyprland/include/hyprutils/memory/ImplBase.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/memory/SharedPtr.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/memory/WeakPtr.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/memory/UniquePtr.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/os
+-- Up-to-date: /opt/dethyprland/include/hyprutils/os/FileDescriptor.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprutils/os/Process.hpp
+-- Up-to-date: /opt/dethyprland/lib/pkgconfig/hyprutils.pc
+-- Configuring hyprlang in Release
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /root/build/dethyprland/hyprlang/build-det
+[0/2] Re-checking globbed directories...
+ninja: no work to do.
+-- Install configuration: "Release"
+-- Up-to-date: /opt/dethyprland/lib/libhyprlang.so.0.6.3
+-- Up-to-date: /opt/dethyprland/lib/libhyprlang.so.2
+-- Up-to-date: /opt/dethyprland/lib/libhyprlang.so
+-- Up-to-date: /opt/dethyprland/include/hyprlang.hpp
+-- Up-to-date: /opt/dethyprland/lib/libhyprlang.so.0.6.3
+-- Up-to-date: /opt/dethyprland/lib/libhyprlang.so.2
+-- Up-to-date: /opt/dethyprland/lib/libhyprlang.so
+-- Up-to-date: /opt/dethyprland/include/hyprlang.hpp
+-- Up-to-date: /opt/dethyprland/lib/pkgconfig/hyprlang.pc
+-- Configuring hyprcursor in Release
+-- Configuring done (0.1s)
+-- Generating done (0.0s)
+-- Build files have been written to: /root/build/dethyprland/hyprcursor/build-det
+[0/2] Re-checking globbed directories...
+ninja: no work to do.
+-- Install configuration: "Release"
+-- Up-to-date: /opt/dethyprland/lib/libhyprcursor.so.0.1.12
+-- Up-to-date: /opt/dethyprland/lib/libhyprcursor.so.0
+-- Up-to-date: /opt/dethyprland/lib/libhyprcursor.so
+-- Up-to-date: /opt/dethyprland/include/hyprcursor.hpp
+-- Up-to-date: /opt/dethyprland/bin/hyprcursor-util
+-- Up-to-date: /opt/dethyprland/include/hyprcursor
+-- Up-to-date: /opt/dethyprland/include/hyprcursor/shared.h
+-- Up-to-date: /opt/dethyprland/include/hyprcursor/hyprcursor.hpp
+-- Up-to-date: /opt/dethyprland/include/hyprcursor/hyprcursor.h
+-- Up-to-date: /opt/dethyprland/lib/pkgconfig/hyprcursor.pc
+-- Configuring hyprgraphics in Release
+-- Checking for modules 'libjxl;libjxl_cms;libjxl_threads'
+--   Package 'libjxl', required by 'virtual:world', not found

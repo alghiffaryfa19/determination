@@ -1,14 +1,16 @@
 #!/bin/sh
 # Determination: launched by det-plasma.service inside a PAM/logind session.
+# Runs as melissa (uid 1000 == AID_SYSTEM) like the phosh session: kgsl/ion
+# are uid-1000-owned and input comes through the android_input group.
 # Mesa env = /opt/mesa (zink/Turnip GL) --- never /usr/local (hybris world).
-# Stage selection via /run/det-plasma.env (written by toggle/native-plasma):
+# Stage selection via /run/det-plasma.env (written by toggle/desktop-on):
 #   DET_PLASMA_CLIENT=foot         kwin smoke (default)
 #   DET_PLASMA_CLIENT=plasmashell  full Plasma Mobile shell
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-export HOME=/root USER=root LOGNAME=root
+export HOME=/home/melissa USER=melissa LOGNAME=melissa
 export LANG=C.UTF-8 TMPDIR=/tmp
 # pam_systemd sets XDG_RUNTIME_DIR; belt-and-braces for manual runs.
-[ -n "${XDG_RUNTIME_DIR:-}" ] || export XDG_RUNTIME_DIR=/run/user/0
+[ -n "${XDG_RUNTIME_DIR:-}" ] || export XDG_RUNTIME_DIR=/run/user/1000
 install -d -m 700 "$XDG_RUNTIME_DIR"
 
 [ -r /etc/determination-device.conf ] && . /etc/determination-device.conf
@@ -36,21 +38,18 @@ CLIENT="${DET_PLASMA_CLIENT:-foot}"
 [ "$CLIENT" = "plasmashell" ] && CLIENT=/usr/local/bin/det-plasma-client
 
 rm -f "$XDG_RUNTIME_DIR"/wayland-0 "$XDG_RUNTIME_DIR"/wayland-0.lock
-# /var/log, NOT /tmp: the container rebooted post-teardown once (2026-07-14)
-# and tmpfs ate the evidence. Bus address exported for mid-run busctl
-# diagnostics (native-plasma step 6a).
-# plasma stage: client passed positionally (NOT --exit-with-session) so a
-# plasmashell crash --- e.g. the Qt 6.8 wp_fractional_scale/get_tearing_control
-# protocol error (2026-07-14, opening Settings) --- doesn't take the whole
-# session down; plasmashell auto-respawns. foot keeps exit-with-session.
+# Log lives in the runtime dir (world-unreadable /var/log breaks as melissa);
+# bus address exported for mid-run busctl diagnostics.
 if [ "$CLIENT" = /usr/local/bin/det-plasma-client ]; then
     exec dbus-run-session -- /bin/sh -c '
-        echo "$DBUS_SESSION_BUS_ADDRESS" > /run/det-plasma-bus
-        exec kwin_wayland --no-lockscreen "$1"
-    ' _ "$CLIENT" > /var/log/kwin.log 2>&1
+        echo "$DBUS_SESSION_BUS_ADDRESS" > "$XDG_RUNTIME_DIR/det-plasma-bus"
+        export XDG_RUNTIME_DIR
+        exec kwin_wayland "$1"
+    ' _ "$CLIENT" > "$XDG_RUNTIME_DIR/kwin.log" 2>&1
 else
     exec dbus-run-session -- /bin/sh -c '
-        echo "$DBUS_SESSION_BUS_ADDRESS" > /run/det-plasma-bus
-        exec kwin_wayland --no-lockscreen --exit-with-session "$1"
-    ' _ "$CLIENT" > /var/log/kwin.log 2>&1
+        echo "$DBUS_SESSION_BUS_ADDRESS" > "$XDG_RUNTIME_DIR/det-plasma-bus"
+        export XDG_RUNTIME_DIR
+        exec kwin_wayland --exit-with-session "$1"
+    ' _ "$CLIENT" > "$XDG_RUNTIME_DIR/kwin.log" 2>&1
 fi

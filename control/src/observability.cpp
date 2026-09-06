@@ -2,10 +2,12 @@
 
 #include "determination/control/system.hpp"
 
+#include <algorithm>
 #include <cstdlib>
 #include <iomanip>
 #include <sstream>
 #include <sys/statvfs.h>
+#include <vector>
 
 namespace determination::control {
 namespace {
@@ -89,13 +91,13 @@ bool audio_phase_stable(const std::string &phase)
            phase == "claimed";
 }
 
+} // namespace
+
 bool presenter_socket_ready()
 {
     return path_exists(
         "/data/user_de/0/com.determination.companion/files/presenter.sock");
 }
-
-} // namespace
 
 std::string status_payload(const ObservabilityOptions &options,
                            const StateRecord &state)
@@ -227,8 +229,10 @@ std::string capabilities_payload(const ObservabilityOptions &options,
                                  bool guest_endpoint)
 {
     return "{\"operations\":[\"hello\",\"ping\",\"status\",\"doctor\","
-           "\"capabilities\",\"metrics\",\"mode-get\",\"mode-set\","
-           "\"mode-recover\",\"boot-profile-get\",\"boot-profile-set\","
+           "\"capabilities\",\"metrics\",\"health\",\"events-unsupported\","
+           "\"sessions\",\"mode-get\",\"mode-set\","
+           "\"mode-recover\",\"op-query\",\"op-cancel\",\"session-validate\","
+           "\"boot-profile-get\",\"boot-profile-set\","
            "\"boot-profile-apply\",\"guest-report\"],\"guest_endpoint\":" +
            std::string(guest_endpoint ? "true" : "false") +
            ",\"transitions\":" +
@@ -242,6 +246,137 @@ std::string capabilities_payload(const ObservabilityOptions &options,
            std::string(path_exists(options.root + "/bin/det-audio-owner")
                            ? "true" : "false") +
            "},\"presenter_protocol\":1}";
+}
+
+namespace {
+
+// Health verdicts use the shared vocabulary from §2: a client must be able
+// to tell unknown, stale, transitioning, degraded, failed and recovered apart.
+struct ComponentHealth {
+    std::string name;
+    std::string state;
+    std::string detail;
+    std::uint64_t age_ms = 0;
+};
+
+int health_rank(const std::string &state)
+{
+    if (state == "healthy" || state == "recovered") return 0;
+    if (state == "unknown") return 1;
+    if (state == "stale" || state == "transitioning") return 2;
+    if (state == "degraded") return 3;
+    return 4; // failed
+}
+
+ComponentHealth guest_agent_health(const ObservabilityOptions &options)
+{
+    const std::string report = trim(
+        read_file(options.root + "/run/guest-health.json", 8192));
+    ComponentHealth component;
+    component.name = "guest.agent";
+    component.state = "unknown";
+    const std::size_t at = report.find("\"monotonic_ms\":");
+    if (at == std::string::npos) {
+        component.detail = "no guest report";
+        return component;
+    }
+    const std::uint64_t stamp = std::strtoull(
+        report.c_str() + at + sizeof("\"monotonic_ms\":") - 1U, nullptr, 10);
+    const std::uint64_t now = monotonic_milliseconds();
+    component.age_ms = now > stamp ? now - stamp : 0;
+    const bool fresh = component.age_ms < 90'000U;
+    if (!fresh) {
+        component.state = "stale";
+        component.detail = "last report " + std::to_string(component.age_ms / 1000U) + "s ago";
+        return component;
+    }
+    const bool wayland = report.find("\"wayland\":true") != std::string::npos;
+    component.state = wayland ? "healthy" : "degraded";
+    component.detail = wayland ? "session reporting" : "compositor socket missing";
+    return component;
+}
+
+std::string components_json(const std::vector<ComponentHealth> &components,
+                            const std::string &overall)
+{
+    std::ostringstream output;
+    output << "{\"schema\":2,\"overall\":\"" << overall << "\",\"components\":[";
+    for (std::size_t index = 0; index < components.size(); ++index) {
+        const ComponentHealth &component = components[index];
+        if (index != 0) output << ',';
+        output << "{\"name\":\"" << json_escape(component.name)
+               << "\",\"state\":\"" << json_escape(component.state)
+               << "\",\"detail\":\"" << json_escape(component.detail)
+               << "\",\"age_ms\":" << component.age_ms << "}";
+    }
+    output << "]}";
+    return output.str();
+}
+
+} // namespace
+
+std::string health_payload(const ObservabilityOptions &options,
+                           const StateRecord &state)
+{
+    std::vector<ComponentHealth> components;
+
+    ComponentHealth transition;
+    transition.name = "control.transition";
+    transition.state = "unknown";
+    transition.detail = "step=" + state.step;
+    switch (state.observed) {
+    case Mode::Entering:
+    case Mode::Exiting:
+        transition.state = "transitioning"; break;
+    case Mode::Recovery:
+        transition.state = "failed"; break;
+    case Mode::Phone:
+    case Mode::Desktop:
+        transition.state = state.last_error.empty() ? "healthy" : "recovered";
+        break;
+    case Mode::Unknown: break;
+    }
+    components.push_back(transition);
+
+    components.push_back(guest_agent_health(options));
+
+    const std::string sf = android_property("init.svc.surfaceflinger");
+    ComponentHealth composer;
+    composer.name = "android.surfaceflinger";
+    composer.state = sf.empty() ? "unknown" : "healthy";
+    composer.detail = sf.empty() ? "property unavailable" : sf;
+    if (sf == "stopped" && state.observed != Mode::Desktop &&
+        state.observed != Mode::Exiting && state.observed != Mode::Recovery) {
+        composer.state = "degraded";
+        composer.detail = "stopped outside desktop ownership";
+    }
+    components.push_back(composer);
+
+    const std::string phase = audio_phase(options);
+    ComponentHealth audio;
+    audio.name = "audio.direct";
+    audio.state = "unknown";
+    audio.detail = "phase=" + phase;
+    if (phase == "none" || phase == "restored" || phase == "rolled-back")
+        audio.state = "healthy";
+    else if (phase == "claimed" || phase == "restoring")
+        audio.state = "transitioning";
+    else audio.state = "failed";
+    components.push_back(audio);
+
+    ComponentHealth presenter;
+    presenter.name = "external.presenter";
+    presenter.state = "unknown";
+    presenter.detail = presenter_socket_ready() ? "socket ready" : "not started";
+    if (presenter_socket_ready()) presenter.state = "healthy";
+    components.push_back(presenter);
+
+    int worst = 0;
+    for (const ComponentHealth &component : components)
+        worst = std::max(worst, health_rank(component.state));
+    static constexpr const char *ranks[] = {"healthy", "unknown", "degraded",
+                                            "degraded", "failed"};
+    return components_json(components, ranks[worst]);
 }
 
 } // namespace determination::control

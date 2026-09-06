@@ -75,6 +75,7 @@ cp ../tools/evgrab/evgrab "$INPUT_FORWARDER" \
    ../toggle/device-config ../toggle/generate-lxc-config ../toggle/generate-guest-config \
    ../toggle/lifecycle-lib ../toggle/boot-profile ../toggle/guest-distro \
    ../toggle/guest-start ../toggle/desktop-on ../toggle/desktop-off \
+   ../toggle/session-select ../toggle/session-set \
    ../toggle/run-transition ../toggle/external-presenter ../toggle/external-input \
    ../toggle/native-plasma ../toggle/native-kms-gate ../toggle/native-restore \
    ../toggle/det-hostagent ../toggle/det-color-compat \
@@ -82,6 +83,8 @@ cp ../tools/evgrab/evgrab "$INPUT_FORWARDER" \
    "$WORK/tools/"
 cp ../device-profiles/*.conf "$WORK/device-profiles/"
 cp ../audio/profiles/*.conf "$WORK/audio-profiles/"
+mkdir -p "$WORK/sessions"
+cp ../guest/sessions/*.session "$WORK/sessions/"
 cp "$DET_GUEST_AGENT" "$WORK/guest-tools/det-guest-agent"
 cp "$DET_AUDIO_GUEST" "$WORK/guest-tools/det-audio-probe"
 cp ../guest/det-audio-session "$WORK/guest-tools/det-audio-session"
@@ -94,8 +97,12 @@ cp ../guest/det-platform "$WORK/guest-tools/det-platform"
 cp ../guest/det-phosh-session "$WORK/guest-tools/det-phosh-session"
 cp ../guest/det-compat-check "$WORK/guest-tools/det-compat-check"
 cp ../guest/det-firefox-content-defaults "$WORK/guest-tools/det-firefox-content-defaults"
+cp ../guest/det-session-launch "$WORK/guest-tools/det-session-launch"
+cp ../guest/det-plasma-session "$WORK/guest-tools/det-plasma-session"
+cp ../guest/det-plasma-client "$WORK/guest-tools/det-plasma-client"
 cp ../guest/setup-compatibility.sh "$WORK/guest-tools/setup-compatibility.sh"
 cp ../guest/det-phosh.service "$WORK/guest-tools/det-phosh.service"
+cp ../guest/det-plasma.service "$WORK/guest-tools/det-plasma.service"
 cp ../guest/determination-connectivity.desktop "$WORK/guest-tools/determination-connectivity.desktop"
 cp ../guest/determination-input-proxy.desktop "$WORK/guest-tools/determination-input-proxy.desktop"
 cp ../guest/det-input-udevdb "$WORK/guest-tools/det-input-udevdb"

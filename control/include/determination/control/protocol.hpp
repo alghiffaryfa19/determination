@@ -8,7 +8,7 @@ namespace determination::control {
 
 constexpr std::uint32_t kProtocolMagic = 0x44544331U; // DTC1
 constexpr std::uint16_t kProtocolMajor = 1;
-constexpr std::uint16_t kProtocolMinor = 1;
+constexpr std::uint16_t kProtocolMinor = 2;
 constexpr std::size_t kMaximumPayload = 16U * 1024U;
 constexpr std::uint32_t kDefaultRpcDeadlineMs = 1'000;
 constexpr std::uint16_t kFlagResponse = 1U << 0;
@@ -20,9 +20,16 @@ enum class Operation : std::uint32_t {
     Doctor = 4,
     Capabilities = 5,
     MetricsSnapshot = 6,
+    HealthList = 7,
+    EventSnapshot = 8,
+    SessionList = 9,
     ModeGet = 0x100,
     ModeSet = 0x101,
     ModeRecover = 0x102,
+    OperationQuery = 0x103,
+    OperationCancel = 0x104,
+    SessionValidate = 0x105,
+    CapsuleCreate = 0x106,
     BootProfileGet = 0x110,
     BootProfileSet = 0x111,
     BootProfileApply = 0x112,

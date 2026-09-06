@@ -60,7 +60,8 @@ cp -f "$DET/lxc/config" "$DET/guest/config"
 for det_guest_tool in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke \
                       det-input-actions det-media-action det-connectivity det-connectivity-menu \
                       det-platform det-phosh-session det-compat-check \
-                      det-firefox-content-defaults; do
+                      det-firefox-content-defaults det-session-launch \
+                      det-plasma-session det-plasma-client; do
     if [ -f "$DET/guest-tools/$det_guest_tool" ]; then
         mkdir -p "$GUEST_ROOT/usr/local/bin"
         cp -f "$DET/guest-tools/$det_guest_tool" \
@@ -84,6 +85,11 @@ if [ -f "$DET/guest-tools/det-phosh.service" ]; then
             "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
         chmod 0644 "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
     fi
+fi
+if [ -f "$DET/guest-tools/det-plasma.service" ] && [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
+    cp -f "$DET/guest-tools/det-plasma.service" \
+        "$GUEST_ROOT/etc/systemd/system/det-plasma.service"
+    chmod 0644 "$GUEST_ROOT/etc/systemd/system/det-plasma.service"
 fi
 if [ -f "$DET/guest-tools/det-input-udevdb" ]; then
     mkdir -p "$GUEST_ROOT/usr/local/sbin"

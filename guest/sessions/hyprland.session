@@ -1,0 +1,11 @@
+id=hyprland
+title=Dethyprland
+description=Hyprland with vendor EGL/GLES through libhybris and direct hwcomposer presentation.
+backend=libhybris-hwcomposer
+renderer=vendor-hybris
+allocator=android-gralloc
+presentation=internal-direct
+input=evdev-grab
+compositor=/usr/bin/Hyprland
+qualification=incompatible
+reason=Aquamarine output and Hyprland native-buffer renderer integration are not implemented; vendor buffer/fence foundation passes on-device, but this is not a launchable session

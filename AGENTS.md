@@ -202,6 +202,24 @@ skipped there. Guest helper binaries are static. Do not call Arch or Alpine
 graphically supported until they pass hwcomposer, Phoc/input, repeated Android
 restore, audio and external-display qualification on the phone.
 
+**Multi-compositor internal sessions (2026-08-25):** `desktop-on` no longer
+hardcodes phoc+phosh. It resolves `$DET/etc/compositor` against
+`$DET/etc/sessions/<id>.session` via `toggle/session-select`
+(planned/incompatible refuse; fallback = phosh), commits the record to
+`$DET/run/session.active`, and branches on the manifest `backend=`:
+`libhybris-hwcomposer` → wlroots path via `guest/det-session-launch`;
+`gralloc-minigbm` → KWin through `det-plasma.service` (PAM/logind session,
+composer HAL stopped pre-launch, evgrab released + touchpanel notifier after
+the socket appears). `desktop-off` tears down from `session.active` including
+HAL restart + livedisplay/color-HAL bounce. Plasma Mobile/KWin 6.3.6 verified
+interactive on-panel through this path (2026-08-25); qualification stays
+experimental — nightlight.so segfaults under the Aug-9 patched libkwin (ABI
+skew with system libKF6ConfigCore) and is disabled via guest
+`/root/.config/kwinrc`. Session manifests deploy via magisk module payload to
+`$DET/etc/sessions`. The companion Software screen now renders those manifests
+(the old hardcoded COMPOSITORS list is gone); APK rebuild needs the Android
+SDK restored on the host (`~/android-sdk` currently missing).
+
 **Other known issues:**
 - phoc teardown segfaults (rc 139, cosmetic).
 - matrix flat varyings (mat3/mat4) unverified in GSK shader fix.

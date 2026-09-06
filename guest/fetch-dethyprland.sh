@@ -22,13 +22,14 @@ fetch() {
     git -C "$dir" checkout --detach FETCH_HEAD
     [ "$(git -C "$dir" rev-parse HEAD)" = "$rev" ]
 }
-# Hyprland v0.54.3 and its flake.lock dependency revisions.
-fetch Hyprland 521ece463c4a9d3d128670688a34756805a4328f
-fetch aquamarine 5d2cb726b16ee349df443f84b64cff53221b6983
-fetch hyprutils e63f3a79334dec49f8eb1691f66f18115df04085
-fetch hyprlang 7615ee388de18239a4ab1400946f3d0e498a8186
-fetch hyprcursor b62396457b9cfe2ebf24fe05404b09d2a40f8ed7
-fetch hyprgraphics 7d63c04b4a2dd5e59ef943b4b143f46e713df804
-fetch hyprwayland-scanner 0a692d4a645165eebd65f109146b8861e3a925e7
-fetch hyprland-protocols 1cb6db5fd6bb8aee419f4457402fa18293ace917
+# v0.49.0 uses Aquamarine and matches trixie's Wayland/xkbcommon development ABI.
+fetch Hyprland 9958d297641b5c84dcff93f9039d80a5ad37ab00
+fetch aquamarine a19cf76ee1a15c1c12083fa372747ce46387289f
+fetch hyprutils 674ea57373f08b7609ce93baff131117a0dfe70d
+fetch hyprlang 557241780c179cf7ef224df392f8e67dab6cef83
+fetch hyprcursor ac903e80b33ba6a88df83d02232483d99f327573
+fetch hyprgraphics 60754910946b4e2dc1377b967b7156cb989c5873
+fetch hyprwayland-scanner 206367a08dc5ac4ba7ad31bdca391d098082e64b
+fetch hyprland-protocols 3a5c2bda1c1a4e55cc1330c782547695a93f05b2
+git -C "$DEST/Hyprland" submodule update --init --recursive
 printf 'Pinned sources ready: %s\nNo session installed or enabled.\n' "$DEST"

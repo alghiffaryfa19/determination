@@ -1,0 +1,15 @@
+id=plasma-mobile
+title=Plasma Mobile
+description=KWin 6 on raw KMS with Mesa zink/Turnip, launched through its PAM/logind unit. Proven interactive in the M5 native runs; not yet the daily-driver default.
+backend=gralloc-minigbm
+renderer=turnip-zink
+allocator=minigbm
+presentation=internal-direct
+input=evdev-grab
+compositor=/usr/bin/kwin_wayland
+shell=/usr/local/bin/det-plasma-client
+services=logind,pipewire,wireplumber
+requires=display.internal.hwc,renderer.native-turnip,input.touch.internal
+limitations=no complete native-handle round trip through KWin yet,fences not carried end to end,composer HAL must stop (no concurrent Android display),teardown bounces color/livedisplay HALs
+qualification=experimental
+reason=launchable from desktop-on; repeated Android-restore, audio and soak gates still pending

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cstdlib>
 #include <iostream>
 #include <utility>
 
@@ -29,9 +30,12 @@ std::string bounded_output(const std::string &output)
 
 } // namespace
 
-TransitionController::TransitionController(std::string root, bool allow_transitions)
+TransitionController::TransitionController(std::string root,
+                                           bool allow_transitions,
+                                           OperationJournal *journal)
     : root_(std::move(root)),
       allow_transitions_(allow_transitions),
+      journal_(journal),
       store_(root_ + "/state/control.state")
 {
 }
@@ -152,6 +156,17 @@ TransitionRequestResult TransitionController::request(
     }
     cancelled_.store(false);
     worker_active_ = true;
+    {
+        // Journal the acceptance before the worker thread exists so the
+        // operation ID survives even an immediate daemon death.
+        JournalEntry entry;
+        entry.transition_id = state_.transition_id;
+        entry.target = mode_name(target);
+        entry.final_state = "accepted";
+        std::string journal_error;
+        if (journal_ && !journal_->append(entry, &journal_error))
+            std::cerr << "detd: journal append: " << journal_error << '\n';
+    }
     worker_ = std::thread(&TransitionController::worker, this, target,
                           effective_deadline);
     result.status = Status::Accepted;
@@ -165,6 +180,46 @@ bool TransitionController::wait_for_idle(std::uint32_t timeout_ms)
     std::unique_lock lock(mutex_);
     return idle_condition_.wait_for(lock, std::chrono::milliseconds(timeout_ms),
                                     [this] { return !worker_active_; });
+}
+
+void TransitionController::journal_locked(const char *final_state)
+{
+    if (!journal_) return;
+    JournalEntry entry;
+    entry.transition_id = state_.transition_id;
+    entry.target = mode_name(state_.desired);
+    entry.final_state = final_state;
+    entry.steps = state_.completed_steps;
+    entry.error = state_.last_error;
+    std::string error;
+    if (!journal_->append(entry, &error))
+        std::cerr << "detd: journal append: " << error << '\n';
+}
+
+TransitionCancelResult TransitionController::cancel(std::uint64_t transition_id)
+{
+    TransitionCancelResult result;
+    std::lock_guard lock(mutex_);
+    result.state = state_;
+    if (!worker_active_ ||
+        (state_.observed != Mode::Entering && state_.observed != Mode::Exiting)) {
+        result.status = Status::Rejected;
+        result.message = "no transition is in flight";
+        return result;
+    }
+    if (transition_id != 0 && transition_id != state_.transition_id) {
+        result.status = Status::InvalidRequest;
+        result.message = "transition id does not match the active operation";
+        return result;
+    }
+    cancelled_.store(true);
+    state_.step = "cancel-requested";
+    persist_locked();
+    result.status = Status::Accepted;
+    result.message = "cancellation requested; rollback runs to phone baseline";
+    result.state = state_;
+    journal_locked("cancel-requested");
+    return result;
 }
 
 bool TransitionController::persist_locked(std::string *error)
@@ -207,6 +262,37 @@ bool TransitionController::verify_target(Mode target, std::string *error) const
             *error = "SurfaceFlinger is " + sf + " after enter adapter";
             return false;
         }
+
+        // Commit needs session evidence from the guest, not just a socket
+        // file (§4.1 step 11). A fresh report must prove the compositor is
+        // serving clients; an absent/stale report keeps the legacy
+        // socket-only contract for older guest agents.
+        const std::string report = trim(
+            read_file(root_ + "/run/guest-health.json", 8192));
+        const std::size_t stamp_at = report.find("\"monotonic_ms\":");
+        if (stamp_at == std::string::npos) return true;
+        const std::uint64_t stamp = std::strtoull(
+            report.c_str() + stamp_at + sizeof("\"monotonic_ms\":") - 1U,
+            nullptr, 10);
+        const std::uint64_t now = monotonic_milliseconds();
+        if (stamp > now || now - stamp > 45'000U) return true;
+
+        std::vector<std::string> missing;
+        if (report.find("\"wayland\":true") == std::string::npos)
+            missing.push_back("wayland-socket");
+        if (report.find("\"session_bus\":true") == std::string::npos)
+            missing.push_back("session-bus");
+        if (report.find("\"phosh\":\"-\"") != std::string::npos ||
+            report.find("\"phoc\":\"-\"") != std::string::npos)
+            missing.push_back("session-processes");
+        if (!missing.empty()) {
+            for (std::size_t index = 0; index < missing.size(); ++index) {
+                if (index != 0) error->append(", ");
+                error->append(missing[index]);
+            }
+            error->insert(0, "desktop commit blocked, missing session gates: ");
+            return false;
+        }
         return true;
     }
     if (marker) {
@@ -242,6 +328,7 @@ void TransitionController::fail_transition(
             state_.last_error = original_error;
             state_.started_monotonic_ms = 0;
             state_.deadline_monotonic_ms = 0;
+            journal_locked("rollback-complete");
             persist_locked();
             worker_active_ = false;
             idle_condition_.notify_all();
@@ -265,6 +352,7 @@ void TransitionController::fail_transition(
         state_.started_monotonic_ms = 0;
         state_.deadline_monotonic_ms = 0;
     }
+    journal_locked(state_.step.c_str());
     persist_locked();
     worker_active_ = false;
     idle_condition_.notify_all();
@@ -334,6 +422,7 @@ void TransitionController::worker(Mode target, std::uint64_t deadline_ms)
     state_.adapter_output.clear();
     state_.started_monotonic_ms = 0;
     state_.deadline_monotonic_ms = 0;
+    journal_locked("idle");
     persist_locked();
     worker_active_ = false;
     idle_condition_.notify_all();

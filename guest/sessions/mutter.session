@@ -1,0 +1,11 @@
+id=mutter
+title=GNOME (Mutter)
+description=GNOME Shell session.
+backend=libhybris-hwcomposer
+renderer=vendor-hybris
+allocator=android-gralloc
+presentation=internal-direct
+input=evdev-grab
+compositor=/usr/bin/mutter
+qualification=planned
+reason=needs an Android allocation/presentation backend before it can own the internal panel

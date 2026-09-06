@@ -164,9 +164,16 @@ std::string operation_name(Operation operation)
     case Operation::Doctor: return "doctor";
     case Operation::Capabilities: return "capabilities";
     case Operation::MetricsSnapshot: return "metrics";
+    case Operation::HealthList: return "health";
+    case Operation::EventSnapshot: return "events";
+    case Operation::SessionList: return "sessions";
     case Operation::ModeGet: return "mode-get";
     case Operation::ModeSet: return "mode-set";
     case Operation::ModeRecover: return "mode-recover";
+    case Operation::OperationQuery: return "op-query";
+    case Operation::OperationCancel: return "op-cancel";
+    case Operation::SessionValidate: return "session-validate";
+    case Operation::CapsuleCreate: return "capsule";
     case Operation::BootProfileGet: return "boot-profile-get";
     case Operation::BootProfileSet: return "boot-profile-set";
     case Operation::BootProfileApply: return "boot-profile-apply";
