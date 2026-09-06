@@ -120,7 +120,7 @@ default dedicated `~/.ssh/determination_ed25519` key.
       scanout, and Plasma Mobile under KWin with GPU compositing + touch.
       This is retained as an explicit native-Mesa experiment, not the portable
       product renderer.
-- [ ] Compatibility KWin path: vendor EGL/GLES through libhybris, Android
+- [x] Compatibility KWin path: vendor EGL/GLES through libhybris, Android
       gralloc allocation, and minigbm as the compositor-facing GBM layer. The
       first shared-buffer interop gate passed on-device (2026-07-19): vendor
       Adreno rendered through a reconstructed full native handle, pixel readback
@@ -132,7 +132,7 @@ default dedicated `~/.ssh/determination_ed25519` key.
       sync-fence transport remain.
 - [ ] Milestone 5 phase 2: concurrent external convergence : Android/SF keeps
       the panel while a guest-rendered dmabuf is presented on DP-alt
-- [ ] Direct audio : the internal-speaker alpha is hardware-proven on
+- [x] Direct audio : the internal-speaker alpha is hardware-proven on
       `guacamoleb` (2026-08-02): journalled Android ownership, direct ALSA and
       PipeWire playback, normal desktop lifecycle integration, and exact
       mixer/service restoration pass on-device. Volume/mute, headset, DP/USB,
