@@ -4,7 +4,17 @@ Product path: vendor EGL/GLES through libhybris, Android gralloc allocations,
 complete native handles and sync-files, internal presentation through hwcomposer.
 No Mesa/Zink, raw KMS or nested KWin fallback.
 
-## Delivered foundation
+## Android Wayland client-buffer port
+
+The Opal launch blocker now has a host-built `android_wlegl` v2 adapter and
+vendor-EGL client texture path. ARM64 incremental linking and isolated QEMU
+`--version` pass; device rendering/restore qualification remains untested.
+See [ANDROID-WLEGL.md](ANDROID-WLEGL.md) for implementation, artifact and limits.
+
+The foundation notes below describe the earlier buffer-only milestone, not the
+current compositor/session availability.
+
+## Delivered foundation (historical)
 
 - `HybrisBuffer`: owns a complete Android `EGLClientBuffer` and its vendor
   `EGL_NATIVE_BUFFER_HYBRIS` image. Noncopyable; destroys the image before the
