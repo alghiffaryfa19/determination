@@ -2,6 +2,7 @@
 # Guest session launcher: desktop-on calls this for both halves of any session.
 #   compositor <binary> [args...]  env + exec the compositor (never returns)
 #   client <shell-path>            wait for wayland-0, run shell (empty = foot)
+#                                    hyprland-config = config owns its shell
 # Phosh keeps det-phosh-session: its systemd/portal/audio contracts stay put.
 set -eu
 
@@ -90,7 +91,9 @@ client)
     command -v det-audio-session >/dev/null 2>&1 && \
         command -v pipewire >/dev/null 2>&1 && spawn det-audio-session
 
-    if [ -n "$shell_path" ] && [ -x "$shell_path" ]; then
+    if [ "$shell_path" = hyprland-config ]; then
+        : # Hyprland exec-once owns its shell; retain session manager and audio.
+    elif [ -n "$shell_path" ] && [ -x "$shell_path" ]; then
         spawn "$shell_path"
     else
         command -v foot >/dev/null 2>&1 && spawn foot

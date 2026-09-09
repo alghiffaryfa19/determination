@@ -42,6 +42,8 @@ object Root {
         val qualification: String,
         val reason: String,
         val limitations: List<String>,
+        val installed: Boolean,
+        val availabilityReason: String,
     )
 
 
@@ -613,9 +615,7 @@ object Root {
      */
     fun sessions(): List<SessionChoice> {
         val r = run(
-            "for f in $DET/etc/sessions/*.session; do " +
-                "[ -f \"\$f\" ] || continue; " +
-                "echo \"===\$(basename \"\$f\" .session)\"; cat \"\$f\"; done",
+            "$BIN/session-catalog",
             10,
         )
         val sessions = mutableListOf<SessionChoice>()
@@ -633,6 +633,8 @@ object Root {
                 reason = fields["reason"] ?: "",
                 limitations = (fields["limitations"] ?: "")
                     .split(',').map { it.trim() }.filter { it.isNotEmpty() },
+                installed = fields["runtime_ready"] == "yes",
+                availabilityReason = fields["runtime_reason"] ?: "Runtime availability unknown",
             )
         }
         for (line in r.out.lineSequence()) {
@@ -691,6 +693,10 @@ object Root {
      */
     fun getCompositor(): String =
         run("cat $DET/etc/compositor 2>/dev/null", 8).out.trim().ifBlank { "phosh" }
+
+    fun activeSession(): String = run(
+        "if [ -f $DET/run/desktop-mode ]; then sed -n 's/^id=//p' $DET/run/session.active; fi", 8,
+    ).out.trim()
 
     fun setCompositor(id: String): Result {
         if (!id.matches(Regex("[a-z0-9-]+")))

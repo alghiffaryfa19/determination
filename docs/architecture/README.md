@@ -10,3 +10,4 @@ Last reviewed: 2026-07-30
 - [GPU application buffers](../gpu-app-buffers.md): client rendering path and verification.
 - [Direct audio](../audio-architecture.md): hardware ownership contract and gates.
 - [Android app API](../app-api.md): public intents and signature-bound control API.
+- [Cooperative system_server](cooperative-system-server.md): experimental path to keep Android services live while the guest exclusively owns the internal panel.

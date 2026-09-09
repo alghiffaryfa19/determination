@@ -84,7 +84,15 @@ set -e
 install -d -m 0755 /run/udev /run/udev/data
 for ev in /sys/class/input/event*; do
     [ -e "$ev" ] || continue
+    name=$(cat "$ev/device/name" 2>/dev/null || true)
+    case "$name" in
+        touchpanel_kpd|touchpanel_ps) continue ;;
+    esac
     props=$(udevadm test-builtin input_id "$ev" 2>/dev/null | grep '^ID_' || true)
+    if [ "$name" = touchpanel ]; then
+        props=$(printf '%s\n' "$props" | grep -v '^ID_INPUT_TOUCH' || true)
+        props=$(printf '%s\nID_INPUT=1\nID_INPUT_TOUCHSCREEN=1\n' "$props")
+    fi
     [ -n "$props" ] || continue
     { printf 'I:1\n'; printf '%s\n' "$props" | sed 's/^/E:/'; } \
         > "/run/udev/data/c$(cat "$ev/dev")"
@@ -117,6 +125,7 @@ cat > /etc/libinput/local-overrides.quirks <<'EOF'
 [OnePlus 7 touchpanel]
 MatchName=touchpanel
 AttrEventCode=-ABS_MT_WIDTH_MAJOR;-ABS_MT_PRESSURE
+AttrInputProp=+INPUT_PROP_DIRECT;-INPUT_PROP_POINTER
 EOF
     ;;
 none|'')

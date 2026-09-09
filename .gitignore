@@ -8,9 +8,11 @@ recon/report-*/
 toolchain/
 determination-magisk-*.zip
 dist/
+*.core
 artifacts/backups/
 artifacts/local/
 artifacts/raw/
+artifacts/android-sdk-restore.txt
 artifacts/*.img
 artifacts/*.apk
 artifacts/*.zip

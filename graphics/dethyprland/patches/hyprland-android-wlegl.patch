@@ -1,3 +1,9 @@
+## SPDX-FileCopyrightText: 2026 Melissa <theonest262@gmail.com>
+## SPDX-License-Identifier: MIT
+##
+## Determination patch for BSD-3-Clause Hyprland. Retain Hyprland's copyright
+## and BSD-3-Clause notice with this patch and its output.
+
 diff --git a/CMakeLists.txt b/CMakeLists.txt
 index bc016d85..40ccf569 100644
 --- a/CMakeLists.txt

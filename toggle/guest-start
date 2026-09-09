@@ -61,13 +61,24 @@ for det_guest_tool in det-guest-agent det-audio-probe det-audio-session det-pipe
                       det-input-actions det-media-action det-connectivity det-connectivity-menu \
                       det-platform det-phosh-session det-compat-check \
                       det-firefox-content-defaults det-session-launch \
-                      det-plasma-session det-plasma-client; do
+                      det-plasma-session det-plasma-client det-hyprland-opal \
+                      det-opal opal; do
     if [ -f "$DET/guest-tools/$det_guest_tool" ]; then
         mkdir -p "$GUEST_ROOT/usr/local/bin"
         cp -f "$DET/guest-tools/$det_guest_tool" \
             "$GUEST_ROOT/usr/local/bin/$det_guest_tool"
         chmod 0755 "$GUEST_ROOT/usr/local/bin/$det_guest_tool"
     fi
+done
+if [ -d "$DET/guest-assets/opal" ]; then
+    mkdir -p "$GUEST_ROOT/usr/local/share/det-opal"
+    cp -a "$DET/guest-assets/opal/." "$GUEST_ROOT/usr/local/share/det-opal/"
+fi
+for det_guest_config in "$DET"/guest-config/*.conf; do
+    [ -f "$det_guest_config" ] || continue
+    mkdir -p "$GUEST_ROOT/etc/determination"
+    cp -f "$det_guest_config" "$GUEST_ROOT/etc/determination/$(basename "$det_guest_config")"
+    chmod 0644 "$GUEST_ROOT/etc/determination/$(basename "$det_guest_config")"
 done
 if [ -f "$DET/guest-tools/setup-compatibility.sh" ]; then
     mkdir -p "$GUEST_ROOT/usr/local/sbin"

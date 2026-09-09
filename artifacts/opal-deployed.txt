@@ -1,0 +1,58 @@
+Killed p89h9c2lt
+No running instances for "/usr/local/share/det-opal/shell.qml"
+Dead instances:
+ - sgkxb2lt
+ - k91g0c2lt
+ - w52j2c2lt
+ - ps2k3c2lt
+ - el3m4c2lt
+ - p7596c2lt
+ - s7708c2lt
+ - p89h9c2lt
+[32m  INFO[0m: Launching config: "/usr/local/share/det-opal/shell.qml"
+[32m  INFO[0m: Shell ID: "886931d2cd7a9b4fff3ab0ad6deb4e7d" Path ID "886931d2cd7a9b4fff3ab0ad6deb4e7d"
+[32m  INFO[0m: Saving logs to "/run/user/1000/quickshell/by-id/pbcibc2lt/log.qslog"
+library "libadreno_app_profiles.so" not found
+[32m  INFO[0m: Configuration Loaded
+{
+"HWC-1": {
+    "levels": {
+
+        "0": [
+                {
+                    "address": "0x60a48e9ea0",
+                    "x": 0,
+                    "y": 0,
+                    "w": 360,
+                    "h": 780,
+                    "namespace": "opal-wallpaper",
+                    "pid": 15973
+                }
+        ],
+        "1": [
+],
+        "2": [
+                {
+                    "address": "0x60a4fa8be0",
+                    "x": 0,
+                    "y": 0,
+                    "w": 360,
+                    "h": 48,
+                    "namespace": "opal-bar",
+                    "pid": 15973
+                },                {
+                    "address": "0x60a4f9c280",
+                    "x": 0,
+                    "y": 732,
+                    "w": 360,
+                    "h": 48,
+                    "namespace": "opal-shelf",
+                    "pid": 15973
+                }
+        ],
+        "3": [
+]
+    }
+}
+}
+

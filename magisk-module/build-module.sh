@@ -68,14 +68,15 @@ trap 'rm -rf "$WORK"' EXIT
 
 cp customize.sh post-fs-data.sh service.sh sepolicy.rule "$WORK/"
 det_render_version_template module.prop.in "$WORK/module.prop"
-mkdir -p "$WORK/tools" "$WORK/guest-tools" "$WORK/zygisk" \
+mkdir -p "$WORK/tools" "$WORK/guest-tools" "$WORK/guest-assets" "$WORK/zygisk" \
     "$WORK/device-profiles" "$WORK/audio-profiles"
 cp ../tools/evgrab/evgrab "$INPUT_FORWARDER" \
    "$DETD" "$DETCTL" "$DET_AUDIO_HOST" "$DET_AUDIO_OWNER" \
    ../toggle/device-config ../toggle/generate-lxc-config ../toggle/generate-guest-config \
    ../toggle/lifecycle-lib ../toggle/boot-profile ../toggle/guest-distro \
    ../toggle/guest-start ../toggle/desktop-on ../toggle/desktop-off \
-   ../toggle/session-select ../toggle/session-set \
+   ../toggle/desktop-memory \
+    ../toggle/session-catalog ../toggle/session-select ../toggle/session-set \
    ../toggle/run-transition ../toggle/external-presenter ../toggle/external-input \
    ../toggle/native-plasma ../toggle/native-kms-gate ../toggle/native-restore \
    ../toggle/det-hostagent ../toggle/det-color-compat \
@@ -83,8 +84,10 @@ cp ../tools/evgrab/evgrab "$INPUT_FORWARDER" \
    "$WORK/tools/"
 cp ../device-profiles/*.conf "$WORK/device-profiles/"
 cp ../audio/profiles/*.conf "$WORK/audio-profiles/"
-mkdir -p "$WORK/sessions"
+mkdir -p "$WORK/sessions" "$WORK/guest-config"
 cp ../guest/sessions/*.session "$WORK/sessions/"
+cp ../guest/hyprland.conf "$WORK/guest-config/hyprland.conf"
+cp ../guest/hyprland-opal.conf "$WORK/guest-config/hyprland-opal.conf"
 cp "$DET_GUEST_AGENT" "$WORK/guest-tools/det-guest-agent"
 cp "$DET_AUDIO_GUEST" "$WORK/guest-tools/det-audio-probe"
 cp ../guest/det-audio-session "$WORK/guest-tools/det-audio-session"
@@ -100,6 +103,12 @@ cp ../guest/det-firefox-content-defaults "$WORK/guest-tools/det-firefox-content-
 cp ../guest/det-session-launch "$WORK/guest-tools/det-session-launch"
 cp ../guest/det-plasma-session "$WORK/guest-tools/det-plasma-session"
 cp ../guest/det-plasma-client "$WORK/guest-tools/det-plasma-client"
+cp ../guest/det-hyprland "$WORK/guest-tools/det-hyprland"
+cp ../guest/det-hyprland-opal "$WORK/guest-tools/det-hyprland-opal"
+cp ../guest/det-opal "$WORK/guest-tools/det-opal"
+cp ../guest/det-opal-bridge "$WORK/guest-tools/det-opal-bridge"
+cp ../guest/opal-command "$WORK/guest-tools/opal"
+cp -a ../guest/opal "$WORK/guest-assets/opal"
 cp ../guest/setup-compatibility.sh "$WORK/guest-tools/setup-compatibility.sh"
 cp ../guest/det-phosh.service "$WORK/guest-tools/det-phosh.service"
 cp ../guest/det-plasma.service "$WORK/guest-tools/det-plasma.service"

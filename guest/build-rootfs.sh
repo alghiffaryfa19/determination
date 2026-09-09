@@ -29,8 +29,9 @@ PKGS="$PKGS,pipewire,pipewire-pulse,wireplumber,alsa-utils"
 PKGS="$PKGS,xdg-desktop-portal,xdg-desktop-portal-phosh,xdg-desktop-portal-gtk"
 PKGS="$PKGS,xdg-utils,xdg-user-dirs,dbus-user-session,gnome-keyring,libpam-gnome-keyring"
 PKGS="$PKGS,at-spi2-core,gvfs,gvfs-backends,flatpak,fonts-noto-core,fonts-noto-color-emoji"
-# Compositor + hybris stack; sway is the first wlroots target (spec §3).
-PKGS="$PKGS,sway,foot,wmenu"
+# Base desktop tools. Phosh and the supported compositor sessions install their
+# own dependencies through the profile setup path.
+PKGS="$PKGS,foot,wmenu"
 
 if [ "$BOOTSTRAP" = mmdebstrap ]; then
     mmdebstrap --architectures=arm64 \

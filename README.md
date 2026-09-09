@@ -46,6 +46,14 @@ Run every host-safe check from the repository root:
 ./tools/check-host.sh
 ```
 
+## Licensing
+
+Determination's original code is [MIT-licensed](LICENSE). Components we build,
+vendor, or modify retain their own licences; see
+[third-party notices](THIRD_PARTY_NOTICES.md) and the verbatim texts in
+[`LICENSES/`](LICENSES/) before redistributing a boot image, guest rootfs, module
+ZIP, or APK.
+
 
 
 ## Linux-first profile

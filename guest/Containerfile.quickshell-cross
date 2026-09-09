@@ -1,0 +1,19 @@
+FROM docker.io/library/debian:trixie
+
+RUN dpkg --add-architecture arm64 \
+ && apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ca-certificates cmake g++-aarch64-linux-gnu gcc-aarch64-linux-gnu \
+      ninja-build pkg-config qt6-base-dev qt6-base-private-dev \
+      qt6-declarative-dev qt6-declarative-private-dev qt6-shadertools-dev \
+      qt6-wayland-dev qt6-wayland-private-dev wayland-protocols \
+      libcli11-dev libdrm-dev libegl-dev libgbm-dev libvulkan-dev spirv-tools \
+      libc6-dev:arm64 libdbus-1-dev:arm64 libdrm-dev:arm64 libegl-dev:arm64 \
+      libgbm-dev:arm64 libgl-dev:arm64 libglib2.0-dev:arm64 \
+      libpipewire-0.3-dev:arm64 libspa-0.2-dev:arm64 \
+      libudev-dev:arm64 libvulkan-dev:arm64 libwayland-dev:arm64 \
+      qt6-base-dev:arm64 qt6-base-private-dev:arm64 \
+      qt6-declarative-dev:arm64 qt6-declarative-private-dev:arm64 \
+      qt6-shadertools-dev:arm64 qt6-wayland-dev:arm64 \
+      qt6-wayland-private-dev:arm64 \
+ && rm -rf /var/lib/apt/lists/*

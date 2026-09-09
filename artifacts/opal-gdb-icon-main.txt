@@ -1,0 +1,38 @@
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0x7fb7684ba0 (LWP 9428)]
+No running instances for "/usr/local/share/det-opal/shell.qml"
+Dead instances:
+ - sgkxb2lt
+ - k91g0c2lt
+ - w52j2c2lt
+ - ps2k3c2lt
+ - el3m4c2lt
+ - p7596c2lt
+[32m  INFO[0m: Launching config: "/usr/local/share/det-opal/shell.qml"
+[32m  INFO[0m: Shell ID: "886931d2cd7a9b4fff3ab0ad6deb4e7d" Path ID "886931d2cd7a9b4fff3ab0ad6deb4e7d"
+[32m  INFO[0m: Saving logs to "/run/user/1000/quickshell/by-id/s7708c2lt/log.qslog"
+[New Thread 0x7fb6e4eba0 (LWP 9429)]
+[New Thread 0x7fb65feba0 (LWP 9430)]
+[New Thread 0x7fb5deeba0 (LWP 9431)]
+[New Thread 0x7fb4b9aba0 (LWP 9432)]
+library "libadreno_app_profiles.so" not found
+[Detaching after fork from child process 9540]
+[32m  INFO[0m: Configuration Loaded
+[New Thread 0x7f98bfeba0 (LWP 9541)]
+[New Thread 0x7f983eeba0 (LWP 9542)]
+[New Thread 0x7f97bdeba0 (LWP 9543)]
+[New Thread 0x7f973ceba0 (LWP 9544)]
+[New Thread 0x7f85c51ba0 (LWP 9651)]
+[New Thread 0x7f85441ba0 (LWP 9652)]
+[New Thread 0x7f84c31ba0 (LWP 9653)]
+[New Thread 0x7f7fffeba0 (LWP 9654)]
+[New Thread 0x7f87f50ba0 (LWP 9659)]
+[New Thread 0x7f7d3deba0 (LWP 9679)]
+[Thread 0x7f7d3deba0 (LWP 9679) exited]
+[31m ERROR[97m quickshell.wayland.buffer.dmabuf[0m: Failed to look up EGL proc: eglQueryDisplayAttribEXT
+[31m ERROR[97m quickshell.wayland.buffer.dmabuf[0m: Failed to look up EGL proc: eglQueryDeviceStringEXT
+[31m ERROR[97m quickshell.wayland.buffer.dmabuf[0m: Failed to look up EGL proc: eglQueryDmaBufFormatsEXT
+[31m ERROR[97m quickshell.wayland.buffer.dmabuf[0m: Failed to look up EGL proc: eglQueryDmaBufModifiersEXT
+[33m  WARN[97m quickshell.wayland.buffer[0m: Render format initialization failed. All buffers will fall back to SHM.
+[33m  WARN[97m qt.qpa.wayland.textinput[0m: virtual void QtWaylandClient::QWaylandTextInputv3::zwp_text_input_v3_leave(wl_surface*) Got leave event for surface 0x0 focused surface 0x5557c41470

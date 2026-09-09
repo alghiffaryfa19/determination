@@ -1,0 +1,69 @@
+Reading package lists...
+Building dependency tree...
+Reading state information...
+foot is already the newest version (1.21.0-2).
+The following additional packages will be installed:
+  bc bemenu callaudiod gojq inotify-tools j4-dmenu-desktop libbemenu-wayland
+  libbemenu0 libcallaudio-tools libcares2 libfmt10 libgeocoding8
+  libinotifytools0 libmbim-glib4 libmbim-proxy libphonenumber8
+  libprotobuf32t64 libqmi-glib5 libqmi-proxy libqrtr-glib0 libspdlog1.15 light
+  lisgd mako-notifier mmsd-tng modemmanager net-tools pamixer pnc rfkill slurp
+  swaybg swayidle swaylock vvmd wayout wl-clipboard wob wtype wvkbd
+Suggested packages:
+  sway-backgrounds xdg-desktop-portal-wlr
+Recommended packages:
+  libmbim-utils libqmi-utils usb-modeswitch gawk wmenu megapixels mpv netsurf
+  w3m wget yt-dlp vvmplayer
+The following NEW packages will be installed:
+  bc bemenu callaudiod gojq inotify-tools j4-dmenu-desktop libbemenu-wayland
+  libbemenu0 libcallaudio-tools libcares2 libfmt10 libgeocoding8
+  libinotifytools0 libmbim-glib4 libmbim-proxy libphonenumber8
+  libprotobuf32t64 libqmi-glib5 libqmi-proxy libqrtr-glib0 libspdlog1.15 light
+  lisgd mako-notifier mmsd-tng modemmanager net-tools pamixer pnc rfkill slurp
+  sway swaybg swayidle swaylock sxmo-utils vvmd wayout wl-clipboard wob wtype
+  wvkbd
+0 upgraded, 42 newly installed, 0 to remove and 8 not upgraded.
+Need to get 7901 kB of archives.
+After this operation, 48.4 MB of additional disk space will be used.
+Get:1 https://deb.debian.org/debian trixie/main arm64 bc arm64 1.07.1-4+b1 [101 kB]
+Get:2 https://deb.debian.org/debian trixie/main arm64 libbemenu0 arm64 0.6.15+dfsg-1+b4 [20.4 kB]
+Get:3 https://deb.debian.org/debian trixie/main arm64 libbemenu-wayland arm64 0.6.15+dfsg-1+b4 [22.8 kB]
+Get:4 https://deb.debian.org/debian trixie/main arm64 bemenu arm64 0.6.15+dfsg-1+b4 [18.0 kB]
+Get:5 https://deb.debian.org/debian trixie/main arm64 callaudiod arm64 0.1.10-1+b2 [21.0 kB]
+Get:6 https://deb.debian.org/debian trixie/main arm64 gojq arm64 0.12.13-1 [1089 kB]
+Get:7 https://deb.debian.org/debian trixie/main arm64 libinotifytools0 arm64 4.23.9.0-2+b1 [22.3 kB]
+Get:8 https://deb.debian.org/debian trixie/main arm64 inotify-tools arm64 4.23.9.0-2+b1 [32.2 kB]
+Get:9 https://deb.debian.org/debian trixie/main arm64 libfmt10 arm64 10.1.1+ds1-4 [121 kB]
+Get:10 https://deb.debian.org/debian trixie/main arm64 libspdlog1.15 arm64 1:1.15.2+ds-2 [99.1 kB]
+Get:11 https://deb.debian.org/debian trixie/main arm64 j4-dmenu-desktop arm64 3.2-1+b1 [111 kB]
+Get:12 https://deb.debian.org/debian trixie/main arm64 libcallaudio-tools arm64 0.1.10-1+b2 [14.5 kB]
+Get:13 https://deb.debian.org/debian trixie/main arm64 libcares2 arm64 1.34.5-1+deb13u1 [92.4 kB]
+Get:14 https://deb.debian.org/debian trixie/main arm64 libprotobuf32t64 arm64 3.21.12-11+deb13u1 [858 kB]
+Get:15 https://deb.debian.org/debian trixie/main arm64 libphonenumber8 arm64 8.13.51+ds-4.2 [203 kB]
+Get:16 https://deb.debian.org/debian trixie/main arm64 libgeocoding8 arm64 8.13.51+ds-4.2 [1211 kB]
+Get:17 https://deb.debian.org/debian trixie/main arm64 libmbim-glib4 arm64 1.32.0-1 [195 kB]
+Get:18 https://deb.debian.org/debian trixie/main arm64 libmbim-proxy arm64 1.32.0-1 [9004 B]
+Get:19 https://deb.debian.org/debian trixie/main arm64 libqrtr-glib0 arm64 1.2.2-1+b2 [15.9 kB]
+Get:20 https://deb.debian.org/debian trixie/main arm64 libqmi-glib5 arm64 1.36.0-1 [792 kB]
+Get:21 https://deb.debian.org/debian trixie/main arm64 libqmi-proxy arm64 1.36.0-1 [9728 B]
+Get:22 https://deb.debian.org/debian trixie/main arm64 light arm64 1.2.2-2+b1 [19.8 kB]
+Get:23 https://deb.debian.org/debian trixie/main arm64 lisgd arm64 0.3.7-1+b1 [11.8 kB]
+Get:24 https://deb.debian.org/debian trixie/main arm64 mako-notifier arm64 1.10.0-1 [53.8 kB]
+Get:25 https://deb.debian.org/debian trixie/main arm64 mmsd-tng arm64 2.6.3-1 [69.4 kB]
+Get:26 https://deb.debian.org/debian trixie/main arm64 modemmanager arm64 1.24.0-1+deb13u1 [972 kB]
+Get:27 https://deb.debian.org/debian trixie/main arm64 net-tools arm64 2.10-1.3 [243 kB]
+Get:28 https://deb.debian.org/debian trixie/main arm64 pamixer arm64 1.6-1+b1 [81.5 kB]
+Get:29 https://deb.debian.org/debian trixie/main arm64 pnc arm64 0.9.4-3+b3 [23.5 kB]
+Get:30 https://deb.debian.org/debian trixie/main arm64 rfkill arm64 2.41-5 [46.7 kB]
+Get:31 https://deb.debian.org/debian trixie/main arm64 slurp arm64 1.5.0-1+b1 [17.9 kB]
+Get:32 https://deb.debian.org/debian trixie/main arm64 swaybg arm64 1.2.1-1+b1 [14.8 kB]
+Get:33 https://deb.debian.org/debian trixie/main arm64 sway arm64 1.10.1-2 [306 kB]
+Get:34 https://deb.debian.org/debian trixie/main arm64 swayidle arm64 1.8.0-1+b1 [16.6 kB]
+Get:35 https://deb.debian.org/debian trixie/main arm64 swaylock arm64 1.8.2-1 [28.6 kB]
+Get:36 https://deb.debian.org/debian trixie/main arm64 wob arm64 0.14.2-1+b1 [17.7 kB]
+Get:37 https://deb.debian.org/debian trixie/main arm64 wvkbd arm64 0.15-1 [45.6 kB]
+Get:38 https://deb.debian.org/debian trixie/main arm64 wayout arm64 0.1.4-1+b1 [18.9 kB]
+Get:39 https://deb.debian.org/debian trixie/main arm64 wtype arm64 0.4-3+b1 [9816 B]
+Get:40 https://deb.debian.org/debian trixie/main arm64 wl-clipboard arm64 2.2.1-2 [31.1 kB]
+Get:41 https://deb.debian.org/debian trixie/main arm64 vvmd arm64 1.1-1 [49.6 kB]
+Get:42 https://deb.debian.org/debian trixie/main arm64 sxmo-utils arm64 1.12.0-7+b3 [763 kB]

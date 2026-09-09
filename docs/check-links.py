@@ -25,7 +25,11 @@ def markdown_files() -> tuple[Path, ...]:
         text=True,
     )
     if result.returncode == 0:
-        return tuple(ROOT / path for path in result.stdout.splitlines() if path)
+        return tuple(
+            ROOT / path
+            for path in result.stdout.splitlines()
+            if path and not path.startswith("guest/vendor/")
+        )
     return tuple(ROOT.rglob("*.md"))
 
 

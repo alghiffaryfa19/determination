@@ -1,3 +1,9 @@
+## SPDX-FileCopyrightText: 2026 Melissa <theonest262@gmail.com>
+## SPDX-License-Identifier: GPL-2.0-or-later
+##
+## Determination patch for KWin 6.3.6. It modifies GPL-2.0-or-later KWin
+## sources; retain the complete upstream KWin notice set.
+
 --- a/src/opengl/eglswapchain.h
 +++ b/src/opengl/eglswapchain.h
 @@ -47,6 +47,7 @@

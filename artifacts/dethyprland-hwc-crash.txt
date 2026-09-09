@@ -1,0 +1,174 @@
+--------------------------------------------
+   Hyprland Crash Report
+--------------------------------------------
+This was an accident, I swear!
+
+Hyprland received signal 6(ABRT)
+Version: 9958d297641b5c84dcff93f9039d80a5ad37ab00
+Tag: 
+Date: Thu May 8 21:15:18 2025
+Flags:
+
+System info:
+	System name: Linux
+	Node name: determination
+	Release: 4.14.357-perf-g96adfa8256dc
+	Version: #2 SMP PREEMPT Sat Jul 11 18:41:53 BST 2026
+
+GPU:
+	
+
+os-release:
+	VERSION_ID="13"
+	VERSION="13 (trixie)"
+	VERSION_CODENAME=trixie
+	DEBIAN_VERSION_FULL=13.6
+	ID=debian
+	BUG_REPORT_URL="https://bugs.debian.org/"
+	NAME="Determination"
+	PRETTY_NAME="Determination 0.5.0-alpha.1 (Aqua)"
+	HOME_URL="https://determination.local"
+	DETERMINATION_VERSION=0.5.0-alpha.1
+	DETERMINATION_CODENAME=Aqua
+Backtrace:
+	# | /opt/dethyprland/bin/Hyprland(_Z12getBacktracev+0x3c) [0x5c892dab80]
+		
+		
+	#1 | /opt/dethyprland/bin/Hyprland(_ZN14NCrashReporter18createAndSaveCrashEi+0x19c0) [0x5c892142d0]
+		
+		
+	#2 | /opt/dethyprland/bin/Hyprland(+0x2b68a0) [0x5c891768a0]
+		
+		
+	#3 | linux-vdso.so.1(__kernel_rt_sigreturn+0) [0x759b4c7628]
+		
+		
+	#4 | /lib/aarch64-linux-gnu/libc.so.6(+0x87d80) [0x7599237d80]
+		
+		
+	#5 | /lib/aarch64-linux-gnu/libc.so.6(gsignal+0x20) [0x75991e6940]
+		
+		
+	#6 | /lib/aarch64-linux-gnu/libc.so.6(abort+0x2c) [0x75991d1a84]
+		
+		
+	#7 | /lib/aarch64-linux-gnu/libstdc++.so.6(_ZN9__gnu_cxx27__verbose_terminate_handlerEv+0x184) [0x759950c0c4]
+		
+		
+	#8 | /lib/aarch64-linux-gnu/libstdc++.so.6(+0xa9650) [0x7599509650]
+		
+		
+	#9 | /lib/aarch64-linux-gnu/libstdc++.so.6(_ZSt10unexpectedv+0) [0x7599500a64]
+		
+		
+	#1 | /lib/aarch64-linux-gnu/libstdc++.so.6(+0xa99e8) [0x75995099e8]
+		
+		
+	#11 | /opt/dethyprland/lib/libaquamarine.so.7(_ZNK11Dethyprland12HybrisBuffer17exportRenderFenceEv+0x150) [0x759b20c2f0]
+		
+		
+	#12 | /opt/dethyprland/lib/libaquamarine.so.7(_ZN11Dethyprland12HwcPresenter7presentEN9Hyprutils6Memory14CSharedPointerIN10Aquamarine7IBufferEEE+0xd4) [0x759b1951f0]
+		
+		
+	#13 | /opt/dethyprland/lib/libaquamarine.so.7(_ZN10Aquamarine15CHeadlessOutput6commitEv+0x170) [0x759b191c30]
+		
+		
+	#14 | /opt/dethyprland/bin/Hyprland(_ZN13CMonitorState6commitEv+0x158) [0x5c892e53dc]
+		
+		
+	#15 | /opt/dethyprland/bin/Hyprland(_ZN8CMonitor16applyMonitorRuleEP12SMonitorRuleb+0x2f44) [0x5c892e3e8c]
+		
+		
+	#16 | /opt/dethyprland/bin/Hyprland(_ZN8CMonitor9onConnectEb+0x1298) [0x5c892df748]
+		
+		
+	#17 | /opt/dethyprland/bin/Hyprland(_ZN11CCompositor12onNewMonitorEN9Hyprutils6Memory14CSharedPointerIN10Aquamarine7IOutputEEE+0x6a8) [0x5c89179458]
+		
+		
+	#18 | /opt/dethyprland/bin/Hyprland(_ZN11CCompositor10initServerENSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEEi+0x10fc) [0x5c89176424]
+		
+		
+	#19 | /opt/dethyprland/bin/Hyprland(main+0xab0) [0x5c8933195c]
+		
+		
+	#2 | /lib/aarch64-linux-gnu/libc.so.6(+0x2225c) [0x75991d225c]
+		
+		
+	#21 | /lib/aarch64-linux-gnu/libc.so.6(__libc_start_main+0x9c) [0x75991d233c]
+		
+		
+	#22 | /opt/dethyprland/bin/Hyprland(_start+0x30) [0x5c891720f0]
+		
+		
+
+
+Log tail:
+[ERR] Hyprcursor failed loading theme "", falling back to Xcursor.
+[WARN] XCURSOR_SIZE size not set, defaulting to size 24
+[LOG] XCursor scanning theme default
+[LOG] XCursor parsing index.theme /usr/share/icons/default/index.theme
+[LOG] XCursor theme default inherits Adwaita
+[LOG] XCursor scanning theme Adwaita
+[LOG] XCursor using theme path /usr/share/icons/Adwaita/cursors
+[LOG] XCursor parsing index.theme /usr/share/icons/Adwaita/index.theme
+[LOG] XCursor theme Adwaita inherits AdwaitaLegacy
+[LOG] XCursor theme Adwaita inherits hicolor
+[LOG] XCursor scanning theme Adwaita
+[LOG] XCursor using theme path /usr/share/icons/Adwaita/cursors
+[LOG] XCursor parsing index.theme /usr/share/icons/Adwaita/index.theme
+[LOG] XCursor theme Adwaita inherits AdwaitaLegacy
+[LOG] XCursor theme Adwaita inherits hicolor
+[LOG] XCursor scanning theme AdwaitaLegacy
+[LOG] XCursor scanning theme hicolor
+[LOG] XCursor parsing index.theme /usr/share/icons/hicolor/index.theme
+[LOG] XCursor already has a shape default loaded, skipping
+[LOG] XCursor already has a shape context-menu loaded, skipping
+[LOG] XCursor already has a shape help loaded, skipping
+[LOG] XCursor already has a shape pointer loaded, skipping
+[LOG] XCursor already has a shape progress loaded, skipping
+[LOG] XCursor already has a shape wait loaded, skipping
+[LOG] XCursor failed to find a legacy shape with name plus, skipping
+[LOG] XCursor already has a shape crosshair loaded, skipping
+[LOG] XCursor already has a shape text loaded, skipping
+[LOG] XCursor already has a shape vertical-text loaded, skipping
+[LOG] XCursor failed to find a legacy shape with name dnd-link, skipping
+[LOG] XCursor failed to find a legacy shape with name dnd-copy, skipping
+[LOG] XCursor already has a shape move loaded, skipping
+[LOG] XCursor failed to find a legacy shape with name dnd-none, skipping
+[LOG] XCursor failed to find a legacy shape with name crossed_circle, skipping
+[LOG] XCursor already has a shape grab loaded, skipping
+[LOG] XCursor already has a shape grabbing loaded, skipping
+[LOG] XCursor already has a shape e-resize loaded, skipping
+[LOG] XCursor already has a shape n-resize loaded, skipping
+[LOG] XCursor already has a shape ne-resize loaded, skipping
+[LOG] XCursor already has a shape nw-resize loaded, skipping
+[LOG] XCursor already has a shape s-resize loaded, skipping
+[LOG] XCursor already has a shape se-resize loaded, skipping
+[LOG] XCursor already has a shape sw-resize loaded, skipping
+[LOG] XCursor already has a shape w-resize loaded, skipping
+[LOG] XCursor already has a shape ew-resize loaded, skipping
+[LOG] XCursor already has a shape ns-resize loaded, skipping
+[LOG] XCursor already has a shape nesw-resize loaded, skipping
+[LOG] XCursor already has a shape nwse-resize loaded, skipping
+[LOG] XCursor already has a shape col-resize loaded, skipping
+[LOG] XCursor already has a shape row-resize loaded, skipping
+[LOG] XCursor already has a shape all-scroll loaded, skipping
+[LOG] XCursor already has a shape zoom-in loaded, skipping
+[LOG] XCursor already has a shape zoom-out loaded, skipping
+[LOG] Creating the VersionKeeper!
+[LOG] CVersionKeeperManager: Read version 0.49.0 matches or is older than running.
+[LOG] Creating the DonationNag!
+[LOG] DonationNag: last nag was 0 days ago, too early for a nag.
+[LOG] Creating the ANRManager!
+[ERR] hyprland-dialog missing from PATH, cannot start ANRManager
+[LOG] Starting XWayland
+[LOG] Starting up the XWayland server
+[LOG] XWayland found a suitable display socket at DISPLAY: :0
+[LOG] New output with name HWC-1
+[LOG] [hookSystem] New hook event registered: newMonitor
+[LOG] [hookSystem] New hook event registered: preMonitorAdded
+[LOG] Applying monitor rule for HWC-1
+[LOG] [AQ] Swapchain: Reconfigured a swapchain to [Vector2D: x: 1080, y: 2340] AB24 of length 2
+[LOG] CMonitorState::ensureBufferPresent: no buffer or mismatched format, attaching one from the swapchain for modeset being possible
+[LOG] Monitor HWC-1: requested preferred, using preferred mode 1080x2340@60.00Hz
+[LOG] output HWC-1 succeeded basic test on format DRM_FORMAT_ABGR8888

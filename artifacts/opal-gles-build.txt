@@ -1,0 +1,15 @@
+[1/21] Automatic MOC for target quickshell-launch
+[2/20] Running AUTOMOC file extraction for target quickshell-launch
+[3/19] Automatic MOC for target quickshell-core
+[4/18] Running AUTOMOC file extraction for target quickshell-core
+[5/18] Running moc --collect-json for target quickshell-core
+[6/10] Building CXX object src/core/CMakeFiles/quickshell-core.dir/iconimageprovider.cpp.o
+[7/10] Linking CXX static library src/core/libquickshell-core.a
+[8/10] Building CXX object src/launch/CMakeFiles/quickshell-launch.dir/launch.cpp.o
+[9/10] Linking CXX static library src/launch/libquickshell-launch.a
+[10/10] Linking CXX executable src/quickshell
+-- Install configuration: "Release"
+-- Installing: /work/build/opal-quickshell-cross/install/opt/dethyprland/bin/quickshell
+-- Set non-toolchain portion of runtime path of "/work/build/opal-quickshell-cross/install/opt/dethyprland/bin/quickshell" to "$ORIGIN:$ORIGIN/../lib"
+-- Up-to-date: /work/build/opal-quickshell-cross/install/opt/dethyprland/share/applications/org.quickshell.desktop
+-- Up-to-date: /work/build/opal-quickshell-cross/install/opt/dethyprland/share/icons/hicolor/scalable/apps/org.quickshell.svg

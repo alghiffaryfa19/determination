@@ -1,4 +1,7 @@
 /*
+ * SPDX-FileCopyrightText: 2026 Melissa <theonest262@gmail.com>
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * direct_hwc2_fill_test: CPU-fill variant of direct_hwc2_test.
  *
  * Same window class, same validate/accept/setClientTarget/present path,

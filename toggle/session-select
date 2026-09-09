@@ -15,7 +15,8 @@ fallback_phosh() {
     echo "renderer=vendor-hybris"
     echo "compositor=/usr/local/bin/phoc"
     echo "compositor_args=-C /etc/phoc.ini"
-    echo "shell=/usr/local/bin/phosh"
+    echo "shell=/usr/libexec/phosh"
+    echo "required_binaries=/usr/libexec/phosh,/usr/bin/squeekboard"
     return 0
 }
 
@@ -35,6 +36,18 @@ manifest_field() {
     sed -n "s/^$1=//p" "$manifest" | head -n 1
 }
 
+GUEST="$ROOT/active-guest"
+[ -d "$GUEST" ] || GUEST="$ROOT/guest"
+
+runtime_binary_ready() {
+    binary=$1
+    [ -n "$binary" ] || return 0
+    case "$binary" in
+        /*) [ -x "$GUEST$binary" ] ;;
+        *) return 1 ;;
+    esac
+}
+
 qualification=$(manifest_field qualification)
 case "$qualification" in
     qualified|proven|experimental|diagnostic) ;;
@@ -52,13 +65,40 @@ esac
 
 compositor=$(manifest_field compositor)
 case "$compositor" in
-    /*) ;;
+    /*) runtime_binary_ready "$compositor" || {
+        warn "'$pref' compositor is not installed; using phosh"
+        fallback_phosh
+        exit 0
+    } ;;
     *)
         warn "'$pref' has no absolute compositor path; refusing"
         fallback_phosh
         exit 0
         ;;
 esac
+
+shell=$(manifest_field shell)
+case "$shell" in
+    ''|hyprland-config) ;;
+    *) runtime_binary_ready "$shell" || {
+    warn "'$pref' shell is not installed; using phosh"
+    fallback_phosh
+    exit 0
+    } ;;
+esac
+
+required=$(manifest_field required_binaries)
+saved_ifs=$IFS
+IFS=,
+for binary in $required; do
+    if ! runtime_binary_ready "$binary"; then
+        warn "'$pref' requires missing guest executable '$binary'; using phosh"
+        IFS=$saved_ifs
+        fallback_phosh
+        exit 0
+    fi
+done
+IFS=$saved_ifs
 
 echo "id=$pref"
 echo "qualification=$qualification"

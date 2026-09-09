@@ -1,0 +1,14 @@
+id=opal
+title=Opal
+description=Opal Quickshell with vendor EGL/GLES through libhybris and plug-and-play multi-monitor direct hwcomposer presentation.
+backend=libhybris-hwcomposer
+renderer=vendor-hybris
+allocator=android-gralloc
+presentation=multi-output-direct
+input=evdev-grab
+compositor=/usr/local/bin/det-hyprland-opal
+shell=hyprland-config
+required_binaries=/opt/dethyprland/bin/Hyprland,/opt/dethyprland/bin/quickshell,/usr/local/bin/det-opal
+qualification=experimental
+reason=Opal is ported as the Determination shell; first device launch and restore qualification remain.
+limitations=Suspend is unavailable while Android owns the power lifecycle,Application and restore compatibility remain experimental

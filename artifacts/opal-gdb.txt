@@ -1,0 +1,218 @@
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
+[New Thread 0x7fb7684ba0 (LWP 4732)]
+No running instances for "/usr/local/share/det-opal/shell.qml"
+Dead instances:
+ - sgkxb2lt
+ - k91g0c2lt
+ - w52j2c2lt
+ - ps2k3c2lt
+[32m  INFO[0m: Launching config: "/usr/local/share/det-opal/shell.qml"
+[32m  INFO[0m: Shell ID: "886931d2cd7a9b4fff3ab0ad6deb4e7d" Path ID "886931d2cd7a9b4fff3ab0ad6deb4e7d"
+[32m  INFO[0m: Saving logs to "/run/user/1000/quickshell/by-id/el3m4c2lt/log.qslog"
+[33m  WARN[0m: Attribute Qt::AA_UseOpenGLES must be set before QCoreApplication is created.
+[New Thread 0x7fb6e4eba0 (LWP 4733)]
+[New Thread 0x7fb65feba0 (LWP 4734)]
+[New Thread 0x7fb5deeba0 (LWP 4735)]
+[New Thread 0x7fb4b9aba0 (LWP 4736)]
+library "libadreno_app_profiles.so" not found
+[Detaching after fork from child process 4850]
+[32m  INFO[0m: Configuration Loaded
+[New Thread 0x7f98bfeba0 (LWP 4851)]
+[New Thread 0x7f983eeba0 (LWP 4852)]
+[New Thread 0x7f97bdeba0 (LWP 4853)]
+[New Thread 0x7f973ceba0 (LWP 4854)]
+[New Thread 0x7f96bbeba0 (LWP 4860)]
+[New Thread 0x7f94916ba0 (LWP 4903)]
+[New Thread 0x7f7cb59ba0 (LWP 4921)]
+[New Thread 0x7f7c349ba0 (LWP 4922)]
+[New Thread 0x7f7bb39ba0 (LWP 4923)]
+[New Thread 0x7f791d3ba0 (LWP 4925)]
+[New Thread 0x7f73ffeba0 (LWP 4926)]
+[New Thread 0x7f7ed24ba0 (LWP 4928)]
+
+Thread 18 "QQuickPixmapRea" received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0x7f7ed24ba0 (LWP 4928)]
+0x0000007fbdf4de80 in QPlatformPixmap::fromFile(QString const&, char const*, QFlags<Qt::ImageConversionFlag>) () from /lib/aarch64-linux-gnu/libQt6Gui.so.6
+
+Thread 18 (Thread 0x7f7ed24ba0 (LWP 4928) "QQuickPixmapRea"):
+#0  0x0000007fbdf4de80 in QPlatformPixmap::fromFile(QString const&, char const*, QFlags<Qt::ImageConversionFlag>) () at /lib/aarch64-linux-gnu/libQt6Gui.so.6
+#1  0x0000007fbdf45760 in QPixmap::load(QString const&, char const*, QFlags<Qt::ImageConversionFlag>) () at /lib/aarch64-linux-gnu/libQt6Gui.so.6
+#2  0x0000007fbdf0e050 in ??? () at /lib/aarch64-linux-gnu/libQt6Gui.so.6
+#3  0x0000007fbdf0d574 in ??? () at /lib/aarch64-linux-gnu/libQt6Gui.so.6
+#4  0x0000007fbdef9df0 in ??? () at /lib/aarch64-linux-gnu/libQt6Gui.so.6
+#5  0x0000007fbdf04270 in QIcon::pixmap(QSize const&, double, QIcon::Mode, QIcon::State) const () at /lib/aarch64-linux-gnu/libQt6Gui.so.6
+#6  0x0000007fbdf0437c in QIcon::pixmap(QSize const&, QIcon::Mode, QIcon::State) const () at /lib/aarch64-linux-gnu/libQt6Gui.so.6
+#7  0x00000055558195c0 in IconImageProvider::requestPixmap(QString const&, QSize*, QSize const&) ()
+#8  0x0000007fbe93e7bc in ??? () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#9  0x0000007fbe93eea4 in ??? () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#10 0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#11 0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 17 (Thread 0x7f73ffeba0 (LWP 4926) "QSGRenderThread"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca129b0 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca153ac in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbd171b10 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#5  0x0000007fbea01a3c in ??? () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#6  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#8  0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 16 (Thread 0x7f791d3ba0 (LWP 4925) "QSGRenderThread"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca129b0 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca153ac in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbd171b10 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#5  0x0000007fbea01a3c in ??? () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#6  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#8  0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 15 (Thread 0x7f7bb39ba0 (LWP 4923) "QSGRenderThread"):
+#0  0x0000007f9ee03a1c in ??? ()
+#1  0x0000000100000000 in ??? ()
+
+Thread 14 (Thread 0x7f7c349ba0 (LWP 4922) "QSGRenderThread"):
+#0  0x0000007f9ee03a1c in ??? ()
+#1  0x0000000100000000 in ??? ()
+
+Thread 13 (Thread 0x7f7cb59ba0 (LWP 4921) "QSGRenderThread"):
+#0  0x0000007f9ee03a1c in ??? ()
+
+Thread 12 (Thread 0x7f94916ba0 (LWP 4903) "QSGRenderThread"):
+#0  0x0000007f9ee03a1c in ??? ()
+
+Thread 11 (Thread 0x7f96bbeba0 (LWP 4860) "QSGRenderThread"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca129b0 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca153ac in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbd171b10 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#5  0x0000007fbea01a3c in ??? () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#6  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#8  0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 10 (Thread 0x7f973ceba0 (LWP 4854) "Thread (pooled)"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca129b0 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca155b4 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbd171a78 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#5  0x0000007fbd1751d0 in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#6  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#8  0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 9 (Thread 0x7f97bdeba0 (LWP 4853) "Thread (pooled)"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca129b0 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca155b4 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbd171a78 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#5  0x0000007fbd1751d0 in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#6  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#8  0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 8 (Thread 0x7f983eeba0 (LWP 4852) "Thread (pooled)"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca129b0 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca155b4 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbd171a78 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#5  0x0000007fbd1751d0 in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#6  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#8  0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 7 (Thread 0x7f98bfeba0 (LWP 4851) "Thread (pooled)"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca129b0 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca155b4 in pthread_cond_timedwait () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbd171a78 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#5  0x0000007fbd1751d0 in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#6  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#8  0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 6 (Thread 0x7fb4b9aba0 (LWP 4736) "QQmlThread"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca1265c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca73b0c in ppoll () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbc320954 in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000007fbc3211a4 in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#6  0x0000007fbd23c058 in QEventDispatcherGlib::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbd021d54 in QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#8  0x0000007fbd102ec4 in QThread::exec() () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#9  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#10 0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#11 0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 5 (Thread 0x7fb5deeba0 (LWP 4735) "WaylandEventThr"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca1265c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca735e0 in poll () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbf579148 in ??? () at /lib/aarch64-linux-gnu/libQt6WaylandClient.so.6
+#5  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#6  0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#7  0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 4 (Thread 0x7fb65feba0 (LWP 4734) "WaylandEventThr"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca129b0 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca153ac in pthread_cond_wait () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbd171b10 in QWaitCondition::wait(QMutex*, QDeadlineTimer) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#5  0x0000007fbf5790e4 in ??? () at /lib/aarch64-linux-gnu/libQt6WaylandClient.so.6
+#6  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#8  0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 3 (Thread 0x7fb6e4eba0 (LWP 4733) "QDBusConnection"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca1265c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca73b0c in ppoll () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbc320954 in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000007fbc3211a4 in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#6  0x0000007fbd23c058 in QEventDispatcherGlib::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbd021d54 in QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#8  0x0000007fbd102ec4 in QThread::exec() () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#9  0x0000007fbd4a5b00 in ??? () at /lib/aarch64-linux-gnu/libQt6DBus.so.6
+#10 0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#11 0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 2 (Thread 0x7fb7684ba0 (LWP 4732) "QThread"):
+#0  0x0000007fbca1ef68 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#1  0x0000007fbca12618 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#2  0x0000007fbca1265c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#3  0x0000007fbca73b0c in ppoll () at /lib/aarch64-linux-gnu/libc.so.6
+#4  0x0000007fbc320954 in ??? () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#5  0x0000007fbc3211a4 in g_main_context_iteration () at /lib/aarch64-linux-gnu/libglib-2.0.so.0
+#6  0x0000007fbd23c058 in QEventDispatcherGlib::processEvents(QFlags<QEventLoop::ProcessEventsFlag>) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#7  0x0000007fbd021d54 in QEventLoop::exec(QFlags<QEventLoop::ProcessEventsFlag>) () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#8  0x0000007fbd102ec4 in QThread::exec() () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#9  0x0000007fbd17371c in ??? () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#10 0x0000007fbca15f38 in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+#11 0x0000007fbca7dc2c in ??? () at /lib/aarch64-linux-gnu/libc.so.6
+
+Thread 1 (Thread 0x7fbf646520 (LWP 4658) "quickshell"):
+#0  0x0000007fbd029ab4 in QMetaObject::cast(QObject const*) const () at /lib/aarch64-linux-gnu/libQt6Core.so.6
+#1  0x0000007f9e60f398 in QQuickGridLayoutBase::invalidate(QQuickItem*) () at /lib/aarch64-linux-gnu/libQt6QuickLayouts.so.6
+#2  0x0000007f9e60f3ac in QQuickGridLayoutBase::invalidate(QQuickItem*) () at /lib/aarch64-linux-gnu/libQt6QuickLayouts.so.6
+#3  0x0000007fbeae8e50 in ??? () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#4  0x0000007fbe795d30 in QQuickItemPrivate::itemChange(QQuickItem::ItemChange, QQuickItem::ItemChangeData const&) () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#5  0x0000007fbe796398 in QQuickItemPrivate::setEffectiveVisibleRecur(bool) () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#6  0x0000007fbe796360 in QQuickItemPrivate::setEffectiveVisibleRecur(bool) () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#7  0x0000007fbe796360 in QQuickItemPrivate::setEffectiveVisibleRecur(bool) () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#8  0x0000007fbe796360 in QQuickItemPrivate::setEffectiveVisibleRecur(bool) () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#9  0x0000007fbe78c4f8 in QQuickItem::setParentItem(QQuickItem*) () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#10 0x0000007fbe7bc840 in ??? () at /lib/aarch64-linux-gnu/libQt6Quick.so.6
+#11 0x0000007fbe7bd578 in QQuickLoader::setSourceComponent(QQmlComponent*) () at /lib/aarch64-linux-gnu/libQt6Quick.so.6

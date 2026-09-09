@@ -22,6 +22,7 @@ class AquamarineBuffer final : public Aquamarine::IBuffer {
     Aquamarine::SDMABUFAttrs dmabuf() override { return {}; }
     Aquamarine::SSHMAttrs shm() override { return {}; }
 
+    void* androidNativeBuffer() override { return native_.nativeBuffer(); }
     HybrisBuffer& native() { return native_; }
 
   private:

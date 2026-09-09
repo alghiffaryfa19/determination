@@ -19,6 +19,90 @@
       "size": 36110
     },
     {
+      "path": "artifacts/dethyprland-buffer-retest.txt",
+      "retention": "tracked-evidence",
+      "sha256": "f6693f5bdfd5785b528a29afb0dc9267ee52692df67a11d751a065e94a580cbb",
+      "size": 932
+    },
+    {
+      "path": "artifacts/dethyprland-buffer-smoke.txt",
+      "retention": "tracked-evidence",
+      "sha256": "f7d4672dc0cab947f905d9025af04d96adefbffe1560b199929252a542c1ed3d",
+      "size": 294
+    },
+    {
+      "path": "artifacts/dethyprland-build-deps.txt",
+      "retention": "tracked-evidence",
+      "sha256": "3b11804868e896453e1f067365e7c712154c08f4fd3f78c556f519b9294c4e79",
+      "size": 12163
+    },
+    {
+      "path": "artifacts/dethyprland-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "6a869594f54aceb56a3e131f809a499672ccd0080ad541d149260564b21f620e",
+      "size": 43741
+    },
+    {
+      "path": "artifacts/dethyprland-hwc-crash.txt",
+      "retention": "tracked-evidence",
+      "sha256": "f1a12307f6073e050bd7d2fa53dc875645a21827a9a2388b38aeb311baab5bbc",
+      "size": 7081
+    },
+    {
+      "path": "artifacts/dethyprland-input-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "b5b2680cbb48672bf702d4377959b829ef87659f97a2016aaf3147094c2d4332",
+      "size": 2366
+    },
+    {
+      "path": "artifacts/dethyprland-kitty-install.txt",
+      "retention": "tracked-evidence",
+      "sha256": "1144e89458e2d7d665d65c381e68752b6b4c89a1a811965ddc5904f0dd8435ad",
+      "size": 1938
+    },
+    {
+      "path": "artifacts/dethyprland-producer-fence-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "ee2e52935d53bd0285d6b9629b9e621c52fcffc7c1392b762f0dbf23a1f8b093",
+      "size": 2424
+    },
+    {
+      "path": "artifacts/dethyprland-qtutils-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "d091f2f6515bc6955c62a792bf574d4530eac91727e080642f019083d29829b1",
+      "size": 62059
+    },
+    {
+      "path": "artifacts/dethyprland-renderer-fix-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "17ff655c7f5ad1da844af160331efb7e986f2a4ceb2d7ed0e000265339ead9ec",
+      "size": 25993
+    },
+    {
+      "path": "artifacts/dethyprland-shell-deps.txt",
+      "retention": "tracked-evidence",
+      "sha256": "2456c9514526edfebc453b2ad41a6c04b59ecc2d68e8e0c61429fddc6e18defc",
+      "size": 2557
+    },
+    {
+      "path": "artifacts/dethyprland-sources.txt",
+      "retention": "tracked-evidence",
+      "sha256": "2537e3fd63115b0048639683985a4831885d2cca62dfeee1dff0b8b20d1fbe80",
+      "size": 7655
+    },
+    {
+      "path": "artifacts/dethyprland-startup-crash.txt",
+      "retention": "tracked-evidence",
+      "sha256": "190d533770b52abbdda675e2d4ea48037b71e25469fabdc4157e9934cdabc73d",
+      "size": 4540
+    },
+    {
+      "path": "artifacts/dethyprland-wlegl-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "8f35747993af6da331c15a7817050b58b45141496d86b1593b44caef8e678ba0",
+      "size": 1271
+    },
+    {
       "path": "artifacts/guest-gpu-smoke-20260708.txt",
       "retention": "tracked-evidence",
       "sha256": "5a8c3d9b5f7e6d23b57aea9eed7058e9190201d66f4d1290777a92862ab7a4ee",
@@ -65,6 +149,108 @@
       "retention": "tracked-evidence",
       "sha256": "36cfd6d6272062b193cda06fff74f0e80f45371eeb0b7f39422e7e4ecfbad14f",
       "size": 3661
+    },
+    {
+      "path": "artifacts/opal-deployed.png",
+      "retention": "tracked-evidence",
+      "sha256": "6da50126a6b18ef69afb0666be3d7035b4d5e12509f2ca3fbc01771df989318b",
+      "size": 186809
+    },
+    {
+      "path": "artifacts/opal-deployed.txt",
+      "retention": "tracked-evidence",
+      "sha256": "e6ec75e86c46ba08c7156bfb0b6b0c727a399e0dfecaf98c08f5e856d892a3d7",
+      "size": 1514
+    },
+    {
+      "path": "artifacts/opal-foreground.txt",
+      "retention": "tracked-evidence",
+      "sha256": "754615adb9e31f595fb1b5554a0932aad9e1d577bf1b0e0012a2641eb27118fd",
+      "size": 592
+    },
+    {
+      "path": "artifacts/opal-gdb-basic.txt",
+      "retention": "tracked-evidence",
+      "sha256": "b05676e1b6fa7542bf7a402de3e4e1d2395552da0a028cb0be03ce4a855db46b",
+      "size": 5630
+    },
+    {
+      "path": "artifacts/opal-gdb-icon-main.txt",
+      "retention": "tracked-evidence",
+      "sha256": "743e1a410f7b7fce02b7bf22358e5f3ae3b142dd5da7fd7cf6867f1d69ed9ec2",
+      "size": 2017
+    },
+    {
+      "path": "artifacts/opal-gdb-install.txt",
+      "retention": "tracked-evidence",
+      "sha256": "28105eb0bab3d63bee9dd2e70a292d604bc780e396b891dd3418e24f4abe42d5",
+      "size": 189
+    },
+    {
+      "path": "artifacts/opal-gdb.txt",
+      "retention": "tracked-evidence",
+      "sha256": "ee89f6f2f1dc87363d6891936c0200f0ca5017180e1eaac5945a5c908f5e2377",
+      "size": 14781
+    },
+    {
+      "path": "artifacts/opal-gles-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "ace2c76a5b6e9abd7ebe56357f336ee21d0ca8d5b1456c51712fae64c6da52f6",
+      "size": 1162
+    },
+    {
+      "path": "artifacts/opal-user-phone.png",
+      "retention": "tracked-evidence",
+      "sha256": "f18d4f7172c88231c2e0c922afb22bcc0931b35e475aee518919d8e6d9638786",
+      "size": 320918
+    },
+    {
+      "path": "artifacts/release-build/android-repository.xml",
+      "retention": "tracked-evidence",
+      "sha256": "461e45d338c8969a89b4f8b05d8abd698a2b58403fe6d8c2cca241b4a502ee0a",
+      "size": 371995
+    },
+    {
+      "path": "artifacts/release-build/apk.rc",
+      "retention": "tracked-evidence",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "size": 2
+    },
+    {
+      "path": "artifacts/release-build/build-apk.sh",
+      "retention": "tracked-evidence",
+      "sha256": "4a36c7449f44f1e2cd6591b346169b333f8454b745d21b559d1bf25705d5f147",
+      "size": 1198
+    },
+    {
+      "path": "artifacts/release-build/deps.rc",
+      "retention": "tracked-evidence",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "size": 2
+    },
+    {
+      "path": "artifacts/release-build/rootfs.rc",
+      "retention": "tracked-evidence",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size": 2
+    },
+    {
+      "path": "artifacts/release-build/rootfs2.rc",
+      "retention": "tracked-evidence",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size": 2
+    },
+    {
+      "path": "artifacts/release-build/rootfs3.rc",
+      "retention": "tracked-evidence",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size": 2
+    },
+    {
+      "path": "artifacts/sxmo-install.txt",
+      "retention": "tracked-evidence",
+      "sha256": "c2859a894408780b753b88730c383576d792bb7903b33dd1e5b49427f4b7fd0a",
+      "size": 5339
     }
   ],
   "generated_by": "artifacts/build-index.py",

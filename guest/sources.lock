@@ -13,3 +13,7 @@ LIBGBINDER_REPO=https://github.com/mer-hybris/libgbinder.git
 LIBGBINDER_COMMIT=e906afcffbfa51b7fbefe042a13b933d9e8dfdd9
 ANDROID_HEADERS_30_URL=https://staging.repo.droidian.org/pool/main/a/android-headers-30/android-headers-30_11.0.0+git20230625193625.7438d90.droidian_all.deb
 ANDROID_HEADERS_30_SHA256=200f1fe1367df74e696d7b1ef1ede8d3c91a146ba53701415d1748d3cd00c263
+QUICKSHELL_REPO=https://github.com/quickshell-mirror/quickshell.git
+QUICKSHELL_COMMIT=59e9c47b0eb48a9e4bcf9631fa062ee939bd2e83
+WAYLAND_PROTOCOLS_REPO=https://gitlab.freedesktop.org/wayland/wayland-protocols.git
+WAYLAND_PROTOCOLS_COMMIT=afb614d5fcbd02d261a6ae91920aa91cf3915a8a

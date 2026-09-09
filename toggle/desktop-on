@@ -209,6 +209,12 @@ case "$ss_state" in
         ;;
 esac
 
+# The command-provider leaves one app_process worker per completed shell call.
+# They have no display or guest role and can occupy gigabytes after a work session.
+lc_state_write ENTERING "$generation" android-workers running
+"$DET/bin/desktop-memory" reclaim "$generation" ||
+    echo "WARN: stale command-worker reclaim failed; desktop continues"
+
 CLOG="$DET/log/compositor.log"
 : > "$CLOG"
 lc_state_write ENTERING "$generation" compositor running

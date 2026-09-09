@@ -67,13 +67,15 @@ def main():
         i += 1
     protocols = SYSROOT / "root/build/dethyprland/Hyprland/protocols"
     flags += ["-I" + container_path(protocols), "-I" + container_path(OUTPUT),
-              "-I" + container_path(SYSROOT / "usr/include/android")]
+              "-I" + container_path(SYSROOT / "usr/include/android"),
+              "-I" + container_path(SYSROOT / "opt/dethyprland/include/hyprland/src/render")]
     xml = ROOT / "graphics/dethyprland/wayland-android.xml"
     for mode, name in (("server-header", "wayland-android-protocol.h"),
                        ("private-code", "wayland-android-protocol.c")):
         run(["wayland-scanner", mode, container_path(xml), container_path(OUTPUT / name)])
     objects = {}
-    for source in ("src/render/Texture.cpp", "src/managers/ProtocolManager.cpp", "src/dethyprland/AndroidWlegl.cpp"):
+    for source in ("src/render/OpenGL.cpp", "src/render/Renderbuffer.cpp", "src/render/Texture.cpp",
+                   "src/managers/ProtocolManager.cpp", "src/dethyprland/AndroidWlegl.cpp"):
         obj = OUTPUT / (Path(source).stem + ".o")
         run(["aarch64-linux-gnu-g++", *flags, "-c", container_path(SOURCE / source), "-o", container_path(obj)])
         objects[f"CMakeFiles/Hyprland.dir/{source}.o"] = container_path(obj)

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Run the vendor-HWC Hyprland compositor with Opal as its config shell.
+export DET_HYPRLAND_CONFIG=/etc/determination/hyprland-opal.conf
+exec /usr/local/bin/det-hyprland "$@"

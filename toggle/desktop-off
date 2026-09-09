@@ -207,6 +207,8 @@ fi
 lc_state_write EXITING "$generation" input running
 lc_pid_signal evgrab TERM "$signal_generation"
 rm -f "$DET/run/evgrab.legacy.pid"
+"$DET/bin/desktop-memory" release "$generation" ||
+    echo "WARN: desktop memory state release failed"
 lc_state_write PHONE "$generation" complete committed
 echo "phone mode restored"
 

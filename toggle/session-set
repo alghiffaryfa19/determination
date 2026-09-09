@@ -13,7 +13,23 @@ case "$(field qualification)" in
     qualified|proven|experimental|diagnostic) ;;
     *) fail "$(field reason)" ;;
 esac
-case "$(field compositor)" in /*) ;; *) fail 'invalid compositor path' ;; esac
+compositor=$(field compositor)
+case "$compositor" in /*) ;; *) fail 'invalid compositor path' ;; esac
+GUEST="$ROOT/active-guest"
+[ -d "$GUEST" ] || GUEST="$ROOT/guest"
+[ -x "$GUEST$compositor" ] || fail "not installed: $compositor"
+shell=$(field shell)
+if [ -n "$shell" ] && [ "$shell" != hyprland-config ]; then
+    case "$shell" in /*) ;; *) fail 'invalid shell path' ;; esac
+    [ -x "$GUEST$shell" ] || fail "not installed: $shell"
+fi
+required=$(field required_binaries)
+IFS=,
+for binary in $required; do
+    case "$binary" in /*) ;; *) fail 'invalid required binary path' ;; esac
+    [ -x "$GUEST$binary" ] || fail "not installed: $binary"
+done
+unset IFS
 # This is a preference only: never mutate the active session or display owner.
 tmp="$ROOT/etc/.compositor.$$"
 trap 'rm -f "$tmp"' EXIT HUP INT TERM

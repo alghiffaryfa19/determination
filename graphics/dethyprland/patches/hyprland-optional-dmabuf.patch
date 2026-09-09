@@ -1,0 +1,34 @@
+## SPDX-FileCopyrightText: 2026 Melissa <theonest262@gmail.com>
+## SPDX-License-Identifier: MIT
+##
+## Determination patch for BSD-3-Clause Hyprland. Retain Hyprland's copyright
+## and BSD-3-Clause notice with this patch and its output.
+
+--- a/src/render/OpenGL.cpp
++++ b/src/render/OpenGL.cpp
+@@ -283,11 +283,12 @@
+     loadGLProc(&m_proc.glEGLImageTargetRenderbufferStorageOES, "glEGLImageTargetRenderbufferStorageOES");
+     loadGLProc(&m_proc.eglCreateImageKHR, "eglCreateImageKHR");
+     loadGLProc(&m_proc.eglDestroyImageKHR, "eglDestroyImageKHR");
+-    loadGLProc(&m_proc.eglQueryDmaBufFormatsEXT, "eglQueryDmaBufFormatsEXT");
+-    loadGLProc(&m_proc.eglQueryDmaBufModifiersEXT, "eglQueryDmaBufModifiersEXT");
++    if (!envEnabled("DET_HYBRIS")) {
++        loadGLProc(&m_proc.eglQueryDmaBufFormatsEXT, "eglQueryDmaBufFormatsEXT");
++        loadGLProc(&m_proc.eglQueryDmaBufModifiersEXT, "eglQueryDmaBufModifiersEXT");
++        loadGLProc(&m_proc.eglGetPlatformDisplayEXT, "eglGetPlatformDisplayEXT");
++    }
+     loadGLProc(&m_proc.glEGLImageTargetTexture2DOES, "glEGLImageTargetTexture2DOES");
+-    loadGLProc(&m_proc.eglDebugMessageControlKHR, "eglDebugMessageControlKHR");
+-    loadGLProc(&m_proc.eglGetPlatformDisplayEXT, "eglGetPlatformDisplayEXT");
+     loadGLProc(&m_proc.eglCreateSyncKHR, "eglCreateSyncKHR");
+     loadGLProc(&m_proc.eglDestroySyncKHR, "eglDestroySyncKHR");
+     loadGLProc(&m_proc.eglDupNativeFenceFDANDROID, "eglDupNativeFenceFDANDROID");
+@@ -452,6 +453,8 @@
+ }
+ 
+ void CHyprOpenGLImpl::initDRMFormats() {
++    // Android native handles are not Linux DMA-BUF plane descriptions.
++    if (envEnabled("DET_HYBRIS")) return;
+     const auto DISABLE_MODS = envEnabled("HYPRLAND_EGL_NO_MODIFIERS");
+     if (DISABLE_MODS)
+         Debug::log(WARN, "HYPRLAND_EGL_NO_MODIFIERS set, disabling modifiers");

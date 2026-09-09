@@ -1,0 +1,122 @@
+#!/system/bin/sh
+# Reclaim stale command-provider workers while Android's panel is handed to the guest.
+
+set -u
+DET=${DET:-/data/determination}
+PROC_ROOT=${DET_PROC_ROOT:-/proc}
+STATE=$DET/run/desktop-memory.state
+MODE=${1:-status}
+GENERATION=${2:-}
+
+# This is deliberately a complete argv prefix, not a package-name or app_process
+# match. Regular framework workers and the caller that initiated desktop-on stay out.
+WORKER_PREFIX='/system/bin/app_process /system/bin com.android.commands.content.Content call --uri content://g.tqyipmcoon.provider --user 0 --method log '
+
+usage() {
+    echo "usage: desktop-memory {status|reclaim <generation>|release <generation>}" >&2
+    exit 2
+}
+
+pid_ppid() {
+    awk '{print $4}' "$PROC_ROOT/$1/stat" 2>/dev/null
+}
+
+is_ancestor() {
+    target=$1
+    current=$$
+    while :; do
+        [ "$current" = "$target" ] && return 0
+        parent=$(pid_ppid "$current")
+        case "$parent" in ''|0|1|"$current"|*[!0-9]*) return 1 ;; esac
+        current=$parent
+    done
+}
+
+is_worker() {
+    pid=$1
+    [ -r "$PROC_ROOT/$pid/cmdline" ] || return 1
+    cmdline=$(tr '\000' ' ' < "$PROC_ROOT/$pid/cmdline" 2>/dev/null) || return 1
+    case "$cmdline" in
+        "$WORKER_PREFIX"*) ! is_ancestor "$pid" ;;
+        *) return 1 ;;
+    esac
+}
+
+worker_pids() {
+    # Android already indexes the only executable that can host this provider.
+    # Scanning every /proc cmdline is expensive enough to defeat the reclaim.
+    candidates=${DET_MEMORY_PIDS:-$(pidof app_process 2>/dev/null)}
+    for pid in $candidates; do
+        case "$pid" in *[!0-9]*|'') continue ;; esac
+        is_worker "$pid" && printf '%s\n' "$pid"
+    done
+}
+
+count_pids() {
+    if [ -n "$1" ]; then
+        printf '%s\n' "$1" | wc -l | tr -d ' '
+    else
+        echo 0
+    fi
+}
+
+write_state() {
+    tmp=$STATE.new.$$
+    umask 077
+    {
+        echo 'schema=1'
+        echo "mode=$MODE"
+        echo "generation=$GENERATION"
+        echo "worker_prefix=$WORKER_PREFIX"
+        echo "matching_before=$before_count"
+        echo "term_sent=$term_sent"
+        echo "kill_sent=$kill_sent"
+        echo "matching_after=$after_count"
+        echo "dry_run=${DET_MEMORY_DRY_RUN:-0}"
+    } > "$tmp" || return 1
+    mv -f "$tmp" "$STATE"
+}
+
+case "$MODE" in
+    status)
+        matches=$(worker_pids)
+        printf 'matching_workers=%s\n' "$(count_pids "$matches")"
+        [ -z "$matches" ] || printf '%s\n' "$matches" | sed 's/^/pid=/'
+        exit 0
+        ;;
+    reclaim|release)
+        case "$GENERATION" in ''|*[!0-9]*) usage ;; esac
+        ;;
+    *) usage ;;
+esac
+
+mkdir -p "$DET/run"
+before=$(worker_pids)
+before_count=$(count_pids "$before")
+term_sent=0
+kill_sent=0
+
+if [ "$MODE" = reclaim ]; then
+    for pid in $before; do
+        is_worker "$pid" || continue
+        if [ "${DET_MEMORY_DRY_RUN:-0}" = 1 ]; then
+            continue
+        fi
+        kill -TERM "$pid" 2>/dev/null && term_sent=$((term_sent + 1))
+    done
+
+    if [ "$term_sent" -gt 0 ]; then
+        sleep 1
+        survivors=$(worker_pids)
+        for pid in $survivors; do
+            is_worker "$pid" || continue
+            kill -KILL "$pid" 2>/dev/null && kill_sent=$((kill_sent + 1))
+        done
+    fi
+fi
+
+after=$(worker_pids)
+after_count=$(count_pids "$after")
+write_state
+printf 'desktop-memory: mode=%s before=%s term=%s kill=%s after=%s\n' \
+    "$MODE" "$before_count" "$term_sent" "$kill_sent" "$after_count"

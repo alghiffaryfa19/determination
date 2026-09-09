@@ -1,0 +1,66 @@
+## SPDX-FileCopyrightText: 2026 Melissa <theonest262@gmail.com>
+## SPDX-License-Identifier: LGPL-3.0-only
+##
+## Determination patch for Quickshell 0.3.0. It modifies LGPL-3.0-only source;
+## retain Quickshell's LICENSE, LICENSE-GPL, and per-file notices.
+
+--- a/src/core/iconimageprovider.cpp
++++ b/src/core/iconimageprovider.cpp
+@@ -2,6 +2,9 @@
+ #include <algorithm>
+ 
+ #include <qcolor.h>
++#include <qcoreapplication.h>
++#include <qthread.h>
++#include <qtenvironmentvariables.h>
+ #include <qicon.h>
+ #include <qlogging.h>
+ #include <qpainter.h>
+@@ -11,6 +14,15 @@
+ 
+ QPixmap
+ IconImageProvider::requestPixmap(const QString& id, QSize* size, const QSize& requestedSize) {
++	if (qEnvironmentVariableIntValue("DET_OPAL_GLES") == 1
++	    && QThread::currentThread() != QCoreApplication::instance()->thread()) {
++		QPixmap result;
++		QMetaObject::invokeMethod(QCoreApplication::instance(), [&] {
++			result = requestPixmap(id, size, requestedSize);
++		}, Qt::BlockingQueuedConnection);
++		return result;
++	}
++
+ 	QString iconName;
+ 	QString fallbackName;
+ 	QString path;
+--- a/src/launch/launch.cpp
++++ b/src/launch/launch.cpp
+@@ -13,6 +13,7 @@
+ #include <qqmldebug.h>
+ #include <qquickwindow.h>
+ #include <qstring.h>
++#include <qsurfaceformat.h>
+ #include <qtenvironmentvariables.h>
+ #include <qtextstream.h>
+ #include <unistd.h>
+@@ -277,10 +278,19 @@
+ 		QIcon::setFallbackSearchPaths(fallbackPaths);
+ 	}
+ 
+-	QGuiApplication::setDesktopSettingsAware(pragmas.desktopSettingsAware);
+-
+ 	delete coreApplication;
+ 
++	if (qEnvironmentVariableIntValue("DET_OPAL_GLES") == 1) {
++		// Android vendor EGL exposes GLES configs, not desktop OpenGL configs.
++		QCoreApplication::setAttribute(Qt::AA_UseOpenGLES);
++		auto format = QSurfaceFormat::defaultFormat();
++		format.setRenderableType(QSurfaceFormat::OpenGLES);
++		format.setVersion(3, 0);
++		QSurfaceFormat::setDefaultFormat(format);
++	}
++
++	QGuiApplication::setDesktopSettingsAware(pragmas.desktopSettingsAware);
++
+ 	QGuiApplication* app = nullptr;
+ 	auto qArgC = 0;
+ 

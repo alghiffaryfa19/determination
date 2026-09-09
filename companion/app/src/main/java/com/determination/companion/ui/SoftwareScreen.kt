@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Block
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -61,15 +58,9 @@ fun SoftwareScreen(
 
         if (wide) {
             Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    CompositorSection(vm)
-                }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    CatalogSection(vm)
-                }
+                Column(Modifier.weight(1f)) { CatalogSection(vm) }
             }
         } else {
-            CompositorSection(vm)
             CatalogSection(vm)
         }
     }
@@ -117,77 +108,6 @@ private fun DistroSection(vm: DetViewModel) {
         }
     }
 }
-
-@Composable
-private fun CompositorSection(vm: DetViewModel) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        SectionLabel("Session · compositor")
-        Text(
-            "Selection applies on the next desktop entry. Unavailable ports cannot be selected.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (vm.sessions.isEmpty()) {
-            GlassCard {
-                Text(
-                    "No session manifests on the device. Reinstall the Determination module to add them.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            return
-        }
-        vm.sessions.forEach { c ->
-            val selected = vm.compositor == c.id
-            val selectable = c.qualification in SELECTABLE_QUALIFICATIONS
-            GlassCard {
-                Row(
-                    Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(
-                        selected = selected,
-                        onClick = { vm.selectSession(c.id) },
-                        enabled = selectable && !selected && vm.busy == null &&
-                            vm.rootState == RootState.GRANTED,
-                    )
-                    Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(c.title, style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold)
-                            Spacer(Modifier.width(8.dp))
-                            when {
-                                c.qualification == "qualified" -> Icon(
-                                    Icons.Rounded.CheckCircle, "verified",
-                                    Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                                selectable -> Icon(
-                                    Icons.Rounded.Science, "experimental",
-                                    Modifier.size(16.dp), tint = MaterialTheme.colorScheme.tertiary)
-                                else -> Icon(
-                                    Icons.Rounded.Block, "unavailable",
-                                    Modifier.size(16.dp), tint = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                        Text(
-                            c.description.ifBlank { c.reason },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        if (!selectable) {
-                            Text(
-                                c.reason.ifBlank { "${c.title} is ${c.qualification}" },
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-private val SELECTABLE_QUALIFICATIONS = setOf("qualified", "proven", "experimental", "diagnostic")
 
 @Composable
 private fun CatalogSection(vm: DetViewModel) {

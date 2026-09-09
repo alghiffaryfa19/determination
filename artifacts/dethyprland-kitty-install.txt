@@ -1,0 +1,29 @@
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  kitty-shell-integration
+Suggested packages:
+  imagemagick
+Recommended packages:
+  kitty-doc
+The following NEW packages will be installed:
+  kitty kitty-shell-integration
+0 upgraded, 2 newly installed, 0 to remove and 8 not upgraded.
+Need to get 6676 kB of archives.
+After this operation, 22.9 MB of additional disk space will be used.
+Get:1 https://deb.debian.org/debian trixie/main arm64 kitty-shell-integration all 0.41.1-2+deb13u1 [97.8 kB]
+Get:2 https://deb.debian.org/debian trixie/main arm64 kitty arm64 0.41.1-2+deb13u1 [6578 kB]
+Fetched 6676 kB in 2s (4047 kB/s)
+Selecting previously unselected package kitty-shell-integration.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 180404 files and directories currently installed.)
+Preparing to unpack .../kitty-shell-integration_0.41.1-2+deb13u1_all.deb ...
+Unpacking kitty-shell-integration (0.41.1-2+deb13u1) ...
+Selecting previously unselected package kitty.
+Preparing to unpack .../kitty_0.41.1-2+deb13u1_arm64.deb ...
+Unpacking kitty (0.41.1-2+deb13u1) ...
+Setting up kitty-shell-integration (0.41.1-2+deb13u1) ...
+Setting up kitty (0.41.1-2+deb13u1) ...
+Processing triggers for desktop-file-utils (0.28-1) ...
+Processing triggers for hicolor-icon-theme (0.18-2) ...
+Processing triggers for man-db (2.13.1-1) ...

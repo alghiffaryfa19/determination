@@ -31,6 +31,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Article
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.DesktopWindows
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Healing
@@ -38,6 +40,7 @@ import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Smartphone
+import androidx.compose.material.icons.rounded.Science
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
@@ -154,6 +157,8 @@ fun ControlScreen(
                 }
             }
 
+            SessionSelector(vm)
+
             SectionLabel("External desktop")
             ExternalDesktopCard(vm, rootOk, installed, busy)
 
@@ -183,6 +188,122 @@ fun ControlScreen(
     }
 
 }
+
+@Composable
+private fun SessionSelector(vm: DetViewModel) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        SectionLabel("Desktop session")
+        Text(
+            "Choose what the next desktop entry launches. This does not interrupt a running session.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            if (vm.activeSession.isBlank()) {
+                "Phone mode · next: ${vm.compositor}"
+            } else {
+                "Running: ${vm.activeSession} · next: ${vm.compositor}"
+            },
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary,
+        )
+        if (vm.sessions.isEmpty()) {
+            GlassCard {
+                Text(
+                    "No session manifests are available. Reinstall the Determination module to refresh the catalog.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+            return
+        }
+        vm.sessions.forEach { session ->
+            val selected = vm.compositor == session.id
+            val active = vm.activeSession == session.id
+            val selectable = session.installed && session.qualification in SELECTABLE_QUALIFICATIONS
+            GlassCard {
+                Row(
+                    Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.material3.RadioButton(
+                        selected = selected,
+                        onClick = { vm.selectSession(session.id) },
+                        enabled = selectable && !selected && vm.busy == null &&
+                            vm.rootState == RootState.GRANTED,
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                session.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            when {
+                                session.qualification == "qualified" -> Icon(
+                                    Icons.Rounded.CheckCircle,
+                                    "verified",
+                                    Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                selectable -> Icon(
+                                    Icons.Rounded.Science,
+                                    "experimental",
+                                    Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.tertiary,
+                                )
+                                else -> Icon(
+                                    Icons.Rounded.Block,
+                                    "unavailable",
+                                    Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            }
+                        }
+                        Text(
+                            when {
+                                active -> "Running now"
+                                selected -> "Selected for next desktop entry"
+                                !session.installed -> session.availabilityReason.ifBlank { "Not installed" }
+                                else -> "Available · ${session.backend}"
+                            },
+                            style = MaterialTheme.typography.labelSmall,
+                            color = when {
+                                active || selected -> MaterialTheme.colorScheme.primary
+                                !session.installed -> MaterialTheme.colorScheme.error
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                        Text(
+                            session.description.ifBlank { session.reason },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        if (!session.installed || session.qualification !in SELECTABLE_QUALIFICATIONS) {
+                            Text(
+                                if (!session.installed) session.availabilityReason
+                                else session.reason.ifBlank { "${session.title} is ${session.qualification}" },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                        if (session.limitations.isNotEmpty()) {
+                            Text(
+                                "Limits: ${session.limitations.joinToString(" · ")}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private val SELECTABLE_QUALIFICATIONS = setOf("qualified", "proven", "experimental", "diagnostic")
 
 @Composable
 private fun ModeBadge(desktop: Boolean) {

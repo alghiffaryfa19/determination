@@ -9,7 +9,7 @@ VERSION=$(grep_prop versionCode "$MODPATH/module.prop")
 SETS="$DET/versions"
 STAGE="$SETS/.stage-$VERSION-$$"
 TARGET="$SETS/$VERSION"
-mkdir -p "$STAGE/bin" "$STAGE/guest-tools" "$STAGE/sessions" "$DET/etc" "$DET/log" "$DET/run" "$DET/lxc" "$SETS"
+mkdir -p "$STAGE/bin" "$STAGE/guest-tools" "$STAGE/guest-assets" "$STAGE/guest-config" "$STAGE/sessions" "$DET/etc" "$DET/log" "$DET/run" "$DET/lxc" "$SETS"
 trap 'rm -rf "$STAGE"' EXIT
 [ ! -e "$TARGET" ] || abort "! payload version $VERSION is already staged"
 
@@ -22,13 +22,22 @@ fi
 GUEST_ROOT=$(readlink -f "$DET/active-guest" 2>/dev/null)
 [ -n "$GUEST_ROOT" ] || GUEST_ROOT="$DET/guest"
 
-for f in evgrab det-input-forwarder detd detctl det-audio-probe det-audio-owner det-audio-route det-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro guest-start desktop-on desktop-off session-select session-set run-transition external-presenter external-input native-plasma native-kms-gate native-restore det-hostagent det-color-compat cycle-stress.sh; do
+# Retire the replaced GTK shell from both the staged payload and active guest.
+rm -f "$STAGE/guest-tools/det-hypr-shell" \
+    "$GUEST_ROOT/usr/local/bin/det-hypr-shell"
+
+# Do not leave withdrawn experimental sessions selectable after a module update.
+for f in cage gamescope-headless labwc mutter sway weston; do
+    rm -f "$STAGE/sessions/$f.session" "$DET/etc/sessions/$f.session"
+done
+
+for f in evgrab det-input-forwarder detd detctl det-audio-probe det-audio-owner det-audio-route det-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro guest-start desktop-on desktop-off desktop-memory session-catalog session-select session-set run-transition external-presenter external-input native-plasma native-kms-gate native-restore det-hostagent det-color-compat cycle-stress.sh; do
     [ -f "$MODPATH/tools/$f" ] || abort "! missing $f in zip"
     cp -f "$MODPATH/tools/$f" "$STAGE/bin/$f"
     chmod 0755 "$STAGE/bin/$f"
 done
 cp -f "$MODPATH/tools/lxc-config-base" "$STAGE/lxc-config-base"
-for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke det-input-actions det-media-action det-connectivity det-connectivity-menu det-platform det-phosh-session det-compat-check det-firefox-content-defaults det-session-launch det-plasma-session det-plasma-client; do
+for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke det-input-actions det-media-action det-connectivity det-connectivity-menu det-platform det-phosh-session det-compat-check det-firefox-content-defaults det-session-launch det-plasma-session det-plasma-client det-hyprland det-hyprland-opal det-opal det-opal-bridge opal; do
   if [ -f "$MODPATH/guest-tools/$f" ]; then
     cp -f "$MODPATH/guest-tools/$f" "$STAGE/guest-tools/$f"
     chmod 0755 "$STAGE/guest-tools/$f"
@@ -37,6 +46,22 @@ for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke de
         chmod 0755 "$GUEST_ROOT/usr/local/bin/$f"
     fi
   fi
+done
+if [ -d "$MODPATH/guest-assets/opal" ]; then
+    cp -a "$MODPATH/guest-assets/opal" "$STAGE/guest-assets/opal"
+    if [ -d "$GUEST_ROOT/usr/local/share" ]; then
+        mkdir -p "$GUEST_ROOT/usr/local/share/det-opal"
+        cp -a "$MODPATH/guest-assets/opal/." "$GUEST_ROOT/usr/local/share/det-opal/"
+    fi
+fi
+for det_guest_config in "$MODPATH"/guest-config/*.conf; do
+    [ -f "$det_guest_config" ] || continue
+    config_name=$(basename "$det_guest_config")
+    cp -f "$det_guest_config" "$STAGE/guest-config/$config_name"
+    chmod 0644 "$STAGE/guest-config/$config_name"
+    mkdir -p "$GUEST_ROOT/etc/determination"
+    cp -f "$det_guest_config" "$GUEST_ROOT/etc/determination/$config_name"
+    chmod 0644 "$GUEST_ROOT/etc/determination/$config_name"
 done
 if [ -f "$MODPATH/guest-tools/setup-compatibility.sh" ]; then
     cp -f "$MODPATH/guest-tools/setup-compatibility.sh" \
@@ -131,6 +156,14 @@ if [ -d "$DET/guest-tools" ] && [ ! -L "$DET/guest-tools" ]; then
     mv "$DET/guest-tools" "$SETS/legacy-guest-tools" || abort "! cannot preserve guest tools"
 fi
 ln -s current/guest-tools "$DET/guest-tools.new" && mv -f "$DET/guest-tools.new" "$DET/guest-tools" || abort "! cannot activate guest tools"
+if [ -d "$DET/guest-assets" ] && [ ! -L "$DET/guest-assets" ]; then
+    mv "$DET/guest-assets" "$SETS/legacy-guest-assets" || abort "! cannot preserve guest assets"
+fi
+ln -s current/guest-assets "$DET/guest-assets.new" && mv -f "$DET/guest-assets.new" "$DET/guest-assets" || abort "! cannot activate guest assets"
+if [ -d "$DET/guest-config" ] && [ ! -L "$DET/guest-config" ]; then
+    mv "$DET/guest-config" "$SETS/legacy-guest-config" || abort "! cannot preserve guest config"
+fi
+ln -s current/guest-config "$DET/guest-config.new" && mv -f "$DET/guest-config.new" "$DET/guest-config" || abort "! cannot activate guest config"
 if [ -e "$DET/lxc/config.base" ] && [ ! -L "$DET/lxc/config.base" ]; then
     cp -f "$DET/lxc/config.base" "$SETS/legacy-lxc-config-base" || abort "! cannot preserve LXC base"
     rm -f "$DET/lxc/config.base"
@@ -176,8 +209,8 @@ if [ "$AUDIO_PROFILE_ID" = guacamoleb ] && \
 fi
 
 # Keep the payload out of the mounted module dir.
-rm -rf "$MODPATH/tools" "$MODPATH/guest-tools" "$MODPATH/device-profiles" \
-    "$MODPATH/audio-profiles"
+rm -rf "$MODPATH/tools" "$MODPATH/guest-tools" "$MODPATH/guest-assets" "$MODPATH/device-profiles" \
+    "$MODPATH/audio-profiles" "$MODPATH/guest-config"
 
 # Running the Determination kernel? Warn, don't block --- module install before
 # kernel flash is a legitimate order of operations.

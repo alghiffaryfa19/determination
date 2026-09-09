@@ -25,6 +25,7 @@ sh recon/tests/test-classify.sh
 sh toggle/tests/lifecycle-test.sh
 sh toggle/tests/guest-distro-test.sh
 sh toggle/tests/session-set-test.sh
+sh toggle/tests/session-select-test.sh
 sh guest/tests/audio-session-test.sh
 sh guest/tests/compatibility-contract-test.sh
 python3 docs/check-links.py

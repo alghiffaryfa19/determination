@@ -102,6 +102,11 @@ install -m 0755 "$HERE/det-phosh-session" "$R/usr/local/bin/det-phosh-session"
 install -m 0755 "$HERE/det-compat-check" "$R/usr/local/bin/det-compat-check"
 install -m 0755 "$HERE/det-firefox-content-defaults" \
     "$R/usr/local/bin/det-firefox-content-defaults"
+install -m 0755 "$HERE/det-opal" "$R/usr/local/bin/det-opal"
+install -m 0755 "$HERE/det-opal-bridge" "$R/usr/local/bin/det-opal-bridge"
+install -m 0755 "$HERE/opal-command" "$R/usr/local/bin/opal"
+install -d "$R/usr/local/share/det-opal"
+cp -a "$HERE/opal/." "$R/usr/local/share/det-opal/"
 install -m 0755 "$HERE/det-input-udevdb" "$R/usr/local/sbin/det-input-udevdb"
 install -m 0755 "$HERE/setup-compatibility.sh" "$R/usr/local/sbin/setup-compatibility.sh"
 install -D -m 0644 "$HERE/det-phosh.service" \

@@ -1,0 +1,41 @@
+#!/system/bin/sh
+set -eu
+ROOT=${DET_SESSION_SELECT_ROOT:-${DET:-/data/determination}}
+GUEST="$ROOT/active-guest"
+[ -d "$GUEST" ] || GUEST="$ROOT/guest"
+for manifest in "$ROOT/etc/sessions/"*.session; do
+    [ -f "$manifest" ] || continue
+    id=${manifest##*/}; id=${id%.session}
+    case "$id" in ''|*[!a-z0-9-]*) continue ;; esac
+    echo "===$id"
+    cat "$manifest"
+    ready=yes
+    reason=
+    field() { sed -n "s/^$1=//p" "$manifest" | head -n 1; }
+    compositor=$(field compositor)
+    shell=$(field shell)
+    required=$(field required_binaries)
+    check_binary() {
+        binary=$1
+        [ -n "$binary" ] || return 0
+        case "$binary" in
+            /*) [ -x "$GUEST$binary" ] && return 0 ;;
+        esac
+        ready=no
+        reason="Missing guest executable: $binary"
+        return 1
+    }
+    check_binary "$compositor" || true
+    if [ "$ready" = yes ] && [ "$shell" != hyprland-config ]; then
+        check_binary "$shell" || true
+    fi
+    saved_ifs=$IFS
+    IFS=,
+    if [ "$ready" = yes ]; then
+        for binary in $required; do
+            check_binary "$binary" || break
+        done
+    fi
+    IFS=$saved_ifs
+    printf '\nruntime_ready=%s\nruntime_reason=%s\n' "$ready" "$reason"
+done

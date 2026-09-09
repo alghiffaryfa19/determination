@@ -109,6 +109,7 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
     var pkgStatus by mutableStateOf<Map<String, String>>(emptyMap()); private set
     var guestUp by mutableStateOf(false); private set
     var compositor by mutableStateOf("phosh"); private set
+    var activeSession by mutableStateOf(""); private set
     var sessions by mutableStateOf<List<Root.SessionChoice>>(emptyList()); private set
     var installingPkg by mutableStateOf<String?>(null); private set
     var guestDistros by mutableStateOf<List<Root.GuestDistro>>(emptyList()); private set
@@ -236,6 +237,10 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
             externalInputCaptured = Root.externalInputStatus()
             hardwareButtons = Root.enumerateHardwareButtons()
             inputMappings = Root.inputMappings()
+            val sessionInfo = Root.sessionInfo()
+            compositor = sessionInfo["compositor"].orEmpty().ifBlank { "phosh" }
+            activeSession = Root.activeSession()
+            sessions = Root.sessions()
             busy = null
         }
     }
@@ -495,6 +500,7 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
             guestDistros = Root.guestDistros()
             sessions = Root.sessions()
             compositor = (info["compositor"] ?: "").ifBlank { "phosh" }
+            activeSession = Root.activeSession()
             guestUp = info["guestup"] == "yes"
             pkgStatus =
                 if (guestUp) Root.dpkgStatus(CATALOG.map { it.pkg })
@@ -567,6 +573,10 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
     fun selectSession(id: String) {
         if (busy != null || rootState != RootState.GRANTED) return
         val session = sessions.firstOrNull { it.id == id } ?: return
+        if (!session.installed) {
+            message = session.availabilityReason.ifBlank { "${session.title} is not installed" }
+            return
+        }
         when (session.qualification) {
             "qualified", "proven", "experimental", "diagnostic" -> Unit
             else -> {

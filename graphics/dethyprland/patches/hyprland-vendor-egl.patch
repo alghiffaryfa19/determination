@@ -1,0 +1,84 @@
+## SPDX-FileCopyrightText: 2026 Melissa <theonest262@gmail.com>
+## SPDX-License-Identifier: MIT
+##
+## Determination patch for BSD-3-Clause Hyprland. Retain Hyprland's copyright
+## and BSD-3-Clause notice with this patch and its output.
+
+diff --git a/src/render/OpenGL.cpp b/src/render/OpenGL.cpp
+index 4bd8eba..a05bb00 100644
+--- a/src/render/OpenGL.cpp
++++ b/src/render/OpenGL.cpp
+@@ -131,7 +131,9 @@ void CHyprOpenGLImpl::initEGL(bool gbm) {
+ 
+     attrs.push_back(EGL_NONE);
+ 
+-    m_eglDisplay = m_proc.eglGetPlatformDisplayEXT(gbm ? EGL_PLATFORM_GBM_KHR : EGL_PLATFORM_DEVICE_EXT, gbm ? m_gbmDevice : m_eglDevice, attrs.data());
++    const bool HYBRIS = envEnabled("DET_HYBRIS");
++    m_eglDisplay = HYBRIS ? eglGetDisplay(EGL_DEFAULT_DISPLAY) :
++        m_proc.eglGetPlatformDisplayEXT(gbm ? EGL_PLATFORM_GBM_KHR : EGL_PLATFORM_DEVICE_EXT, gbm ? m_gbmDevice : m_eglDevice, attrs.data());
+     if (m_eglDisplay == EGL_NO_DISPLAY)
+         RASSERT(false, "EGL: failed to create a platform display");
+ 
+@@ -175,7 +177,16 @@ void CHyprOpenGLImpl::initEGL(bool gbm) {
+ 
+     attrs.push_back(EGL_NONE);
+ 
+-    m_eglContext = eglCreateContext(m_eglDisplay, EGL_NO_CONFIG_KHR, EGL_NO_CONTEXT, attrs.data());
++    EGLConfig config = EGL_NO_CONFIG_KHR;
++    if (HYBRIS) {
++        RASSERT(EGLEXTENSIONS.contains("EGL_KHR_surfaceless_context"), "libhybris: surfaceless EGL context required");
++        const EGLint configAttrs[] = {EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_RED_SIZE, 8,
++            EGL_GREEN_SIZE, 8, EGL_BLUE_SIZE, 8, EGL_ALPHA_SIZE, 8, EGL_NONE};
++        EGLint count = 0;
++        RASSERT(eglChooseConfig(m_eglDisplay, configAttrs, &config, 1, &count) && count == 1,
++                "libhybris: vendor EGL config selection failed");
++    }
++    m_eglContext = eglCreateContext(m_eglDisplay, config, EGL_NO_CONTEXT, attrs.data());
+     if (m_eglContext == EGL_NO_CONTEXT) {
+ #ifdef GLES2
+         RASSERT(false, "EGL: failed to create a context with GLES2.0");
+@@ -189,7 +200,7 @@ void CHyprOpenGLImpl::initEGL(bool gbm) {
+         attrs.push_back(0);
+         attrs.push_back(EGL_NONE);
+ 
+-        m_eglContext        = eglCreateContext(m_eglDisplay, EGL_NO_CONFIG_KHR, EGL_NO_CONTEXT, attrs.data());
++        m_eglContext        = eglCreateContext(m_eglDisplay, config, EGL_NO_CONTEXT, attrs.data());
+         m_eglContextVersion = EGL_CONTEXT_GLES_3_0;
+ 
+         if (m_eglContext == EGL_NO_CONTEXT)
+@@ -305,7 +316,12 @@ CHyprOpenGLImpl::CHyprOpenGLImpl() : m_drmFD(g_pCompositor->m_drmFD) {
+     RASSERT(eglBindAPI(EGL_OPENGL_ES_API) != EGL_FALSE, "Couldn't bind to EGL's opengl ES API. This means your gpu driver f'd up. This is not a hyprland issue.");
+ 
+     bool success = false;
+-    if (EGLEXTENSIONS.contains("EXT_platform_device") || !m_proc.eglQueryDevicesEXT || !m_proc.eglQueryDeviceStringEXT) {
++    if (envEnabled("DET_HYBRIS")) {
++        RASSERT(eglGetProcAddress("eglHybrisCreateNativeBuffer"), "DET_HYBRIS requires libhybris, not Mesa");
++        initEGL(false);
++        success = true;
++    }
++    if (!success && EGLEXTENSIONS.contains("EXT_platform_device") && m_proc.eglQueryDevicesEXT && m_proc.eglQueryDeviceStringEXT) {
+         m_eglDevice = eglDeviceFromDRMFD(m_drmFD);
+ 
+         if (m_eglDevice != EGL_NO_DEVICE_EXT) {
+diff --git a/src/render/Renderbuffer.cpp b/src/render/Renderbuffer.cpp
+index addc99a..fecfc03 100644
+--- a/src/render/Renderbuffer.cpp
++++ b/src/render/Renderbuffer.cpp
+@@ -22,9 +22,14 @@ CRenderbuffer::~CRenderbuffer() {
+ }
+ 
+ CRenderbuffer::CRenderbuffer(SP<Aquamarine::IBuffer> buffer, uint32_t format) : m_hlBuffer(buffer), m_drmFormat(format) {
+-    auto dma = buffer->dmabuf();
+-
+-    m_image = g_pHyprOpenGL->createEGLImage(dma);
++    if (auto native = buffer->androidNativeBuffer()) {
++        constexpr EGLenum NATIVE_BUFFER_HYBRIS = 0x3140;
++        const EGLint attrs[] = {EGL_IMAGE_PRESERVED_KHR, EGL_TRUE, EGL_NONE};
++        m_image = g_pHyprOpenGL->m_proc.eglCreateImageKHR(g_pHyprOpenGL->m_eglDisplay, EGL_NO_CONTEXT,
++                                                       NATIVE_BUFFER_HYBRIS, native, attrs);
++    } else {
++        m_image = g_pHyprOpenGL->createEGLImage(buffer->dmabuf());
++    }
+     if (m_image == EGL_NO_IMAGE_KHR) {
+         Debug::log(ERR, "rb: createEGLImage failed");
+         return;
