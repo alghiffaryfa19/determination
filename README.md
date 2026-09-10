@@ -19,6 +19,16 @@ Magisk-patched ramdisk) plus a Zygisk module : **not a ROM** (though can be adap
 
 
 
+## PC installation and porting
+
+Launch `./determination-installer` on a Linux PC to start the linear porting and
+installation interview. It asks one validated question at a time for device
+discovery, verified releases, kernel builds, device bundle generation,
+installation, and PC-held boot backups. The Android companion controls the installed desktop;
+it no longer downloads or installs system artifacts.
+
+See the [workbench guide](installer/README.md) for host setup and the complete flow.
+
 ## Repo layout
 
 | Path | What |
@@ -33,7 +43,8 @@ Magisk-patched ramdisk) plus a Zygisk module : **not a ROM** (though can be adap
 | `audio/` | direct ALSA hardware and ownership binaries |
 | `companion/` | Android UI and permission facade: mode confirmation, status/API, Quick Settings, share sheet, optional external presenter |
 | `tools/evgrab/` | small C daemon that holds `EVIOCGRAB` on evdev nodes during desktop mode |
-| `usb-install/` | cable-free install: Magisk action zips that flash/restore the kernel from a USB drive on the phone itself |
+| `installer/` | Terminal interview, automatic kernel porting, verified bundles, installation, and recovery |
+| `usb-install/` | Legacy device-specific host flashing helper |
 | `zygisk/` | Zygisk/LSPosed module for `system_server` hooks |
 | `docs/` | Current wiki: guides, architecture, reference, operations, qualification, and separated history |
 

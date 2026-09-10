@@ -1,6 +1,6 @@
 # Determination companion app
 
-A small native Android app (phone side) to drive Determination without a
+A native Android controller to drive Determination without a
 computer attached. It uses the versioned local control bridge when available
 and labels the direct Magisk `su` path as an emergency compatibility fallback.
 
@@ -43,3 +43,11 @@ The companion reports bridge status when the installed module supports it. A
 successful request can mean accepted rather than completed; recovery-required
 is a state to resolve, not a successful transition. See the
 [documentation home](../docs/README.md) for current operational guidance.
+
+## Installation ownership
+
+System installation, updates, porting, and boot recovery are owned by the
+[PC workbench](../installer/README.md). The companion retains mode control,
+Linux package management, session selection, diagnostics, and power controls.
+The installation wizard, release downloader, local updater, and boot writer
+have been removed from the APK.

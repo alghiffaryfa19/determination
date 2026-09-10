@@ -98,10 +98,6 @@ enum class Dest(
         "Control", Icons.Outlined.Smartphone, Icons.Rounded.Smartphone,
         "Determination", "Mode, display, and input",
     ),
-    Install(
-        "Install", Icons.Outlined.SystemUpdateAlt, Icons.Rounded.SystemUpdateAlt,
-        "Install & update", "Guided setup and verified releases",
-    ),
     Software(
         "Apps", Icons.Outlined.Apps, Icons.Rounded.Apps,
         "Linux software", "Guest package catalog",
@@ -120,7 +116,6 @@ enum class Dest(
 @Composable
 fun DetApp(vm: DetViewModel, windowSize: WindowSizeClass) {
     var dest by rememberSaveable { mutableStateOf(Dest.Control) }
-    var installerOpen by rememberSaveable { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val compact = windowSize.widthSizeClass == WindowWidthSizeClass.Compact
     val expanded = windowSize.widthSizeClass == WindowWidthSizeClass.Expanded
@@ -132,39 +127,13 @@ fun DetApp(vm: DetViewModel, windowSize: WindowSizeClass) {
         if (vm.rootState != RootState.GRANTED) return@LaunchedEffect
         when (dest) {
             Dest.Control -> vm.refresh()
-            Dest.Install -> vm.refreshInstaller()
             Dest.Software -> vm.refreshSoftware()
             Dest.Settings -> vm.refresh()
         }
     }
-    LaunchedEffect(vm.rootState, vm.status["installed"], vm.installerWalkthroughSeen) {
-        if (vm.rootState == RootState.GRANTED && vm.status["installed"] == "no" &&
-            !vm.installerWalkthroughSeen
-        ) {
-            installerOpen = true
-        }
-    }
-    LaunchedEffect(installerOpen) {
-        if (installerOpen && vm.rootState == RootState.GRANTED) vm.refreshInstaller()
-    }
-
-    if (installerOpen) {
-        InstallerWizardScreen(
-            vm = vm,
-            wide = expanded,
-            onClose = {
-                vm.markInstallerWalkthroughSeen()
-                installerOpen = false
-            },
-        )
-        LogSheetAndDialogs(vm)
-        return
-    }
-
     val refreshCurrent = {
         when (dest) {
             Dest.Control -> vm.refresh()
-            Dest.Install -> vm.refreshInstaller()
             Dest.Software -> vm.refreshSoftware()
             Dest.Settings -> vm.refresh()
         }
@@ -235,17 +204,9 @@ fun DetApp(vm: DetViewModel, windowSize: WindowSizeClass) {
                     // Intentional hard cut: keep the pill, lose the page carousel.
                     when (dest) {
                         Dest.Control -> ControlScreen(vm, expanded, content, 82.dp)
-                        Dest.Install -> InstallScreen(
-                            vm,
-                            expanded,
-                            onOpenInstaller = { installerOpen = true },
-                            modifier = content,
-                            bottomPad = 82.dp,
-                        )
                         Dest.Software -> SoftwareScreen(vm, expanded, content, 82.dp)
                         Dest.Settings -> SettingsScreen(
                             vm,
-                            onOpenInstaller = { installerOpen = true },
                             modifier = content,
                             bottomPad = 82.dp,
                         )

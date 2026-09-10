@@ -2,41 +2,39 @@
 
 Status: current safety guide
 Authority: device qualification maintainers
-Last reviewed: 2026-08-09
+Last reviewed: 2026-09-10
 
-## Guided rooted-device installer
+## PC installation workbench
 
-For a published v2 online bundle, the main companion app can perform a fresh
-install without ADB or a host PC:
+Run `./determination-installer` on a Linux PC. The terminal interview owns discovery,
+release selection, automatic port builds, installation, and boot recovery.
+The companion app has no system installer or boot writer.
 
-1. Install the signed companion APK and grant its Magisk superuser request.
-2. Open **Install**, check the official GitHub release, and review the detected
-   device, active slot, Android fingerprint, battery, and free space.
-3. Choose a published guest distro and the wired hostname/lifecycle options.
-   Debian is qualified on `guacamoleb`; Arch and Alpine remain explicitly
-   experimental until their complete hardware gates pass.
-4. Tap **Install Determination** and keep Android in phone mode until it
-   finishes. The transaction installs the module, static LXC runtime, selected
-   rootfs and configuration before touching boot.
-5. Reboot only when the app reports success.
+Select one authorized device and inspect it. The next questions choose an
+HTTPS release manifest or a local bundle, a distro, and a hostname. Prepare and
+verify downloads every artifact, validates archive contents, saves a complete
+boot backup on the PC, and repacks the release kernel around the device's own
+Magisk ramdisk. It does not install userspace or write boot.
 
-The app never flashes the release boot image verbatim. It extracts only the
-qualified kernel, repacks it around the phone's current Magisk-patched ramdisk,
-backs up the complete active boot partition to `Download`, writes the active
-slot, and verifies the flashed bytes. A readback mismatch triggers an immediate
-restore attempt and must be treated as a recovery incident.
+Install Determination repeats validation, stages userspace, installs the module,
+runtime, rootfs, and companion, and writes boot last. A failed write or readback
+triggers a restore attempt from the verified backup. Reboot is a separate action.
+Existing guest slots are retained rather than replaced.
 
-The app blocks a boot artifact unless both a device alias and the exact Android
-build fingerprint match the release manifest. Unknown devices and post-OTA
-builds are recon targets, not “try it and see” installer targets.
+Automatic port downloads a selected downstream source branch or uses a local
+source folder. It merges the running config with Determination requirements,
+compiles the kernel, inserts the detected device profile into the shared module,
+and assembles a local schema 2 bundle pinned to the connected Android build.
+The interview offers to install that bundle when the build completes. New ports remain
+experimental until hardware qualification; the build operation itself is real.
 
-Enable **Settings → Advanced → Installer dry run** before the guided install to
-exercise the complete non-destructive path. It downloads and hash-verifies all
-selected artifacts, checks the module/runtime/rootfs layouts, rebuilds a boot
-candidate around the current Magisk ramdisk, and creates and verifies the
-recovery backup. It does not install the module, extract a guest, alter
-configuration, or write the boot partition. Verified downloads, root staging
-files, and the recovery backup are intentionally retained for the real run.
+Recovery creates backups, restores a matching backup over rooted ADB, verifies
+the running installation, and reboots. Operation logs remain on the PC. A bootloop still
+requires the device's supported bootloader recovery procedure. The PC backup
+includes the slot, exact Android fingerprint, serial, size, and SHA-256.
+
+See the [workbench guide](../../installer/README.md) for prerequisites, supported
+boot layouts, build inputs, and interruption behavior.
 
 ## Before an install or upgrade
 
