@@ -19,6 +19,7 @@ import urllib.parse
 import urllib.request
 import uuid
 import zipfile
+from discovery import PARTITIONS, PROBES, partitions, profile_values
 
 REPO = Path(__file__).resolve().parents[1]
 DEFAULT_MANIFEST = 'https://github.com/kriscrossapplesauce2004/determination/releases/latest/download/determination-update.json'
@@ -113,7 +114,7 @@ def validate_manifest(data):
     return data
 
 
-def select_artifacts(manifest, device, distro, experimental=False):
+def select_artifacts(manifest, device, distro, experimental=True):
     selected = {}
     for kind in KINDS:
         matches = []
@@ -131,7 +132,7 @@ def select_artifacts(manifest, device, distro, experimental=False):
             matches.append(item)
         if len(matches) != 1:
             raise Failure(f'{kind}: expected one compatible artifact, found {len(matches)}. '
-                          'Select another release or use Automatic port with experimental builds enabled.')
+                          'Select another release or build a port for this device.')
         selected[kind] = matches[0]
     return selected
 
@@ -394,18 +395,36 @@ class Engine:
             'abis': props.get('ro.product.cpu.abilist', props.get('ro.product.cpu.abi', '')).split(','),
             'fingerprint': props.get('ro.build.fingerprint', ''), 'slot': slot,
             'model': props.get('ro.product.model', ''), 'kernel': self.shell('uname -r'),
-            'part': '/dev/block/bootdevice/by-name/boot' + slot,
         }
         if not device['fingerprint'] or 'arm64-v8a' not in device['abis']:
             raise Failure('A known Android fingerprint and arm64 device are required.')
-        device['boot_size'] = int(self.shell('blockdev --getsize64 ' + device['part'], root=True))
+        device['partitions'] = partitions(self.shell(PARTITIONS, root=True))
+        boots = [p for p in device['partitions'] if p['name'] == 'boot' + slot]
+        if len({p['node'] for p in boots}) != 1:
+            raise Failure('The active boot partition could not be identified unambiguously.')
+        device['part'], device['boot_size'] = boots[0]['path'], boots[0]['size']
         battery = self.shell('dumpsys battery')
         match = re.search(r'^\s*level:\s*(\d+)\s*$', battery, re.M)
         device['battery'] = int(match[1]) if match else 0
-        device['config'] = self.shell('zcat /proc/config.gz', root=True)
+        device['properties'] = props
+        device['probes'] = {}
+        for name, script in PROBES.items():
+            self.phase('Extracting device ' + name)
+            try:
+                output, status = self.run(self.adb_args('shell', 'su -c ' + shlex.quote(script)), timeout=45, acceptable=tuple(range(256)))
+                device['probes'][name] = {'output': output, 'exitCode': status}
+            except Cancelled:
+                raise
+            except Failure as error:
+                device['probes'][name] = {'output': '', 'error': str(error)}
+        config_probe = device['probes']['config']
+        device['config'] = config_probe['output'] if config_probe.get('exitCode') == 0 else ''
         device['missing'] = [key for key in REQUIRED if f'CONFIG_{key}=y' not in device['config'].splitlines()]
-        device['display'] = self.shell('wm size')
-        device['graphics'] = self.shell('lshal 2>/dev/null; service list; ls /vendor/lib64/hw')
+        device['display'] = device['probes']['display']['output']
+        device['graphics'] = device['probes']['graphics']['output']
+        evidence = self.workspace / 'recon' / (time.strftime('%Y%m%d-%H%M%S') + '-' + uuid.uuid4().hex[:8]) / 'device.json'
+        device['evidence'] = str(evidence)
+        save_json(evidence, device)
         save_json(self.workspace / 'device.json', device)
         return device
 
@@ -551,13 +570,7 @@ fi
             self.shell('rm -rf ' + remote)
 
     def device_profile(self, device):
-        profile = REPO / 'device-profiles' / (device['device'] + '.conf')
-        text = profile.read_text() if profile.is_file() else f'DET_PROFILE_ID={device["device"]}\n'
-        if not profile.is_file():
-            text += 'DET_GRAPHICS_RENDERER=libhybris\nDET_GBM_PROVIDER=minigbm\n'
-            match = re.search(r'Physical size:\s*(\d+)x(\d+)', device['display'])
-            if match:
-                text += f'DET_PANEL_WIDTH={match[1]}\nDET_PANEL_HEIGHT={match[2]}\n'
+        text = ''.join(f'{key}={value}\n' for key, value in profile_values(device).items())
         output = self.workspace / 'ports' / device['device'] / 'device.conf'
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(text)
@@ -580,6 +593,8 @@ fi
         output = profile.parent / 'kernel'
         output.mkdir(exist_ok=True)
         base = profile.parent / 'running.config'
+        if not re.search(r'^CONFIG_ARM64=y$', device.get('config', ''), re.M):
+            raise Failure('Provide the matching running kernel configuration with CONFIG_ARM64=y.')
         base.write_text(device['config'])
         source_commit, _ = self.run(['git', '-C', source, 'rev-parse', 'HEAD'])
         source_changes, _ = self.run(['git', '-C', source, 'status', '--porcelain'])
@@ -589,9 +604,6 @@ fi
         config = output / '.config'
         shutil.copyfile(base, config)
         fragments = [str(overlay)]
-        qualified = REPO / 'kernel/profiles' / (device['device'] + '.config')
-        if qualified.is_file():
-            fragments.append(str(qualified))
         env = dict(os.environ, KCONFIG_CONFIG=str(config))
         self.phase('Applying Determination kernel requirements to the running device configuration')
         self.run(['sh', source / 'scripts/kconfig/merge_config.sh', '-m', '-O', output, config, *fragments], cwd=source, env=env)
@@ -643,13 +655,14 @@ fi
                               support='experimental', sha256=digest(destination), size=destination.stat().st_size))
         manifest['artifacts'] = artifacts
         save_json(bundle / 'determination-update.json', validate_manifest(manifest))
+        save_json(bundle / 'device-evidence.json', device)
         save_json(bundle / 'port-build.json', {'device': device['device'], 'fingerprint': device['fingerprint'],
                   'source': str(source), 'sourceCommit': source_commit, 'sourceDirty': bool(source_changes), 'target': target, 'configSha256': digest(config), 'kernelSha256': digest(kernel),
                   'qualification': 'experimental', 'backup': str(backup)})
         self.log('Built installable port: ' + str(bundle))
         return str(bundle / 'determination-update.json')
 
-    def install(self, device, source, distro, hostname, experimental=False, prepare_only=False):
+    def install(self, device, source, distro, hostname, experimental=True, prepare_only=False):
         if not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', hostname):
             raise Failure('Hostname must contain lowercase letters, digits, and internal hyphens.')
         self.assert_device(device)

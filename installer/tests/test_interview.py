@@ -39,11 +39,11 @@ class InterviewTests(unittest.TestCase):
 
     def test_complete_install_interview_passes_validated_values(self):
         self.interview.device = device()
-        answers = ['', 'debian', 'workstation', 'no', 'yes']
+        answers = ['', 'debian', 'workstation', 'yes']
         with patch('builtins.input', side_effect=answers), contextlib.redirect_stdout(io.StringIO()), \
              patch.object(self.engine, 'install', return_value={'status': 'prepared'}) as install:
             self.interview.install()
-        install.assert_called_once_with(device(), DEFAULT_MANIFEST, 'debian', 'workstation', False, True)
+        install.assert_called_once_with(device(), DEFAULT_MANIFEST, 'debian', 'workstation', True, True)
         saved = json.loads(self.interview.settings_path.read_text())
         self.assertEqual(saved['hostname'], 'workstation')
         self.assertNotIn('experimental', saved)

@@ -208,10 +208,9 @@ class Interview:
         distro = self.one_of('Linux distribution', ('debian', 'arch', 'alpine'), distro_default or self.settings.get('distro', 'debian'))
         hostname = self.ask('Guest hostname', self.settings.get('hostname', 'determination'), hostname_value)
         self.remember(manifest=manifest, distro=distro, hostname=hostname)
-        experimental = self.yes_no('Allow experimental artifacts', False)
+        experimental = True
         prepare_only = self.yes_no('Prepare and verify only; do not install or flash', False)
         if not prepare_only:
-            print(self.palette.bad('\n  Boot will be written only after the PC backup, repack, and readback checks pass.'), flush=True)
             if not self.yes_no('Continue with installation', False):
                 print('  Installation cancelled.', flush=True)
                 return
@@ -224,17 +223,16 @@ class Interview:
 
     def port(self):
         self.common()
-        reference = self.device['device'] in ('guacamoleb', 'OnePlus7')
-        source_default = str(self.repo / 'kernel/src') if (self.repo / 'kernel/src/Makefile').is_file() else None
-        if source_default is None and reference:
-            source_default = 'https://github.com/crdroidandroid/android_kernel_oneplus_sm8150.git'
-        source = self.ask('Matching ROM kernel source (local path or HTTPS repository)', source_default)
+        if not self.device.get('config'):
+            config = self.path('Matching running kernel configuration', must_exist=True)
+            self.device['config'] = Path(config).read_text()
+        source = self.ask('Matching ROM kernel source (local path or HTTPS repository)')
         if source.startswith('https://'):
-            ref = self.ask('Kernel branch or tag', '16.0' if reference else 'main')
+            ref = self.ask('Kernel branch or tag')
             source = self.engine.fetch_source(source, ref, self.device['device'])
         source = self.path('Kernel source directory', source, directory=True, must_exist=True)
-        default_target = 'Image.gz-dtb' if self.device['device'] in ('guacamoleb', 'OnePlus7') else 'Image'
-        target = self.one_of('Kernel image target', ('Image', 'Image.gz', 'Image.gz-dtb'), default_target)
+        target = 'Image'
+        print('  Building the uncompressed kernel; repacking preserves the original boot image format.', flush=True)
         jobs = self.ask('Parallel build jobs', str(min(os.cpu_count() or 2, 16)), jobs_value)
         overrides = self.ask('Compiler make overrides', '', compiler_value)
         manifest = self.manifest()

@@ -32,7 +32,13 @@ against phone free space before userspace installation.
 
 `determination-installer init` lists authorized devices, asks for the ADB serial,
 and inspects the exact Android fingerprint, active slot, boot size, battery,
-kernel config, display size, ABI, and graphics services. Multiple phones are
+kernel config, display size, ABI, and graphics services. It also records device-tree
+identity, CPU and memory details, kernel command line, boot configuration, loaded
+modules and module manifests, VINTF HAL declarations, graphics nodes, display
+modes, input capabilities, power supplies, backlights, thermal sensors, network
+interfaces, routes, and audio devices. Optional probe failures are recorded and
+do not discard other findings. Each inspection saves a separate evidence report.
+Boot partitions are resolved from the device's actual by-name links. Multiple phones are
 never resolved by choosing the first device. The next question asks whether to
 install, build a port, or recover.
 
@@ -40,8 +46,8 @@ install, build a port, or recover.
 artifacts beside it. Select Debian, Arch, or Alpine and enter a hostname. Each
 artifact must have a matching SHA-256 and length. Device and exact-build filters
 apply before boot preparation, and ambiguous matches fail. Experimental releases
-require an explicit answer to the experimental-artifact question. Debian remains the hardware-proven baseline on the
-reference device; selecting another distro does not qualify its graphics stack.
+are available by default, including newly generated ports. Qualification remains
+artifact metadata, without a separate permission question.
 
 When asked, **prepare and verify** downloads, validates, backs up, and repacks without
 installing userspace or writing a partition. **Install Determination** repeats
@@ -51,18 +57,19 @@ Existing guest slots are retained. This is not an in-place distro upgrade.
 A reboot is never automatic.
 
 `determination-installer port` does the reusable porting work. It asks for a
-downstream repository or local git checkout. The OnePlus 7 source defaults are
-prefilled from the repository's existing reference profile; verify they match
-the installed ROM. For other devices, supply the ROM maintainer's source URL and
-branch. The installer does not infer source provenance from a marketing name.
-Select the kernel target and compiler overrides if the ROM requires them. The
-build uses the running config, merges Determination's fragment and any matching
-kernel profile, disables framebuffer console ownership, resolves Kconfig defaults,
-checks mandatory container options, and compiles the requested target. Incremental
+downstream repository or local git checkout and an explicit branch or tag for a
+repository download. No phone name supplies a source, branch, kernel fragment,
+or hardware profile. If the running configuration cannot be read, the interview
+asks for its local file. Compiler overrides remain available. The build uses
+the running config, merges Determination's common fragment, disables framebuffer
+console ownership, resolves Kconfig defaults, checks mandatory container options,
+and compiles the uncompressed arm64 Image. Incremental
 build output is retained for retries.
 
 The uncompressed arm64 Image is repacked with the original boot metadata,
-ramdisk, and appended DTB. The shared module gains the detected device profile;
+ramdisk, and appended DTB. The shared module gains a profile generated from actual
+display dimensions and unambiguous wireless, backlight, and DRM observations;
+unknown values are omitted. The complete inspection accompanies the bundle.
 shared runtime, rootfs, and companion artifacts are reused from the base release.
 The resulting local installation bundle has fresh checksums, the connected
 fingerprint, device IDs, and build provenance. The next question offers to continue
@@ -105,7 +112,8 @@ Do not reboot an incomplete installation until its failure is understood.
 One process can mutate a workspace at a time. After a crash, verify that its
 process has exited before removing `operation.lock`. A verified cached download
 is reusable; an interrupted partial download restarts. Saved settings do not
-restore a stale device identity or automatically opt into experimental artifacts.
+restore a stale device identity. Experimental artifacts are enabled independently
+of saved settings.
 
 ## Workspace and tests
 

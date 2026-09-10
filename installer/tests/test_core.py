@@ -20,7 +20,7 @@ def device():
             'fingerprint': 'vendor/product/device:16/build/id:user/release-keys', 'slot': '_a',
             'part': '/dev/block/bootdevice/by-name/boot_a', 'boot_size': 4096,
             'display': 'Physical size: 1080x2400', 'kernel': '4.14.0-test',
-            'config': '\n'.join('CONFIG_' + key + '=y' for key in REQUIRED)}
+            'config': 'CONFIG_ARM64=y\n' + '\n'.join('CONFIG_' + key + '=y' for key in REQUIRED)}
 
 
 def bundle(directory):
@@ -83,11 +83,11 @@ class CoreTests(unittest.TestCase):
         with self.assertRaises(Failure):
             select_artifacts(self.manifest, device(), 'debian')
 
-    def test_experimental_requires_opt_in(self):
+    def test_experimental_is_available_by_default(self):
         self.manifest['artifacts'][0]['support'] = 'experimental'
         with self.assertRaises(Failure):
-            select_artifacts(self.manifest, device(), 'debian')
-        self.assertEqual(len(select_artifacts(self.manifest, device(), 'debian', True)), 5)
+            select_artifacts(self.manifest, device(), 'debian', False)
+        self.assertEqual(len(select_artifacts(self.manifest, device(), 'debian')), 5)
 
     def test_manifest_rejects_unsafe_metadata(self):
         for key, value in [('name', '../escape'), ('size', True), ('sha256', 'a' * 63), ('url', 'http://bad'), ('devices', 'phone')]:
