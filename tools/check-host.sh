@@ -42,6 +42,7 @@ else
     "$CXX" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
         -Icontrol/include \
         control/src/adapter.cpp control/src/observability.cpp \
+        control/src/journal.cpp \
         control/src/policy.cpp control/src/protocol.cpp control/src/state.cpp \
         control/src/system.cpp control/src/transition.cpp \
         control/tests/control_tests.cpp -o "$WORK/control-tests"

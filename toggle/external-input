@@ -44,7 +44,7 @@ case "${1:-status}" in
         # The Android capture helper is root, while the Wayland client must run
         # as the same uid as KWin so KWin can identify its executable and apply
         # the narrow fake-input desktop permission. Android AID_SYSTEM and the
-        # guest melissa account intentionally share gid 1000.
+        # guest detuser account intentionally share gid 1000.
         chown 0:1000 "$SOCKET"
         chmod 0660 "$SOCKET"
         $LXC /bin/systemctl start det-input-proxy.service || exit 1

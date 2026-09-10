@@ -15,6 +15,12 @@ val determinationVersionCode = determinationVersion.getProperty("versionCode")?.
     ?: error("version.properties has no numeric versionCode")
 val determinationCodename = determinationVersion.getProperty("codename")
     ?: error("version.properties has no codename")
+val determinationUpdateManifestUrl = providers
+    .gradleProperty("determinationUpdateManifestUrl")
+    .getOrElse("")
+
+fun buildConfigString(value: String): String =
+    "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
 android {
     namespace = "com.determination.companion"
@@ -40,6 +46,11 @@ android {
         versionCode = determinationVersionCode
         versionName = determinationVersionName
         buildConfigField("String", "RELEASE_CODENAME", "\"$determinationCodename\"")
+        buildConfigField(
+            "String",
+            "UPDATE_MANIFEST_URL",
+            buildConfigString(determinationUpdateManifestUrl),
+        )
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }

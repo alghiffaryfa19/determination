@@ -66,6 +66,12 @@ different and are recorded in the release manifest.
 
 ### Changed
 
+- Replaced the original developer-specific guest identity, local toolchain
+  paths, package attribution, release naming, and repository-owner URLs with a
+  neutral `detuser` account and distributor-configurable project metadata.
+- Existing uid-1000 guest accounts are renamed offline on first start after an
+  update, preserving hardware permissions, the home directory, SSH access, and
+  password-gated sudo configuration.
 - Lifecycle operations now use a shared lock, generation, boot identity, and
   process start-time checks so stale PID files and overlapping transitions
   cannot target unrelated processes.

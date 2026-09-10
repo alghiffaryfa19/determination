@@ -78,6 +78,9 @@ object ReleaseRepository {
     private const val DNS_ATTEMPTS = 3
 
     fun fetch(manifestUrl: String): OnlineRelease {
+        require(manifestUrl.isNotBlank()) {
+            "No update manifest URL is configured"
+        }
         val bytes = retryDnsLookup {
             readHttps(manifestUrl, MAX_MANIFEST_BYTES.toLong())
         }

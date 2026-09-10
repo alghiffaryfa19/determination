@@ -249,11 +249,11 @@ if [ "$sess_backend" = gralloc-minigbm ]; then
                 systemctl start systemd-logind 2>/dev/null || true
                 # Nightlight plugin segfaults under the Aug-9 patched libkwin
                 # (ABI skew with system libKF6ConfigCore); keep it off.
-                install -d -o melissa -g melissa -m 700 /home/melissa/.config
-                grep -q nightlightEnabled /home/melissa/.config/kwinrc 2>/dev/null ||
+                install -d -o detuser -g detuser -m 700 /home/detuser/.config
+                grep -q nightlightEnabled /home/detuser/.config/kwinrc 2>/dev/null ||
                     printf "[Plugins]\nnightlightEnabled=false\n" \
-                        > /home/melissa/.config/kwinrc
-                chown melissa:melissa /home/melissa/.config/kwinrc 2>/dev/null || true
+                        > /home/detuser/.config/kwinrc
+                chown detuser:detuser /home/detuser/.config/kwinrc 2>/dev/null || true
                 case "$(basename "$1")" in
                     plasmashell|det-plasma-client) client=plasmashell ;;
                     *)                             client=foot ;;
@@ -296,16 +296,16 @@ else
         # Prepare root-owned input state before launching unprivileged compositor.
         "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            install -d -o melissa -g melissa -m 700 /run/user/1000
+            install -d -o detuser -g detuser -m 700 /run/user/1000
             # phoc segfaults instead of reporting an unreadable config.
             chmod a+r /etc/phoc.ini 2>/dev/null || true
             if [ -x /usr/local/sbin/det-input-udevdb ]; then
                 det-input-udevdb 2>/dev/null && det-platform service-start seatd 2>/dev/null
             fi' >> "$CLOG" 2>&1
-        # det-platform preserves melissa's android_input supplementary group.
+        # det-platform preserves detuser's android_input supplementary group.
         "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            exec det-platform run-user melissa \
+            exec det-platform run-user detuser \
                 /usr/local/bin/det-session-launch compositor "$1" ${2:-}
         ' compositor-shim "$sess_compositor" "$sess_args" >> "$CLOG" 2>&1
         rc=$?
@@ -344,7 +344,7 @@ if [ "$sess_backend" != gralloc-minigbm ]; then
                     journalctl -u det-phosh.service -n 100 --no-pager 2>/dev/null || true
                     exit 11
                 fi
-                exec det-platform run-user melissa /usr/local/bin/det-phosh-session
+                exec det-platform run-user detuser /usr/local/bin/det-phosh-session
             ' >> "$CLOG" 2>&1
             [ -f "$DET/run/desktop-mode" ] || break
             sleep 2
@@ -355,7 +355,7 @@ if [ "$sess_backend" != gralloc-minigbm ]; then
         while [ -f "$DET/run/desktop-mode" ]; do
             "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
                 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-                exec det-platform run-user melissa \
+                exec det-platform run-user detuser \
                     /usr/local/bin/det-session-launch client "$1"
             ' client-shim "$sess_shell" >> "$CLOG" 2>&1
             [ -f "$DET/run/desktop-mode" ] || break

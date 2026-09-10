@@ -4,8 +4,8 @@ After=seatd.service
 
 [Service]
 Type=simple
-User=melissa
-Group=melissa
+User=detuser
+Group=detuser
 EnvironmentFile=-/etc/determination-device.conf
 ExecStart=/usr/local/bin/det-input-proxy-session
 Restart=on-failure

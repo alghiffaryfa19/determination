@@ -7,7 +7,7 @@
 
 **Reviewed state:** `main` at `4811f05`, plus the current uncommitted external-presenter/audio work
 
-**Bottom line:** Determination is a successful, unusually complete device-specific alpha. It is no longer a feasibility experiment. It is also not yet a dependable release or a portable convergence platform. The hard problem has changed from “can this work?” to “can this recover, reproduce, survive, and work somewhere other than Melissa's exact phone?”
+**Bottom line:** Determination is a successful, unusually complete device-specific alpha. It is no longer a feasibility experiment. It is also not yet a dependable release or a portable convergence platform. The hard problem has changed from “can this work?” to “can this recover, reproduce, survive, and work somewhere other than the original reference phone?”
 
 ## The honest answer
 
@@ -31,7 +31,7 @@ That is a hell of an achievement. Most projects in this area stop at a composito
 - Portability has a good configuration foundation but exactly one proven device.
 - Release reproduction, automated recovery testing, security hardening, and long-duration stability remain substantially unfinished.
 
-My label for the project is **late hardware prototype / serious pre-release alpha**. For Melissa's phone, it is closer to a beta-quality personal tool. For another person's phone, or even a clean rebuild of this one six months from now, it is still an alpha.
+My label for the project is **late hardware prototype / serious pre-release alpha**. For the reference phone, it is closer to a beta-quality tool. For another person's phone, or even a clean rebuild of this one six months from now, it is still an alpha.
 
 ## Three finish lines, not one
 
@@ -57,7 +57,7 @@ The proof is broad rather than cosmetic:
 - libhybris can talk to the Android 16 vendor EGL/GLES implementation;
 - the Droidian wlroots/phoc stack can drive the internal display through HWC;
 - real Wayland clients use GPU buffers rather than a screenshot or software-only path;
-- the session runs as `melissa`, not as an ornamental root shell;
+- the session runs as `detuser`, not as an ornamental root shell;
 - input ownership, PTYs, `nosuid`, pidfd incompatibility, battery lies, wake behavior, and session-manager behavior have all been chased down at their actual layer.
 
 That last point matters. The project repeatedly encountered bugs that look tiny in a screenshot but are the difference between a demo and a system: `/dev/ptmx`, input GIDs, `/etc/phoc.ini` permissions, a charger re-enumerating its power-supply node, and a half-backported pidfd API. The fixes are now encoded rather than living only in terminal history.
@@ -94,7 +94,7 @@ That is more important than another settings screen. A convergence layer which c
 
 ### 4. The project has become pleasant enough to inhabit
 
-Direct key-only SSH to `melissa@192.168.117.2`, a useful MOTD, correct terminal capabilities, a global `det` command, Fish, and a non-root desktop do not solve the core architecture. They do change the project from something only its author can nurse through ADB into something that can be used normally.
+Direct key-only SSH to `detuser@192.168.117.2`, a useful MOTD, correct terminal capabilities, a global `det` command, Fish, and a non-root desktop do not solve the core architecture. They do change the project from something only its author can nurse through ADB into something that can be used normally.
 
 The recent transition animation and UI polish are in the same category: valuable now that the core works, but not substitutes for correctness. The balance is currently reasonable.
 
@@ -251,7 +251,7 @@ Until then the honest description is **portable architecture work with one suppo
 - the release APK is not permanently signed;
 - the full ship checklist is still open.
 
-The source build depends on local toolchains, vendor inputs, branch tips, scripted source rewrites, and manually accumulated device state. Today, a knowledgeable Melissa can reproduce it. That is not the same as the repository reproducing it.
+The source build depends on local toolchains, vendor inputs, branch tips, scripted source rewrites, and manually accumulated device state. Today, a knowledgeable maintainer can reproduce it. That is not the same as the repository reproducing it.
 
 Before a public Aqua build:
 
@@ -265,7 +265,7 @@ Before a public Aqua build:
 
 The repo is also carrying three roughly 100 MB boot images, large logs, old module zips, and screenshots alongside source. The evidence is valuable; deleting it would be silly. Separate immutable release artifacts and bulky lab evidence from normal Git history using releases, an artifact store, or LFS plus a small checked-in manifest. The current pack is already around 119 MB and will only grow.
 
-There are 110 commits, 13 commits ahead of `origin/main`, and a dirty working tree containing serious external-display work. Push or otherwise back up the existing history soon, but do not mix the presenter experiment into the Aqua release accidentally. The 18 early commits under the legacy `melissa@example.com` identity are not worth rewriting public history for; standardize new commits and move on.
+There are 110 commits, 13 commits ahead of `origin/main`, and a dirty working tree containing serious external-display work. Push or otherwise back up the existing history soon, but do not mix the presenter experiment into the Aqua release accidentally. Early commits under a legacy author identity are not worth rewriting public history for; standardize new commits and move on.
 
 ## Testing and observability
 
@@ -298,7 +298,7 @@ That becomes the input to both human debugging and eventual automated recovery.
 
 ## Security model
 
-The project currently assumes the Debian guest and Melissa are trusted. That is understandable for a one-owner research device, but it must be written down because the implementation grants broad access:
+The project currently assumes the Debian guest and local operator are trusted. That is understandable for a single-operator research device, but it must be written down because the implementation grants broad access:
 
 - several GPU, binder, ashmem, input, and vendor device nodes are exposed or relaxed;
 - guest uid/gid choices deliberately overlap Android AIDs;

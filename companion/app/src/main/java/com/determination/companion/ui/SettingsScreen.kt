@@ -247,7 +247,7 @@ fun SettingsScreen(
                 )
                 Text("Update source", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "HTTPS manifest for official releases, mirrors, or a self-hosted channel.",
+                    "HTTPS manifest packaged by the distributor, a mirror, or a self-hosted channel.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -262,7 +262,7 @@ fun SettingsScreen(
                 OutlinedButton(
                     onClick = vm::resetManifestUrl,
                     enabled = vm.updateManifestUrl != Prefs.UPDATE_MANIFEST_DEFAULT,
-                ) { Text("Use official releases") }
+                ) { Text("Use packaged source") }
             }
         }
     }

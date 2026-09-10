@@ -8,8 +8,8 @@ if [ "${1:-}" = --live ] && [ "$(id -u)" -eq 0 ]; then
     [ -n "$phosh_pid" ] || { echo 'FAIL  Phosh is not running'; exit 1; }
     proc_env=/proc/$phosh_pid/environ
     env_value() { tr '\000' '\n' < "$proc_env" | sed -n "s/^$1=//p" | head -n 1; }
-    exec det-platform run-user melissa env \
-        HOME=/home/melissa USER=melissa LOGNAME=melissa \
+    exec det-platform run-user detuser env \
+        HOME=/home/detuser USER=detuser LOGNAME=detuser \
         XDG_RUNTIME_DIR="$(env_value XDG_RUNTIME_DIR)" \
         XDG_SESSION_ID="$(env_value XDG_SESSION_ID)" \
         WAYLAND_DISPLAY="$(env_value WAYLAND_DISPLAY)" \
@@ -41,8 +41,8 @@ case "${XDG_CURRENT_DESKTOP:-}" in *Phosh*) pass 'Phosh desktop identity' ;; *) 
 session_id=${XDG_SESSION_ID:-}
 if [ -n "$session_id" ] && loginctl show-session "$session_id" -p Name -p Type -p Class >/dev/null 2>&1; then
     pass "logind session $session_id"
-elif loginctl list-sessions --no-legend 2>/dev/null | awk '$3 == "melissa" { found=1 } END { exit !found }'; then
-    pass 'logind knows melissa'
+elif loginctl list-sessions --no-legend 2>/dev/null | awk '$3 == "detuser" { found=1 } END { exit !found }'; then
+    pass 'logind knows detuser'
 else
     fail 'logind has no graphical user session'
 fi

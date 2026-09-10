@@ -7,14 +7,14 @@ Wants=systemd-logind.service
 
 [Service]
 Type=simple
-User=melissa
+User=detuser
 PAMName=login
 TTYPath=/dev/tty1
 UtmpIdentifier=tty1
 StandardInput=null
 StandardOutput=journal
 StandardError=journal
-Environment=HOME=/home/melissa USER=melissa LOGNAME=melissa
+Environment=HOME=/home/detuser USER=detuser LOGNAME=detuser
 Environment=XDG_SESSION_TYPE=wayland XDG_SESSION_DESKTOP=phosh
 Environment=XDG_CURRENT_DESKTOP=Phosh:GNOME DESKTOP_SESSION=phosh
 ExecStart=/usr/local/bin/det-phosh-session

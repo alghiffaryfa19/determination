@@ -30,6 +30,16 @@ No Gradle wrapper jar is committed. Either:
 - **CLI** : `cd companion && gradle wrapper && ./gradlew assembleDebug`
   (needs a local Gradle ≥ 8.7 and an Android SDK with API 34).
 
+Distributors can package an update channel without editing source:
+
+```sh
+./gradlew assembleRelease \
+  -PdeterminationUpdateManifestUrl=https://example.org/releases/determination-update.json
+```
+
+If the property is omitted, online updates remain unconfigured until the user
+sets an HTTPS manifest URL in Settings.
+
 Install the debug APK: `adb install app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Requirements

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2026 Melissa <theonest262@gmail.com>
+ * SPDX-FileCopyrightText: 2026 Determination contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * direct_hwc2_fill_test: CPU-fill variant of direct_hwc2_test.

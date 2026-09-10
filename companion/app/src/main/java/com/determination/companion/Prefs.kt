@@ -9,8 +9,7 @@ import android.content.SharedPreferences
  */
 object Prefs {
     const val POLL_DEFAULT = 5
-    const val UPDATE_MANIFEST_DEFAULT =
-        "https://github.com/kriscrossapplesauce2004/determination/releases/latest/download/determination-update.json"
+    val UPDATE_MANIFEST_DEFAULT: String = BuildConfig.UPDATE_MANIFEST_URL
 
     private lateinit var sp: SharedPreferences
 

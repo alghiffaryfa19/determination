@@ -104,35 +104,35 @@ ensure_group android_input 1004
 ensure_group android_audio 1005
 
 uid1000_user=$(getent passwd 1000 | cut -d: -f1 || true)
-if [ -n "$uid1000_user" ] && [ "$uid1000_user" != melissa ]; then
+if [ -n "$uid1000_user" ] && [ "$uid1000_user" != detuser ]; then
     # Generic Arch Linux ARM images traditionally ship `alarm` as uid 1000.
     # The numeric uid is load-bearing for Android GPU/audio nodes, so rename the
     # account instead of creating a second user or changing its number.
     uid1000_group=$(id -gn "$uid1000_user")
-    usermod -l melissa -d /home/melissa -m "$uid1000_user"
-    if [ "$uid1000_group" != melissa ] && ! getent group melissa >/dev/null 2>&1; then
-        groupmod -n melissa "$uid1000_group"
+    usermod -l detuser -d /home/detuser -m "$uid1000_user"
+    if [ "$uid1000_group" != detuser ] && ! getent group detuser >/dev/null 2>&1; then
+        groupmod -n detuser "$uid1000_group"
     fi
-elif ! id melissa >/dev/null 2>&1; then
+elif ! id detuser >/dev/null 2>&1; then
     case "$(det-platform id)" in
-        alpine) adduser -D -u 1000 -s /bin/sh melissa ;;
-        *) useradd -m -u 1000 -s /bin/bash melissa ;;
+        alpine) adduser -D -u 1000 -s /bin/sh detuser ;;
+        *) useradd -m -u 1000 -s /bin/bash detuser ;;
     esac
 fi
 
 for group in video input render audio android_graphics android_input android_audio; do
     getent group "$group" >/dev/null 2>&1 || continue
     case "$(det-platform id)" in
-        alpine) addgroup melissa "$group" 2>/dev/null || true ;;
-        *) usermod -aG "$group" melissa ;;
+        alpine) addgroup detuser "$group" 2>/dev/null || true ;;
+        *) usermod -aG "$group" detuser ;;
     esac
 done
 
 setup-compatibility.sh
 
 install -d -m 0750 /etc/sudoers.d
-printf '%s\n' 'melissa ALL=(ALL) ALL' > /etc/sudoers.d/melissa
-chmod 0440 /etc/sudoers.d/melissa
+printf '%s\n' 'detuser ALL=(ALL) ALL' > /etc/sudoers.d/detuser
+chmod 0440 /etc/sudoers.d/detuser
 printf '%s\n' determination > /etc/hostname
 grep -q determination /etc/hosts 2>/dev/null || \
     printf '127.0.0.1\tlocalhost\n127.0.1.1\tdetermination\n' > /etc/hosts

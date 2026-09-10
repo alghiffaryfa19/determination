@@ -8,7 +8,7 @@
 #                         installs the test clients into the guest.
 #   gpu-smoke.sh        --- DESKTOP MODE (desktop-on running, phoc socket up):
 #                         runs the actual gate. Windows will appear on the
-#                         panel; melissa should be told before running.
+#                         panel; warn the device operator before running.
 #
 # Pass criteria:
 #   1. hybris wayland EGL platform plugin installed.
@@ -44,7 +44,7 @@ if [ "${1:-}" = "prep" ]; then
 fi
 
 [ -f "$DET/run/desktop-mode" ] || {
-    echo "FATAL: desktop mode not active --- run desktop-on first (and warn melissa: windows will appear)"; exit 1; }
+    echo "FATAL: desktop mode not active --- run desktop-on first (and warn the device operator: windows will appear)"; exit 1; }
 
 $LXC /bin/sh -c '
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

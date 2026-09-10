@@ -2,7 +2,7 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 
-out=$(env -i PATH=/usr/bin:/bin HOME=/home/melissa USER=melissa LOGNAME=melissa \
+out=$(env -i PATH=/usr/bin:/bin HOME=/home/detuser USER=detuser LOGNAME=detuser \
     "$ROOT/guest/det-phosh-session" --print-environment)
 printf '%s\n' "$out" | grep -q '^XDG_CURRENT_DESKTOP=Phosh:GNOME$'
 printf '%s\n' "$out" | grep -q '^GTK_USE_PORTAL=1$'
@@ -10,7 +10,7 @@ printf '%s\n' "$out" | grep -q '^EGL_PLATFORM=wayland$'
 printf '%s\n' "$out" | grep -q '^GSK_RENDERER=ngl$'
 
 grep -q '^PAMName=login$' "$ROOT/guest/det-phosh.service"
-grep -q '^User=melissa$' "$ROOT/guest/det-phosh.service"
+grep -q '^User=detuser$' "$ROOT/guest/det-phosh.service"
 grep -q 'XDG_RUNTIME_DIR/bus' "$ROOT/guest/det-phosh-session"
 grep -q 'systemctl --user mask --runtime --now' "$ROOT/guest/det-phosh-session"
 grep -q 'DISABLE_RTKIT=1' "$ROOT/guest/det-audio-session"

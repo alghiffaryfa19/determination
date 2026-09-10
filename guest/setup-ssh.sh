@@ -47,12 +47,12 @@ else
     apt-get install -y -qq --no-install-recommends openssh-server
 fi
 
-getent passwd melissa >/dev/null || { echo "FATAL: guest user melissa is missing" >&2; exit 1; }
-home=$(getent passwd melissa | cut -d: -f6)
-group=$(id -gn melissa)
-install -d -o melissa -g "$group" -m 0700 "$home/.ssh"
+getent passwd detuser >/dev/null || { echo "FATAL: guest user detuser is missing" >&2; exit 1; }
+home=$(getent passwd detuser | cut -d: -f6)
+group=$(id -gn detuser)
+install -d -o detuser -g "$group" -m 0700 "$home/.ssh"
 touch "$home/.ssh/authorized_keys"
-chown melissa:"$group" "$home/.ssh/authorized_keys"
+chown detuser:"$group" "$home/.ssh/authorized_keys"
 chmod 0600 "$home/.ssh/authorized_keys"
 
 # Match key type + base64 payload, ignoring comments, so reruns do not append
@@ -68,13 +68,13 @@ done < "$KEYS"
 
 install -d -m 0755 /etc/ssh/sshd_config.d
 cat > /etc/ssh/sshd_config.d/50-determination.conf <<'EOF'
-# Determination: the guest is administered as melissa with a public key.
+# Determination: the guest is administered as detuser with a public key.
 PermitRootLogin no
 PubkeyAuthentication yes
 PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitEmptyPasswords no
-AllowUsers melissa
+AllowUsers detuser
 X11Forwarding no
 AllowAgentForwarding yes
 AllowTcpForwarding yes
@@ -87,8 +87,8 @@ EOF
 # after password, keyboard-interactive, and empty-password login are disabled
 # above. This creates no usable password; `det passwd` can still set one for
 # sudo later.
-account_state=$(passwd -S melissa 2>/dev/null | awk '{ print $2 }')
-case "$account_state" in L|LK) passwd -d melissa >/dev/null ;; esac
+account_state=$(passwd -S detuser 2>/dev/null | awk '{ print $2 }')
+case "$account_state" in L|LK) passwd -d detuser >/dev/null ;; esac
 
 ssh-keygen -A
 sshd -t
@@ -102,4 +102,4 @@ else
     systemctl --quiet is-active ssh || { echo "FATAL: ssh.service did not start" >&2; exit 1; }
 fi
 
-echo "SSH-SETUP-OK --- key login for melissa; password/root login disabled"
+echo "SSH-SETUP-OK --- key login for detuser; password/root login disabled"

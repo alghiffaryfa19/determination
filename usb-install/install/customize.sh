@@ -8,7 +8,7 @@
 #   2. Magisk app -> Modules -> Install from storage -> pick THIS zip.
 #      It scans Download for magisk_patched-*.img (newest first) and flashes
 #      the first one that passes ALL checks; see the check list below.
-#   3. Reboot. `uname -a` should say melissa@terra.
+#   3. Reboot. `uname -a` should say detuser@determination.
 #
 # Checks before a single byte is written to the partition:
 #   - image is a real Android boot image (ANDROID! magic)
@@ -38,7 +38,7 @@ SKIPUNZIP=1
 # substituted at zip build time. Falls back to the project marker if the
 # substitution somehow did not happen.
 BANNER="@BANNER@"
-MARKER="melissa@terra"
+MARKER="detuser@determination"
 case "$BANNER" in @*) BANNER="$MARKER" ;; esac
 
 DRYFLAG=/sdcard/Download/determination-dryrun

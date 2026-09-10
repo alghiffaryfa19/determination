@@ -108,7 +108,7 @@ done
 FAVS="[${FAVS%, }]"
 echo "favorites -> $FAVS"
 
-echo "== phosh settings (melissa user dconf, persists) =="
+echo "== phosh settings (detuser user dconf, persists) =="
 # idle-delay 0: phosh's idle blank goes through the same broken
 # output-wake path as the power button (KEY_POWER is quirked inert; an
 # idle blank would still soft-kill the session). Never blank.
@@ -120,8 +120,8 @@ DARKBG=$(ls /usr/share/backgrounds/gnome/*[Dd]ark*.jpg \
             /usr/share/backgrounds/gnome/*-d.jpg 2>/dev/null | head -1)
 BG=${DARKBG:-$(ls /usr/share/backgrounds/gnome/*.jpg /usr/share/backgrounds/gnome/*.png 2>/dev/null | head -1)}
 export BG FAVS
-det-platform run-user melissa env \
-    HOME=/home/melissa USER=melissa LOGNAME=melissa BG="$BG" FAVS="$FAVS" \
+det-platform run-user detuser env \
+    HOME=/home/detuser USER=detuser LOGNAME=detuser BG="$BG" FAVS="$FAVS" \
     dbus-run-session -- /bin/sh -c '
     gsettings set org.gnome.desktop.session idle-delay "uint32 0"
     gsettings set org.gnome.desktop.screensaver lock-enabled false
@@ -145,7 +145,7 @@ echo "== Firefox narrow-window content default =="
 # not a normal pref. Seed 67% only when the user has not chosen a global value;
 # site-specific zooms and later Settings changes remain authoritative.
 if ! pgrep -x firefox-esr >/dev/null 2>&1; then
-    det-platform run-user melissa env HOME=/home/melissa USER=melissa LOGNAME=melissa \
+    det-platform run-user detuser env HOME=/home/detuser USER=detuser LOGNAME=detuser \
         det-firefox-content-defaults
 else
     echo "Firefox is running; preserving its live content database"

@@ -58,7 +58,7 @@ restoring, so the restore is itself undoable.
    avoids registering as a module). Read the log above it: if it says
    `flashed and verified`, it worked.
 3. **Reboot.** Check with any terminal / `adb shell`: `uname -a` must contain
-   `melissa@terra`. Then install the `determination-magisk-v*.zip` the same way
+   `detuser@determination`. Then install the `determination-magisk-v*.zip` the same way
    (Modules then Install from storage) --- this one is a real module and stays.
 
 ## Undo

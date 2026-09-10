@@ -28,7 +28,7 @@ export PATH="$REPO/toolchain/usr/bin:$PATH"
 ADB="${ADB:-$HOME/platform-tools/adb}"
 BOOTIMG="$REPO/boot/determination-boot.img"
 PRISTINE="${PRISTINE:-$REPO/artifacts/boot_a-crdroid-12.11.img}"
-MARKER="melissa@terra"
+MARKER="detuser@determination"
 DMB=/data/adb/magisk/magiskboot
 DWORK=/data/local/tmp/det-hostflash
 

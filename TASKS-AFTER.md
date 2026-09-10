@@ -168,7 +168,7 @@ to reduce historical clone size.
 | X09 | Complete | This file maps every native, lifecycle, product, integration, and publication task ID. |
 | X10 | Complete | Cleanup removes files from the current tree without rewriting public history. |
 | X11 | Complete | The integrated scope passed final review and is committed intentionally as one implementation change after the frozen task-contract commit. |
-| X12 | Complete | The branch is published and [draft pull request 1](https://github.com/kriscrossapplesauce2004/determination/pull/1) records scope, impact, validation, migration, limitations, and device gates. |
+| X12 | Complete | The branch is published and draft pull request 1 records scope, impact, validation, migration, limitations, and device gates. |
 
 ## Final host validation
 

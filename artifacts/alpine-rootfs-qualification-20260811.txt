@@ -1,4 +1,6 @@
 Determination Alpine rootfs qualification - 2026-08-11
+Note: Personal account labels were normalized to the project's neutral guest
+account name; the underlying qualification result is unchanged.
 Device: OnePlus 7 / guacamoleb
 Android: crDroid 12.11 / Android 16 (SDK 36)
 Kernel: 4.14.357-perf-g96adfa8256dc
@@ -20,8 +22,8 @@ Cold boot with /sbin/init as PID 1: PASS
 Root remount with suid, dev, and exec: PASS
 Gateway, internet, and DNS: PASS
 OpenRC dbus, seatd, and sshd: PASS
-melissa uid 1000 and Android device groups: PASS
-Direct key-only ssh melissa@192.168.117.2: PASS
+detuser uid 1000 and Android device groups: PASS
+Direct key-only ssh detuser@192.168.117.2: PASS
 Stable SSH host identity across Debian and Alpine: PASS
 Phosh/OpenRC package provisioning: PASS
 Input udev database and touchpanel recognition: PASS

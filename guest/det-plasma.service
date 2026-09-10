@@ -12,7 +12,7 @@ Wants=systemd-logind.service
 
 [Service]
 Type=simple
-User=melissa
+User=detuser
 PAMName=login
 TTYPath=/dev/tty1
 UtmpIdentifier=tty1
