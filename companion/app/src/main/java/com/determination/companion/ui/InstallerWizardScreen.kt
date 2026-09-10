@@ -283,6 +283,14 @@ private fun CustomizePage(vm: DetViewModel) {
             }
         }
         OutlinedTextField(
+            value = vm.installerDisplayName,
+            onValueChange = vm::updateInstallerDisplayName,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text("Your name in Linux") },
+            supportingText = { Text("Shown by the desktop; the stable login remains detuser.") },
+        )
+        OutlinedTextField(
             value = vm.installerHostname,
             onValueChange = vm::updateInstallerHostname,
             modifier = Modifier.fillMaxWidth(),
@@ -315,6 +323,7 @@ private fun ReviewPage(vm: DetViewModel) {
         GlassCard {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 DetailRow("Distro", vm.installerDistro)
+                DetailRow("User", vm.installerDisplayName.ifBlank { "Not set" })
                 DetailRow("Hostname", vm.installerHostname)
                 DetailRow("Release", release?.let { "${it.version} · ${it.channel}" } ?: "Awaiting first qualified release")
                 DetailRow("Mode", if (realReady) {

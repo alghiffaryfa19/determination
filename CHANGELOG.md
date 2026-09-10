@@ -72,6 +72,8 @@ different and are recorded in the release manifest.
 - Existing uid-1000 guest accounts are renamed offline on first start after an
   update, preserving hardware permissions, the home directory, SSH access, and
   password-gated sudo configuration.
+- Guided Linux setup now asks for a user-facing display name while retaining
+  the stable `detuser` login required by services and device permissions.
 - Lifecycle operations now use a shared lock, generation, boot identity, and
   process start-time checks so stale PID files and overlapping transitions
   cannot target unrelated processes.

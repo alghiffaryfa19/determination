@@ -566,14 +566,40 @@ object Root {
     }
 
     /** Persist the small set of installer customizations that are genuinely wired. */
-    fun configureInstall(hostname: String, stopGuestOnExit: Boolean): Result {
+    fun configureInstall(
+        displayName: String,
+        hostname: String,
+        stopGuestOnExit: Boolean,
+    ): Result {
+        val normalizedName = displayName.trim()
+        if (normalizedName.isBlank())
+            return Result(false, "", "Linux display name is required")
+        if (normalizedName.length > 64 || normalizedName.any {
+                it.isISOControl() || it == ':' || it == ','
+            })
+            return Result(false, "", "display name contains unsupported characters")
         if (!hostname.matches(Regex("[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?")))
             return Result(false, "", "hostname must use lowercase letters, numbers and hyphens")
+        val quotedName = shellQuote(normalizedName)
         val stop = if (stopGuestOnExit) "1" else "0"
         val script = """
             set -e
             root=${'$'}($BIN/guest-distro root)
             [ -d "${'$'}root/etc" ] || { echo "active guest rootfs is missing"; exit 1; }
+            [ -f "${'$'}root/etc/passwd" ] || { echo "active guest has no passwd database"; exit 1; }
+            display_name=$quotedName
+            passwd_new="${'$'}root/etc/passwd.new.${'$'}${'$'}"
+            awk -F: -v OFS=: -v display_name="${'$'}display_name" '
+                ${'$'}3 == 1000 { ${'$'}5 = display_name; found = 1 }
+                { print }
+                END { if (!found) exit 1 }
+            ' "${'$'}root/etc/passwd" > "${'$'}passwd_new" || {
+                rm -f "${'$'}passwd_new"
+                echo "active guest has no uid-1000 account"
+                exit 1
+            }
+            chmod 0644 "${'$'}passwd_new"
+            mv -f "${'$'}passwd_new" "${'$'}root/etc/passwd"
             mkdir -p $DET/etc
             {
                 echo "hostname=$hostname"

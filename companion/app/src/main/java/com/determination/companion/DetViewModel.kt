@@ -100,6 +100,7 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
     var onlineRelease by mutableStateOf<OnlineRelease?>(null); private set
     var onlineError by mutableStateOf<String?>(null); private set
     var installerDistro by mutableStateOf("debian"); private set
+    var installerDisplayName by mutableStateOf("Determination User"); private set
     var installerHostname by mutableStateOf("determination"); private set
     var installerStopGuestOnExit by mutableStateOf(false); private set
     var installerStep by mutableStateOf<String?>(null); private set
@@ -296,6 +297,12 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
         if (id in setOf("debian", "arch", "alpine") && busy == null) installerDistro = id
     }
 
+    fun updateInstallerDisplayName(value: String) {
+        installerDisplayName = value
+            .filter { it >= ' ' && it != ':' && it != ',' }
+            .take(64)
+    }
+
     fun updateInstallerHostname(value: String) {
         installerHostname = value.lowercase().filter { it.isLetterOrDigit() || it == '-' }.take(63)
     }
@@ -401,7 +408,11 @@ class DetViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 installerStep = "Selecting and customising the guest"
                 Root.activateGuestOffline(installerDistro).requireOk("guest activation")
-                Root.configureInstall(installerHostname, installerStopGuestOnExit).requireOk("customization")
+                Root.configureInstall(
+                    installerDisplayName,
+                    installerHostname,
+                    installerStopGuestOnExit,
+                ).requireOk("customization")
 
                 installerStep = "Backing up and installing the kernel"
                 Root.flashBootImage(stage(boot!!)).requireOk("boot install")
