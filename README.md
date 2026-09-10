@@ -5,13 +5,12 @@ Android convergence layer for Android 16
 Android stays PID1; a Wayland desktop runs as an LXC guest
 on the **same downstream vendor kernel**; `libhybris` bridges the guest to the
 bionic GPU/display blobs. Shipped as a custom `boot.img` (custom kernel +
-Magisk-patched ramdisk) plus a Zygisk module : **not a ROM**. `/system` and
+Magisk-patched ramdisk) plus a Zygisk module : **not a ROM** (though can be adapted as such) - `/system` and
 `/vendor` stay stock.
 
-Two modes:
 
-- **External convergence** (concurrent): SurfaceFlinger keeps the internal
-  panel, the guest compositor drives a DP-alt external display. Both live.
+
+
 - **Internal on-demand desktop*: SF is stopped and
   respawn-masked, the guest compositor takes the panel via hwcomposer, input is
   handed off with `EVIOCGRAB`.
@@ -31,7 +30,7 @@ Two modes:
 | `guest/` | Debian baseline plus experimental Arch Linux ARM/Alpine rootfs builders; shared LXC, libhybris, and session contract |
 | `toggle/` | §4 internal-panel handoff: SF stop + respawn suppression + compositor swap + input grab; plus `det-hostagent` (guest→host control channel) |
 | `control/` | native `detd` state/API owner, `detctl` client, durable-state/protocol core, and host tests |
-| `audio/` | direct ALSA hardware inventory and journalled ownership binaries |
+| `audio/` | direct ALSA hardware and ownership binaries |
 | `companion/` | Android UI and permission facade: mode confirmation, status/API, Quick Settings, share sheet, optional external presenter |
 | `tools/evgrab/` | small C daemon that holds `EVIOCGRAB` on evdev nodes during desktop mode |
 | `usb-install/` | cable-free install: Magisk action zips that flash/restore the kernel from a USB drive on the phone itself |
@@ -56,9 +55,9 @@ ZIP, or APK.
 
 
 
-## Linux-first profile
+## Linux-first profile (experimental)
 
-Supported device profiles can request a health-gated Linux-first startup while
+Supported device profiles can request a Linux-first startup while
 retaining the minimum Android and vendor services needed for the downstream
 kernel, radio, thermal, power, binder, and qualified networking stack:
 
@@ -69,8 +68,7 @@ det linux-first apply
 det linux-first disable
 ```
 
-A failed automatic attempt returns to phone mode and disables automatic retry
-until it is explicitly enabled again. See the
+. See the
 [boot-profile reference](docs/reference/device-and-boot-profiles.md) and
 [recovery guide](docs/guides/install-and-recovery.md) before enabling it.
 
@@ -120,35 +118,14 @@ default dedicated `~/.ssh/determination_ed25519` key.
 - [x] Toggle round trip cable-free: companion app Enter, guest launchers /
       phosh power menu Exit, verified on-device (2026-07-11) : milestone 4 done
       (QS tile confirmed)
-- [x] Milestone 6: Zygisk hook on system_server's SF-death handling :
-      verified on device 2026-07-11: system_server stable, WiFi stays up,
-      guest networking alive throughout desktop mode
-- [x] Debian application-session compatibility layer (2026-08-21): Phosh now
-      runs in an active PAM/logind Wayland login with its standard systemd user
-      bus, XDG portals, Secret Service, accessibility, feedback, GVfs, Flatpak,
-      native Wayland app hints, and user-owned GNOME settings. The live contract
-      passed 17/17 checks and GNOME Calculator launched through its desktop
-      entry. This qualifies the session plumbing, not every individual app or
-      hardware API.
 - [x] Milestone 5 phase 1: native graphics/KMS path proven (2026-07-13/14) :
       Turnip on KGSL, minigbm allocation, dmabuf→Vulkan import, raw DSI KMS
       scanout, and Plasma Mobile under KWin with GPU compositing + touch.
       This is retained as an explicit native-Mesa experiment, not the portable
       product renderer.
-- [x] Compatibility KWin path: vendor EGL/GLES through libhybris, Android
-      gralloc allocation, and minigbm as the compositor-facing GBM layer. The
-      first shared-buffer interop gate passed on-device (2026-07-19): vendor
-      Adreno rendered through a reconstructed full native handle, pixel readback
-      through the original allocation matched, and minigbm imported/re-exported
-      its pixel dma-buf. The display-safe 1080x2340 benchmark completes four
-      fullscreen textured/blended layers in 4.263 ms mean / 4.625 ms p99;
-      full-handle and minigbm setup cost 8 us and 92 us mean respectively.
-      Direct KWin integration, authoritative plane metadata, presentation, and
-      sync-fence transport remain.
+respectively..
 - [ ] Milestone 5 phase 2: concurrent external convergence : Android/SF keeps
       the panel while a guest-rendered dmabuf is presented on DP-alt
 - [x] Direct audio : the internal-speaker alpha is hardware-proven on
       `guacamoleb` (2026-08-02): journalled Android ownership, direct ALSA and
-      PipeWire playback, normal desktop lifecycle integration, and exact
-      mixer/service restoration pass on-device. Volume/mute, headset, DP/USB,
-      suspend/cable/crash stress, and latency/xrun qualification remain.
+      PipeWire playback, normal desktop lifecycle integration, etc
