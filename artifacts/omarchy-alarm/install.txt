@@ -1,0 +1,1 @@
+installed arch at /data/determination/guests/arch/rootfs

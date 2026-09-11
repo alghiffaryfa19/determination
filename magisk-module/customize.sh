@@ -37,7 +37,7 @@ for f in evgrab det-input-forwarder detd detctl det-audio-probe det-audio-owner 
     chmod 0755 "$STAGE/bin/$f"
 done
 cp -f "$MODPATH/tools/lxc-config-base" "$STAGE/lxc-config-base"
-for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke det-input-actions det-media-action det-connectivity det-connectivity-menu det-platform det-phosh-session det-compat-check det-firefox-content-defaults det-session-launch det-plasma-session det-plasma-client det-hyprland det-hyprland-opal det-opal det-opal-bridge opal; do
+for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke det-input-actions det-media-action det-connectivity det-connectivity-menu det-platform det-phosh-session det-compat-check det-firefox-content-defaults det-session-launch det-plasma-session det-plasma-client det-hyprland det-hyprland-opal det-hyprland-omarchy det-omarchy det-opal det-opal-bridge opal; do
   if [ -f "$MODPATH/guest-tools/$f" ]; then
     cp -f "$MODPATH/guest-tools/$f" "$STAGE/guest-tools/$f"
     chmod 0755 "$STAGE/guest-tools/$f"
@@ -53,6 +53,11 @@ if [ -d "$MODPATH/guest-assets/opal" ]; then
         mkdir -p "$GUEST_ROOT/usr/local/share/det-opal"
         cp -a "$MODPATH/guest-assets/opal/." "$GUEST_ROOT/usr/local/share/det-opal/"
     fi
+fi
+if [ -d "$MODPATH/guest-assets/omarchy" ]; then
+    mkdir -p "$STAGE/guest-assets/omarchy" "$GUEST_ROOT/usr/local/share/det-omarchy"
+    cp -a "$MODPATH/guest-assets/omarchy/." "$STAGE/guest-assets/omarchy/"
+    cp -a "$MODPATH/guest-assets/omarchy/." "$GUEST_ROOT/usr/local/share/det-omarchy/"
 fi
 for det_guest_config in "$MODPATH"/guest-config/*.conf; do
     [ -f "$det_guest_config" ] || continue

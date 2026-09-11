@@ -1,0 +1,22 @@
+#!/bin/sh
+set -u
+
+[ "${1:-}" != -q ] || shift
+[ "$#" -ge 2 ] || exit 2
+
+target=$1
+method=$2
+shift 2
+case "$target" in
+    shell) ;;
+    osd) target=omarchy.osd ;;
+    media) target=omarchy.media ;;
+    clock) target=omarchy.clock ;;
+    bar) target=omarchy.bar ;;
+esac
+
+case "$target:$method:$#" in
+    shell:summon:1|shell:toggle:1) set -- "$1" "{}" ;;
+esac
+
+exec /usr/local/bin/det-omarchy ipc "$target" "$method" "$@"

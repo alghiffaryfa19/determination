@@ -28,6 +28,8 @@ sh toggle/tests/session-set-test.sh
 sh toggle/tests/session-select-test.sh
 sh guest/tests/audio-session-test.sh
 sh guest/tests/compatibility-contract-test.sh
+sh guest/tests/omarchy-commands-test.sh
+sh guest/tests/portable-rootfs-test.sh
 python3 docs/check-links.py
 python3 artifacts/build-index.py --check
 python3 website/check-site.py

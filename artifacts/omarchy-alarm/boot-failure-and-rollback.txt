@@ -1,0 +1,14 @@
+Failed to find module 'autofs4'
+Failed to determine whether /proc is a mount point: Protocol driver not attached
+Failed to determine whether /sys is a mount point: Protocol driver not attached
+Failed to determine whether /dev is a mount point: Protocol driver not attached
+Unable to determine whether tmpfs supports 'usrquota' mount option, assuming not: Function not implemented
+Failed to determine whether /run is a mount point: Protocol driver not attached
+Failed to determine whether /sys/fs/cgroup is a mount point: Protocol driver not attached
+[[0;1;31m!!!!!![0m] Failed to mount API filesystems.
+Exiting PID 1...
+active=debian
+root=/data/determination/guest
+ready=yes
+running=yes
+running

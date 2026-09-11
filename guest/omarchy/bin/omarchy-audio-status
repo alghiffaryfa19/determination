@@ -1,0 +1,29 @@
+#!/bin/sh
+set -u
+
+name=
+if command -v pactl >/dev/null 2>&1; then
+    name=$(pactl get-default-sink 2>/dev/null || true)
+fi
+
+if command -v wpctl >/dev/null 2>&1; then
+    status=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || true)
+    volume=$(printf '%s\n' "$status" | awk '/Volume:/ { printf "%d", $2 * 100; exit }')
+    if [ -n "$volume" ]; then
+        muted=0
+        case "$status" in *'[MUTED]'*) muted=1 ;; esac
+        printf '%s %s %s\n' "$volume" "$muted" "$name"
+        exit 0
+    fi
+fi
+
+if command -v pactl >/dev/null 2>&1; then
+    volume=$(pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null | awk 'match($0, /[0-9]+%/) { value=substr($0, RSTART, RLENGTH - 1); print value; exit }')
+    muted=$(pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null | awk '/Mute:/ { print ($2 == "yes" ? 1 : 0); exit }')
+    if [ -n "$volume" ]; then
+        printf '%s %s %s\n' "$volume" "${muted:-0}" "$name"
+        exit 0
+    fi
+fi
+
+printf '%s\n' '-1 1'

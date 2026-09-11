@@ -1,0 +1,577 @@
+The Meson build system
+Version: 1.7.0
+Source dir: /work/build/omarchy-alarm/systemd-257.13
+Build dir: /work/build/omarchy-alarm/systemd-build
+Build type: cross build
+Project name: systemd
+Project version: 257.13
+C compiler for the host machine: aarch64-linux-gnu-gcc (gcc 14.2.0 "aarch64-linux-gnu-gcc (Debian 14.2.0-19) 14.2.0")
+C linker for the host machine: aarch64-linux-gnu-gcc ld.bfd 2.44
+Compiler for language c for the build machine not found.
+Build machine cpu family: x86_64
+Build machine cpu: x86_64
+Host machine cpu family: aarch64
+Host machine cpu: armv8-a
+Target machine cpu family: aarch64
+Target machine cpu: armv8-a
+Program tools/git-setup.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/git-setup.sh)
+Program tools/meson-build.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/meson-build.sh)
+C++ compiler for the host machine: aarch64-linux-gnu-g++ (gcc 14.2.0 "aarch64-linux-gnu-g++ (Debian 14.2.0-19) 14.2.0")
+C++ linker for the host machine: aarch64-linux-gnu-g++ ld.bfd 2.44
+Compiler for C supports arguments -Wno-missing-field-initializers: YES (cached)
+Compiler for C supports arguments -Wno-unknown-warning-option: NO (cached)
+Compiler for C supports arguments -Wno-unused-parameter: YES (cached)
+Compiler for C supports arguments -Wno-nonnull-compare: YES (cached)
+Compiler for C supports arguments -Warray-bounds: YES (cached)
+Compiler for C supports arguments -Warray-bounds=2: YES (cached)
+Compiler for C supports arguments -Wdate-time: YES (cached)
+Compiler for C supports arguments -Wendif-labels: YES (cached)
+Compiler for C supports arguments -Werror=format=2: YES (cached)
+Compiler for C supports arguments -Werror=format-signedness: YES (cached)
+Compiler for C supports arguments -Werror=implicit-function-declaration: YES (cached)
+Compiler for C supports arguments -Werror=implicit-int: YES (cached)
+Compiler for C supports arguments -Werror=incompatible-pointer-types: YES (cached)
+Compiler for C supports arguments -Werror=int-conversion: YES (cached)
+Compiler for C supports arguments -Werror=missing-declarations: YES (cached)
+Compiler for C supports arguments -Werror=missing-prototypes: YES (cached)
+Compiler for C supports arguments -Werror=overflow: YES (cached)
+Compiler for C supports arguments -Werror=override-init: YES (cached)
+Compiler for C supports arguments -Werror=return-type: YES (cached)
+Compiler for C supports arguments -Werror=shift-count-overflow: YES (cached)
+Compiler for C supports arguments -Werror=shift-overflow=2: YES (cached)
+Compiler for C supports arguments -Werror=strict-flex-arrays: YES (cached)
+Compiler for C supports arguments -Werror=undef: YES (cached)
+Compiler for C supports arguments -Wfloat-equal: YES (cached)
+Compiler for C supports arguments -Wimplicit-fallthrough=5: YES (cached)
+Compiler for C supports arguments -Winit-self: YES (cached)
+Compiler for C supports arguments -Wlogical-op: YES (cached)
+Compiler for C supports arguments -Wmissing-include-dirs: YES (cached)
+Compiler for C supports arguments -Wmissing-noreturn: YES (cached)
+Compiler for C supports arguments -Wnested-externs: YES (cached)
+Compiler for C supports arguments -Wold-style-definition: YES (cached)
+Compiler for C supports arguments -Wpointer-arith: YES (cached)
+Compiler for C supports arguments -Wredundant-decls: YES (cached)
+Compiler for C supports arguments -Wshadow: YES (cached)
+Compiler for C supports arguments -Wstrict-aliasing=2: YES (cached)
+Compiler for C supports arguments -Wstrict-prototypes: YES (cached)
+Compiler for C supports arguments -Wsuggest-attribute=noreturn: YES (cached)
+Compiler for C supports arguments -Wunterminated-string-initialization: NO (cached)
+Compiler for C supports arguments -Wunused-function: YES (cached)
+Compiler for C supports arguments -Wwrite-strings: YES (cached)
+Compiler for C supports arguments -Wzero-length-bounds: YES (cached)
+Compiler for C supports arguments -Wno-error=#warnings: NO (cached)
+Compiler for C supports arguments -Wno-string-plus-int: NO (cached)
+Compiler for C supports arguments -fdiagnostics-show-option: YES (cached)
+Compiler for C supports arguments -fno-common: YES (cached)
+Compiler for C supports arguments -fstack-protector: YES (cached)
+Compiler for C supports arguments -fstack-protector-strong: YES (cached)
+Compiler for C supports arguments -fstrict-flex-arrays=3: YES (cached)
+Compiler for C supports arguments --param=ssp-buffer-size=4: YES (cached)
+Compiler for C supports arguments -Wno-maybe-uninitialized: YES (cached)
+Compiler for C supports arguments -Wno-unused-result: YES (cached)
+Compiler for C supports arguments -ftrivial-auto-var-init=zero: YES (cached)
+Compiler for C supports link arguments -fstack-protector: YES (cached)
+Compiler for C supports arguments -fno-strict-aliasing: YES (cached)
+Compiler for C supports arguments -fstrict-flex-arrays=1: YES (cached)
+Compiler for C supports arguments -fvisibility=hidden: YES (cached)
+Compiler for C supports arguments -ffunction-sections: YES (cached)
+Compiler for C supports arguments -fdata-sections: YES (cached)
+Compiler for C supports link arguments -Wl,--fatal-warnings: YES (cached)
+Compiler for C supports link arguments -Wl,-z,now: YES (cached)
+Compiler for C supports link arguments -Wl,-z,relro: YES (cached)
+Compiler for C supports link arguments -Wl,-z,gcs-report-dynamic=none: YES (cached)
+Compiler for C supports link arguments -Wl,--warn-common: YES (cached)
+Compiler for C supports link arguments -Wl,--gc-sections: YES (cached)
+Compiler for C supports arguments -Wzero-length-bounds: YES (cached)
+Checking if "-Werror=shadow with local shadowing" compiles: YES (cached)
+Compiler for C++ supports arguments -Wno-missing-field-initializers: YES (cached)
+Compiler for C++ supports arguments -Wno-unknown-warning-option: NO (cached)
+Compiler for C++ supports arguments -Wno-unused-parameter: YES (cached)
+Compiler for C++ supports arguments -Wno-nonnull-compare: YES (cached)
+Compiler for C supports arguments -Wstringop-truncation: YES (cached)
+Checking for size of "dev_t" : 8 
+Checking for size of "ino_t" : 8 
+Checking for size of "rlim_t" : 8 
+Checking for size of "time_t" : 8 
+Checking for size of "typeof(((struct timex *)0)->freq)" : 8 
+Computing int of "LONG_MAX" : 9223372036854775807
+Checking for size of "char16_t" : 2 
+Checking for size of "char32_t" : 4 
+Checking for size of "struct mount_attr" : 32 
+Checking for size of "struct statx" : 256 
+Checking for size of "struct dirent64" : 280 
+Checking for size of "struct sched_attr" : 56 
+Checking for function "secure_getenv" : YES (cached)
+Checking for function "__secure_getenv" : NO (cached)
+Checking for function "memfd_create" : YES (cached)
+Checking for function "gettid" : YES (cached)
+Checking for function "fchmodat2" : NO (cached)
+Checking for function "pivot_root" : NO (cached)
+Checking for function "ioprio_get" : NO (cached)
+Checking for function "ioprio_set" : NO (cached)
+Checking for function "sched_setattr" : YES (cached)
+Checking for function "name_to_handle_at" : YES (cached)
+Checking for function "setns" : YES (cached)
+Checking for function "renameat2" : YES (cached)
+Checking for function "kcmp" : NO (cached)
+Checking for function "keyctl" : NO (cached)
+Checking for function "copy_file_range" : YES (cached)
+Checking for function "bpf" : NO (cached)
+Checking for function "statx" : YES (cached)
+Checking for function "explicit_bzero" : YES (cached)
+Checking for function "reallocarray" : YES (cached)
+Checking for function "set_mempolicy" : NO (cached)
+Checking for function "get_mempolicy" : NO (cached)
+Checking for function "pidfd_send_signal" : YES (cached)
+Checking for function "pidfd_open" : YES (cached)
+Checking for function "rt_sigqueueinfo" : NO (cached)
+Checking for function "rt_tgsigqueueinfo" : NO (cached)
+Checking for function "mallinfo" : YES (cached)
+Checking for function "mallinfo2" : YES (cached)
+Checking for function "execveat" : YES (cached)
+Checking for function "close_range" : YES (cached)
+Checking for function "epoll_pwait2" : YES (cached)
+Checking for function "mount_setattr" : YES (cached)
+Checking for function "move_mount" : YES (cached)
+Checking for function "open_tree" : YES (cached)
+Checking for function "fsopen" : YES (cached)
+Checking for function "fsconfig" : YES (cached)
+Checking for function "fsmount" : YES (cached)
+Checking for function "getdents64" : YES (cached)
+Checking for function "pidfd_spawn" : YES (cached)
+Checking for function "getrandom" : YES (cached)
+Program awk found: YES (/usr/bin/awk)
+Program diff found: YES (/usr/bin/diff)
+Program echo found: YES (/usr/bin/echo)
+Program env found: YES (/usr/bin/env)
+Program find found: YES (/usr/bin/find)
+Program getent found: YES (/usr/bin/getent)
+Program git found: NO
+Program gperf found: YES (/usr/bin/gperf)
+Program id found: YES (/usr/bin/id)
+Program ln found: YES (/usr/bin/ln)
+Program rsync found: NO
+Program sed found: YES (/usr/bin/sed)
+Program sh found: YES (/usr/bin/sh)
+Program stat found: YES (/usr/bin/stat)
+Program quotaon /usr/sbin/quotaon /sbin/quotaon found: NO
+Program quotacheck /usr/sbin/quotacheck /sbin/quotacheck found: NO
+Program kmod /usr/sbin/kmod /sbin/kmod found: NO
+Program kexec /usr/sbin/kexec /sbin/kexec found: NO
+Program sulogin found: YES (/usr/sbin/sulogin)
+Program mount found: YES (/usr/bin/mount)
+Program umount found: YES (/usr/bin/umount)
+Program loadkeys /usr/sbin/loadkeys /sbin/loadkeys found: NO
+Program setfont /usr/sbin/setfont /sbin/setfont found: NO
+Program nologin found: YES (/usr/sbin/nologin)
+Message: gperf len type is size_t
+Has header "sys/capability.h" : YES (cached)
+Has header "crypt.h" : YES (cached)
+Has header "linux/ioprio.h" : YES (cached)
+Has header "linux/memfd.h" : YES (cached)
+Has header "linux/time_types.h" : YES (cached)
+Has header "sys/auxv.h" : YES (cached)
+Has header "sys/sdt.h" : YES (cached)
+Has header "threads.h" : YES (cached)
+Has header "valgrind/memcheck.h" : NO (cached)
+Has header "valgrind/valgrind.h" : NO (cached)
+Dependency threads found: YES unknown (cached)
+Library rt found: YES
+Library m found: YES
+Library dl found: YES
+Dependency libcrypt found: YES 4.5.2 (cached)
+Dependency libcap found: YES 2.78 (cached)
+Checking if "libatomic" links: YES (cached)
+Checking for function "crypt_ra" with dependency libcrypt: YES (cached)
+Checking for function "crypt_preferred_method" with dependency libcrypt: YES (cached)
+Checking for function "crypt_gensalt_ra" with dependency libcrypt: YES (cached)
+Dependency libbpf found: YES 1.7.0 (cached)
+Program clang found: NO
+Dependency mount found: YES 2.42.2 (cached)
+Dependency fdisk found: YES 2.42.2 (cached)
+Dependency pwquality skipped: feature pwquality disabled
+Found pkg-config: YES (/usr/bin/pkg-config) 1.8.1
+Found CMake: NO
+Run-time dependency passwdqc found: NO (tried pkgconfig and cmake)
+Dependency libseccomp found: YES 2.6.0 (cached)
+Dependency libselinux skipped: feature selinux disabled
+Dependency libapparmor skipped: feature apparmor disabled
+Run-time dependency polkit-gobject-1 found: NO (tried pkgconfig and cmake)
+Dependency libacl found: YES 2.4.0 (cached)
+Dependency audit skipped: feature audit disabled
+Dependency blkid found: YES 2.42.2 (cached)
+Checking for function "blkid_probe_set_hint" with dependency blkid: YES (cached)
+Dependency libkmod found: YES 34.2 (cached)
+Run-time dependency xencontrol found: NO (tried pkgconfig and cmake)
+Dependency pam found: YES 1.7.2 (cached)
+Dependency pam_misc found: YES 1.7.2 (cached)
+Run-time dependency libmicrohttpd found: NO (tried pkgconfig and cmake)
+Dependency libcryptsetup skipped: feature libcryptsetup disabled
+Checking for function "crypt_activate_by_token_pin" with dependency libcryptsetup: NO (cached)
+Dependency libcurl found: YES 8.21.0 (cached)
+Dependency libidn2 skipped: feature libidn2 disabled
+Dependency libidn skipped: feature libidn disabled
+Dependency libiptc found: YES 1.8.13 (cached)
+Dependency libqrencode skipped: feature qrencode disabled
+Dependency libgcrypt skipped: feature gcrypt disabled
+Dependency gpg-error skipped: feature gcrypt disabled
+Library gpg-error skipped: feature gcrypt disabled
+Dependency gnutls skipped: feature gnutls disabled
+Dependency openssl found: YES 3.6.3 (cached)
+Dependency p11-kit-1 skipped: feature p11kit disabled
+Dependency libfido2 skipped: feature libfido2 disabled
+Dependency tss2-esys tss2-rc tss2-mu tss2-tcti-device skipped: feature tpm2 disabled
+Dependency libdw found: YES 0.195 (cached)
+Checking for function "dwelf_elf_e_machine_string" with dependency libdw: YES (cached)
+Checking for function "dwfl_set_sysroot" with dependency libdw: YES (cached)
+Dependency zlib found: YES 1.3.2 (cached)
+Dependency bzip2 found: YES 1.0.8 (cached)
+Dependency liblzma found: YES 5.8.3 (cached)
+Dependency liblz4 found: YES 1.10.0 (cached)
+Dependency libzstd found: YES 1.5.7 (cached)
+Dependency libarchive found: YES 3.8.9 (cached)
+Run-time dependency xkbcommon found: NO (tried pkgconfig and cmake)
+Dependency libpcre2-8 found: YES 10.47 (cached)
+Dependency glib-2.0 found: YES 2.88.3 (cached)
+Dependency gobject-2.0 found: YES 2.88.3 (cached)
+Dependency gio-2.0 found: YES 2.88.3 (cached)
+Dependency dbus-1 found: YES 1.16.2 (cached)
+build/omarchy-alarm/systemd-257.13/meson.build:1534: WARNING: Exporting D-Bus interface XML files is disabled during cross build. Pass path or "yes" to force enable.
+Program python3 (jinja2) found: YES (/usr/bin/python3) modules: jinja2
+Program python3 found: NO (disabled by: bootloader )
+Program python3 (pefile) found: NO
+Program tools/check-efi-alignment.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/check-efi-alignment.py)
+Message: Using neither provided nor generated vmlinux.h, some features will not be available.
+Program tools/check-version-history.py found: YES (/usr/bin/python3 /work/build/omarchy-alarm/systemd-257.13/tools/check-version-history.py)
+Program tools/elf2efi.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/elf2efi.py)
+Program tools/dbus_exporter.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/dbus_exporter.py)
+Program tools/generate-gperfs.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/generate-gperfs.py)
+Program tools/make-autosuspend-rules.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/make-autosuspend-rules.py)
+Program tools/make-directive-index.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/make-directive-index.py)
+Program tools/sync-docs.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/sync-docs.py)
+Program tools/make-man-index.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/make-man-index.py)
+Program tools/meson-render-jinja2.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/meson-render-jinja2.py)
+Program tools/update-dbus-docs.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/update-dbus-docs.py)
+Program tools/update-hwdb-autosuspend.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/update-hwdb-autosuspend.sh)
+Program tools/update-hwdb.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/update-hwdb.sh)
+Program tools/update-man-rules.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/update-man-rules.py)
+Program tools/update-syscall-tables.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/update-syscall-tables.sh)
+Program tools/xml_helper.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/xml_helper.py)
+Configuring config.h using configuration
+Program generate-af-list.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/src/basic/generate-af-list.sh)
+Program generate-arphrd-list.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/src/basic/generate-arphrd-list.sh)
+Program generate-cap-list.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/src/basic/generate-cap-list.sh)
+Program generate-errno-list.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/src/basic/generate-errno-list.sh)
+Program missing_syscalls.py found: YES (/usr/bin/python3 /work/build/omarchy-alarm/systemd-257.13/src/basic/missing_syscalls.py)
+Program check-filesystems.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/src/basic/check-filesystems.sh)
+Program generate-filesystem-list.py found: YES (/work/build/omarchy-alarm/systemd-257.13/src/basic/generate-filesystem-list.py)
+Program generate-filesystem-switch-case.py found: YES (/work/build/omarchy-alarm/systemd-257.13/src/basic/generate-filesystem-switch-case.py)
+Program sd-journal/generate-audit_type-list.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/src/libsystemd/sd-journal/generate-audit_type-list.sh)
+Program generate-syscall-list.py found: YES (/work/build/omarchy-alarm/systemd-257.13/src/shared/generate-syscall-list.py)
+Program generate-ip-protocol-list.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/src/shared/generate-ip-protocol-list.sh)
+Program generate-keyboard-keys-list.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/src/udev/generate-keyboard-keys-list.sh)
+Program generate-keyboard-keys-gperf.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/src/udev/generate-keyboard-keys-gperf.sh)
+Program test-kernel-install.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/src/kernel-install/test-kernel-install.sh)
+Program generate-dns_type-gperf.py found: YES (/work/build/omarchy-alarm/systemd-257.13/src/resolve/generate-dns_type-gperf.py)
+Program generate-sym-test.py found: YES (/work/build/omarchy-alarm/systemd-257.13/src/test/generate-sym-test.py)
+Program generate-directives.py found: YES (/usr/bin/python3 /work/build/omarchy-alarm/systemd-257.13/test/fuzz/generate-directives.py)
+Message: network/test-acd is a manual test
+Message: network/test-ipv4ll-manual is a manual test
+Message: network/test-ndisc-send is a manual test
+Message: udev/test-udev-rule-runner is a manual test
+Message: coredump/test-coredump-vacuum is a manual test
+Message: import/test-qcow2 is a manual test
+Message: login/test-inhibit is a manual test
+Message: login/test-session-properties is a manual test
+Message: nspawn/test-patch-uid is a manual test
+Message: resolve/test-dnssec-complex is a manual test
+Message: resolve/test-resolved-dummy-server is a manual test
+Message: test/test-ask-password-api is a manual test
+Message: test/test-btrfs is a manual test
+Message: test/test-btrfs-physical-offset is a manual test
+Message: test/test-chase-manual is a manual test
+Message: test/test-dlopen is a manual test
+Message: test/test-ipcrm is an unsafe test
+Message: test/test-netlink-manual is a manual test
+Message: test/test-nft-set is a manual test
+Message: test/test-sleep is a manual test
+Message: test/test-watchdog is an unsafe test
+Message: core/test-install is a manual test
+Message: core/test-ns is a manual test
+Message: test/test-aux-scope is a manual test
+Message: libsystemd/test-bus-benchmark is a manual test
+Message: libsystemd/test-journal-append is a manual test
+Program mkosi found: NO
+Configuring test-sysusers.sh using configuration
+Program rule-syntax-check.py found: YES (/work/build/omarchy-alarm/systemd-257.13/test/rule-syntax-check.py)
+Program test-fstab-generator.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/test/test-fstab-generator.sh)
+Program test-network-generator-conversion.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/test/test-network-generator-conversion.sh)
+Program rpm found: NO
+Program rpmspec found: NO
+Program test-rpm-macros.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/test/test-rpm-macros.sh)
+Message: Skipping test-rpm-macros since rpm and/or rpmspec are not available
+Program xsltproc found: NO
+Message: Skipping crypttab.5 because HAVE_LIBCRYPTSETUP is false
+Message: Skipping dnssec-trust-anchors.d.5 because ENABLE_RESOLVE is false
+Message: Skipping homectl.1 because ENABLE_HOMED is false
+Message: Skipping homed.conf.5 because ENABLE_HOMED is false
+Message: Skipping importctl.1 because ENABLE_MACHINED is false
+Message: Skipping integritytab.5 because HAVE_LIBCRYPTSETUP is false
+Message: Skipping journal-remote.conf.5 because HAVE_MICROHTTPD is false
+Message: Skipping journal-upload.conf.5 because HAVE_MICROHTTPD is false
+Message: Skipping kernel-install.8 because ENABLE_KERNEL_INSTALL is false
+Message: Skipping loader.conf.5 because ENABLE_BOOTLOADER is false
+Message: Skipping machinectl.1 because ENABLE_MACHINED is false
+Message: Skipping networkctl.1 because ENABLE_NETWORKD is false
+Message: Skipping networkd.conf.5 because ENABLE_NETWORKD is false
+Message: Skipping nss-mymachines.8 because ENABLE_NSS_MYMACHINES is false
+Message: Skipping nss-resolve.8 because ENABLE_NSS_RESOLVE is false
+Message: Skipping oomctl.1 because ENABLE_OOMD is false
+Message: Skipping oomd.conf.5 because ENABLE_OOMD is false
+Message: Skipping org.freedesktop.home1.5 because ENABLE_HOMED is false
+Message: Skipping org.freedesktop.machine1.5 because ENABLE_MACHINED is false
+Message: Skipping org.freedesktop.network1.5 because ENABLE_NETWORKD is false
+Message: Skipping org.freedesktop.oom1.5 because ENABLE_OOMD is false
+Message: Skipping org.freedesktop.portable1.5 because ENABLE_PORTABLED is false
+Message: Skipping org.freedesktop.resolve1.5 because ENABLE_RESOLVE is false
+Message: Skipping org.freedesktop.sysupdate1.5 because ENABLE_SYSUPDATED is false
+Message: Skipping org.freedesktop.timesync1.5 because ENABLE_TIMESYNCD is false
+Message: Skipping pam_systemd_home.8 because ENABLE_PAM_HOME is false
+Message: Skipping portablectl.1 because ENABLE_PORTABLED is false
+Message: Skipping repart.d.5 because ENABLE_REPART is false
+Message: Skipping resolvectl.1 because ENABLE_RESOLVE is false
+Message: Skipping resolved.conf.5 because ENABLE_RESOLVE is false
+Message: Skipping runlevel.8 because HAVE_SYSV_COMPAT is false
+Message: Skipping systemd-bless-boot-generator.8 because ENABLE_BOOTLOADER is false
+Message: Skipping systemd-bless-boot.service.8 because ENABLE_BOOTLOADER HAVE_BLKID is false
+Message: Skipping systemd-boot-random-seed.service.8 because ENABLE_BOOTLOADER is false
+Message: Skipping systemd-boot.7 because ENABLE_BOOTLOADER is false
+Message: Skipping systemd-bsod.service.8 because HAVE_QRENCODE ENABLE_INITRD is false
+Message: Skipping systemd-cryptenroll.1 because HAVE_LIBCRYPTSETUP is false
+Message: Skipping systemd-cryptsetup-generator.8 because HAVE_LIBCRYPTSETUP is false
+Message: Skipping systemd-cryptsetup.8 because HAVE_LIBCRYPTSETUP is false
+Message: Skipping systemd-firstboot.1 because ENABLE_FIRSTBOOT is false
+Message: Skipping systemd-hibernate-resume-generator.8 because ENABLE_HIBERNATE is false
+Message: Skipping systemd-hibernate-resume.service.8 because ENABLE_HIBERNATE is false
+Message: Skipping systemd-homed.service.8 because ENABLE_HOMED is false
+Message: Skipping systemd-initctl.service.8 because HAVE_SYSV_COMPAT is false
+Message: Skipping systemd-integritysetup-generator.8 because HAVE_LIBCRYPTSETUP is false
+Message: Skipping systemd-integritysetup@.service.8 because HAVE_LIBCRYPTSETUP is false
+Message: Skipping systemd-journal-gatewayd.service.8 because ENABLE_REMOTE HAVE_MICROHTTPD is false
+Message: Skipping systemd-journal-remote.service.8 because ENABLE_REMOTE HAVE_MICROHTTPD is false
+Message: Skipping systemd-machined.service.8 because ENABLE_MACHINED is false
+Message: Skipping systemd-measure.1 because HAVE_TPM2 HAVE_BLKID HAVE_OPENSSL is false
+Message: Skipping systemd-mountfsd.service.8 because ENABLE_MOUNTFSD is false
+Message: Skipping systemd-networkd-wait-online.service.8 because ENABLE_NETWORKD is false
+Message: Skipping systemd-networkd.service.8 because ENABLE_NETWORKD is false
+Message: Skipping systemd-oomd.service.8 because ENABLE_OOMD is false
+Message: Skipping systemd-pcrlock.8 because ENABLE_BOOTLOADER HAVE_OPENSSL HAVE_TPM2 is false
+Message: Skipping systemd-pcrphase.service.8 because ENABLE_BOOTLOADER HAVE_OPENSSL HAVE_TPM2 is false
+Message: Skipping systemd-portabled.service.8 because ENABLE_PORTABLED is false
+Message: Skipping systemd-rc-local-generator.8 because HAVE_SYSV_COMPAT is false
+Message: Skipping systemd-repart.8 because ENABLE_REPART is false
+Message: Skipping systemd-resolved.service.8 because ENABLE_RESOLVE is false
+Message: Skipping systemd-stub.7 because ENABLE_BOOTLOADER is false
+Message: Skipping systemd-sysext.8 because ENABLE_SYSEXT is false
+Message: Skipping systemd-sysupdate.8 because ENABLE_SYSUPDATE is false
+Message: Skipping systemd-sysupdated.service.8 because ENABLE_SYSUPDATED is false
+Message: Skipping systemd-sysv-generator.8 because HAVE_SYSV_COMPAT is false
+Message: Skipping systemd-time-wait-sync.service.8 because ENABLE_TIMESYNCD is false
+Message: Skipping systemd-timesyncd.service.8 because ENABLE_TIMESYNCD is false
+Message: Skipping systemd-tpm2-setup.service.8 because ENABLE_BOOTLOADER is false
+Message: Skipping systemd-userdbd.service.8 because ENABLE_USERDB is false
+Message: Skipping systemd-veritysetup-generator.8 because HAVE_LIBCRYPTSETUP is false
+Message: Skipping systemd-veritysetup@.service.8 because HAVE_LIBCRYPTSETUP is false
+Message: Skipping systemd-vmspawn.1 because ENABLE_VMSPAWN is false
+Message: Skipping systemd.dnssd.5 because ENABLE_RESOLVE is false
+Message: Skipping systemd.netdev.5 because ENABLE_NETWORKD is false
+Message: Skipping systemd.network.5 because ENABLE_NETWORKD is false
+Message: Skipping sysupdate.d.5 because ENABLE_SYSUPDATE is false
+Message: Skipping sysupdate.features.5 because ENABLE_SYSUPDATE is false
+Message: Skipping telinit.8 because HAVE_SYSV_COMPAT is false
+Message: Skipping timesyncd.conf.5 because ENABLE_TIMESYNCD is false
+Message: Skipping ukify.1 because ENABLE_UKIFY is false
+Message: Skipping updatectl.1 because ENABLE_SYSUPDATED is false
+Message: Skipping userdbctl.1 because ENABLE_USERDB is false
+Message: Skipping veritytab.5 because HAVE_LIBCRYPTSETUP is false
+Message: python-lxml not available, not making man page indices
+Configuring man using configuration
+Configuring html using configuration
+Compiler for C supports arguments -std=c90: YES (cached)
+Compiler for C supports arguments -std=c99: YES (cached)
+Compiler for C supports arguments -std=c11: YES (cached)
+Compiler for C supports arguments -std=c17: YES (cached)
+Compiler for C supports arguments -std=c23: YES (cached)
+Compiler for C supports arguments -std=gnu90: YES (cached)
+Compiler for C supports arguments -std=gnu99: YES (cached)
+Compiler for C supports arguments -std=gnu11: YES (cached)
+Compiler for C supports arguments -std=gnu17: YES (cached)
+Compiler for C supports arguments -std=gnu23: YES (cached)
+Run-time dependency bash-completion found: NO (tried pkgconfig and cmake)
+Checking for size of "long" : 8 
+Message: Not installing tmpfiles.d/portables.conf because ENABLE_PORTABLED is 0
+Message: Not installing tmpfiles.d/systemd-network.conf because ENABLE_NETWORKD is 0
+Message: Not installing tmpfiles.d/systemd-nspawn.conf because ENABLE_MACHINED is 0
+Message: Not installing tmpfiles.d/systemd-resolve.conf because ENABLE_RESOLVE is 0
+Message: Not installing tmpfiles.d/20-systemd-stub.conf because ENABLE_EFI is 0
+Message: Not installing tmpfiles.d/20-systemd-userdb.conf because ENABLE_SSH_USERDB_CONFIG is 0
+Program jekyll found: NO
+Program tools/check-help.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/check-help.sh)
+Program tools/check-version.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/check-version.sh)
+Program tools/check-api-docs.sh found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/check-api-docs.sh)
+Program tools/meson-extract-unit-files.py found: YES (/work/build/omarchy-alarm/systemd-257.13/tools/meson-extract-unit-files.py)
+Build targets in project: 769
+
+systemd 257.13
+
+    build mode                               : release
+    split bin-sbin                           : true
+    prefix directory                         : /usr
+    sysconf directory                        : /etc
+    include directory                        : /usr/include
+    lib directory                            : /usr/lib
+    SysV init scripts                        : 
+    SysV rc?.d directories                   : 
+    PAM modules directory                    : /usr/lib/security
+    PAM configuration directory              : /usr/lib/pam.d
+    ssh server configuration directory       : /etc/ssh/sshd_config.d
+    ssh server privilege separation directory: /run/sshd
+    ssh client configuration directory       : /etc/ssh/ssh_config.d
+    libcryptsetup plugins directory          : /usr/lib/cryptsetup
+    Shell profile directory                  : /etc/profile.d
+    RPM macros directory                     : /usr/lib/rpm/macros.d
+    modprobe.d directory                     : /usr/lib/modprobe.d
+    D-Bus policy directory                   : /work/build/omarchy-alarm/rootfs/usr/share/dbus-1/system.d
+    D-Bus session directory                  : /work/build/omarchy-alarm/rootfs/usr/share/dbus-1/services
+    D-Bus system directory                   : /work/build/omarchy-alarm/rootfs/usr/share/dbus-1/system-services
+    D-Bus interfaces directory               : no
+    bash completions directory               : /usr/share/bash-completion/completions
+    zsh completions directory                : /usr/share/zsh/site-functions
+    private shared lib version tag           : 257
+    extra start script                       : /etc/rc.local
+    debug shell                              : /bin/sh @ /dev/tty9
+    system UIDs                              : <=999 (alloc >=1)
+    system GIDs                              : <=999 (alloc >=1)
+    dynamic UIDs                             : 61184…65519
+    container UID bases                      : 524288…1878982656
+    static UID/GID allocations               : tty-gid:5
+    /dev/kvm access mode                     : 0666
+    render group access mode                 : 0666
+    certificate root directory               : /etc/ssl
+    support URL                              : https://lists.freedesktop.org/mailman/listinfo/systemd-devel
+    nobody user name                         : nobody
+    nobody group name                        : nobody
+    fallback hostname                        : localhost
+    default compression method               : zstd
+    default DNSSEC mode                      : allow-downgrade
+    default DNS-over-TLS mode                : no
+    default mDNS mode                        : yes
+    default LLMNR mode                       : yes
+    default DNS servers                      : 1.1.1.1#cloudflare-dns.com
+                                               8.8.8.8#dns.google
+                                               1.0.0.1#cloudflare-dns.com
+                                               8.8.4.4#dns.google
+                                               2606:4700:4700::1111#cloudflare-dns.com
+                                               2001:4860:4860::8888#dns.google
+                                               2606:4700:4700::1001#cloudflare-dns.com
+                                               2001:4860:4860::8844#dns.google
+    default NTP servers                      : time1.google.com
+                                               time2.google.com
+                                               time3.google.com
+                                               time4.google.com
+    default net.naming_scheme= value         : latest
+    default KillUserProcesses= value         : true
+    default locale                           : C.UTF-8
+    default nspawn locale                    : C.UTF-8
+    default status unit format               : description
+    default user $PATH                       : (same as system services)
+    systemd service watchdog                 : 3min
+    time epoch                               : 1773427008 (2026-03-13T18:36:48+00:00)
+
+  Features
+    enabled                                  : ACL, IMA, IPE, PAM, SECCOMP, SMACK, blkid, elfutils, libarchive, libbpf, libcurl, libfdisk, libiptc, openssl, pcre2, zstd, lz4, xz, zlib, bzip2, backlight, binfmt, coredump, environment.d, hostnamed, hwdb, importd, localed, logind, nsresourced, nss-myhostname, nss-systemd, pstore, quotacheck, randomseed, rfkill, systemd-analyze, sysusers, storagetm, timedated, tmpfiles, vconsole, xdg-autostart, dmi, idn, polkit, kmod, dbus, glib, utmp, ldconfig, adm group, wheel group, gshadow, link-udev-shared, link-systemctl-shared, link-networkd-shared, link-timesyncd-shared, link-journalctl-shared, link-boot-shared, link-portabled-shared, cryptolib(openssl), DNS-over-TLS(openssl)
+    disabled                                 : AUDIT, AppArmor, SELinux, gcrypt, gnutls, libcryptsetup, libcryptsetup-plugins, libfido2, libidn, libidn2, microhttpd, p11kit, passwdqc, pwquality, qrencode, tpm2, xkbcommon, bootloader, bpf-framework, efi, firstboot, hibernate, homed, initrd, kernel-install, machined, mountfsd, networkd, nss-mymachines, nss-resolve, oomd, portabled, repart, resolve, sysext, sysupdate, sysupdated, timesyncd, userdb, vmspawn, legacy-pkla, xenctrl, tpm, man pages, html pages, man page indices, SysV compat, compat-mutable-uid-boundaries, debug hashmap, debug mmap cache, debug siphash, trace logging, slow tests, fuzz tests, install tests, first-boot-full-preset, fexecve, standalone-binaries, coverage, static-libsystemd, static-libudev
+Cleaning... 0 files.
+
+  User defined options
+    Cross files                              : build/omarchy-alarm/systemd-cross.ini
+    acl                                      : enabled
+    apparmor                                 : disabled
+    audit                                    : disabled
+    bootloader                               : disabled
+    buildtype                                : release
+    c_link_args                              : ["--sysroot=/work/build/omarchy-alarm/rootfs", "-L/work/build/omarchy-alarm/rootfs/usr/lib", "-Wl,-rpath-link,/work/build/omarchy-alarm/rootfs/usr/lib"]
+    efi                                      : false
+    firstboot                                : false
+    gcrypt                                   : disabled
+    gnutls                                   : disabled
+    hibernate                                : false
+    homed                                    : disabled
+    html                                     : disabled
+    initrd                                   : false
+    install-tests                            : false
+    kernel-install                           : false
+    libcryptsetup                            : disabled
+    libdir                                   : lib
+    libfido2                                 : disabled
+    libidn                                   : disabled
+    libidn2                                  : disabled
+    logind                                   : true
+    machined                                 : false
+    man                                      : disabled
+    mode                                     : release
+    mountfsd                                 : false
+    networkd                                 : false
+    oomd                                     : false
+    openssl                                  : enabled
+    p11kit                                   : disabled
+    pam                                      : enabled
+    portabled                                : false
+    prefix                                   : /usr
+    pwquality                                : disabled
+    qrencode                                 : disabled
+    repart                                   : disabled
+    resolve                                  : false
+    seccomp                                  : enabled
+    selinux                                  : disabled
+    sysext                                   : false
+    sysupdate                                : disabled
+    sysupdated                               : disabled
+    sysvinit-path                            : 
+    sysvrcnd-path                            : 
+    tests                                    : false
+    timesyncd                                : false
+    tpm                                      : false
+    tpm2                                     : disabled
+    translations                             : false
+    ukify                                    : disabled
+    userdb                                   : false
+    version-tag                              : 257.13-determination
+
+Found ninja-1.12.1 at /usr/bin/ninja
+ninja: Entering directory `build/omarchy-alarm/systemd-build'
+[1/195] Generating version.h with a custom command
+[2/116] Generating hwdb.d/60-autosuspend-chromiumos.hwdb with a custom command (wrapped by meson to capture output)
+[3/116] Generating shell-completion/bash/systemctl with a custom command
+[4/116] Generating rules.d/73-seat-late.rules with a custom command
+[5/116] Generating rules.d/90-vconsole.rules with a custom command
+[6/116] Generating rules.d/71-seat.rules with a custom command
+[7/116] Linking target systemd-modules-load
+[8/116] Linking target systemd-notify
+[9/116] Linking target systemd-mount
+[10/116] Linking target systemd-network-generator
+[11/116] Linking target systemd-pull
+FAILED: systemd-pull 
+aarch64-linux-gnu-gcc  -o systemd-pull systemd-pull.p/src_import_pull.c.o systemd-pull.p/src_import_pull-raw.c.o systemd-pull.p/src_import_pull-tar.c.o systemd-pull.p/src_import_pull-job.c.o systemd-pull.p/src_import_pull-common.c.o systemd-pull.p/src_import_curl-util.c.o -Wl,--as-needed -Wl,--no-undefined -Wl,-O1 -fstack-protector --sysroot=/work/build/omarchy-alarm/rootfs -Wl,-rpath-link,/work/build/omarchy-alarm/rootfs/usr/lib '-Wl,-rpath,$ORIGIN/src/shared' -Wl,-rpath-link,/work/build/omarchy-alarm/systemd-build/src/shared -Wl,--start-group src/import/libimport-common.a src/shared/libsystemd-shared-257.so /work/build/omarchy-alarm/rootfs/usr/lib/libbz2.so /work/build/omarchy-alarm/rootfs/usr/lib/libcurl.so /work/build/omarchy-alarm/rootfs/usr/lib/liblzma.so /work/build/omarchy-alarm/rootfs/usr/lib/libz.so /work/build/omarchy-alarm/rootfs/usr/lib/libssl.so /work/build/omarchy-alarm/rootfs/usr/lib/libcrypto.so -Wl,--end-group -Wl,--fatal-warnings -Wl,-z,now -Wl,-z,relro -Wl,-z,gcs-report-dynamic=none -Wl,--warn-common -Wl,--gc-sections -Wl,--fatal-warnings -Wl,-z,now -Wl,-z,relro -Wl,-z,gcs-report-dynamic=none -Wl,--warn-common -Wl,--gc-sections
+/usr/lib/gcc-cross/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/bin/ld: /work/build/omarchy-alarm/rootfs/usr/lib/libcurl.so: undefined reference to `__memset_explicit_chk@GLIBC_2.43'
+collect2: error: ld returned 1 exit status
+[12/116] Linking target systemd-journal-upload
+FAILED: systemd-journal-upload 
+aarch64-linux-gnu-gcc  -o systemd-journal-upload systemd-journal-upload.p/src_journal-remote_journal-upload-journal.c.o systemd-journal-upload.p/src_journal-remote_journal-upload.c.o -Wl,--as-needed -Wl,--no-undefined -Wl,-O1 -fstack-protector --sysroot=/work/build/omarchy-alarm/rootfs -Wl,-rpath-link,/work/build/omarchy-alarm/rootfs/usr/lib '-Wl,-rpath,$ORIGIN/src/shared' -Wl,-rpath-link,/work/build/omarchy-alarm/systemd-build/src/shared -Wl,--start-group src/shared/libsystemd-shared-257.so -pthread /work/build/omarchy-alarm/rootfs/usr/lib/libcurl.so -Wl,--end-group -Wl,--fatal-warnings -Wl,-z,now -Wl,-z,relro -Wl,-z,gcs-report-dynamic=none -Wl,--warn-common -Wl,--gc-sections
+/usr/lib/gcc-cross/aarch64-linux-gnu/14/../../../../aarch64-linux-gnu/bin/ld: /work/build/omarchy-alarm/rootfs/usr/lib/libcurl.so: undefined reference to `__memset_explicit_chk@GLIBC_2.43'
+collect2: error: ld returned 1 exit status
+[13/116] Linking target systemd-nsresourcework
+[14/116] Linking target systemd-nsresourced
+[15/116] Linking target systemd-path
+[16/116] Linking target systemd-nspawn
+ninja: build stopped: subcommand failed.

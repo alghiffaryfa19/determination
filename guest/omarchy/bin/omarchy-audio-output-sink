@@ -1,0 +1,4 @@
+#!/bin/sh
+set -u
+
+pactl get-default-sink 2>/dev/null || true

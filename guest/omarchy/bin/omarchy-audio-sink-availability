@@ -1,0 +1,7 @@
+#!/bin/sh
+set -u
+
+pactl list short sinks 2>/dev/null | while IFS='	' read -r _ name _; do
+    [ -n "$name" ] && printf '%s\t1\n' "$name"
+done
+exit 0

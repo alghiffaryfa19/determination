@@ -1,0 +1,7 @@
+#!/bin/sh
+set -u
+
+[ "$#" -ge 1 ] || exit 0
+wpctl set-default "$1" >/dev/null 2>&1 || true
+[ "$#" -lt 2 ] || pactl set-default-sink "$2" >/dev/null 2>&1 || true
+exit 0

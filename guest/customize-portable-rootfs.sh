@@ -67,11 +67,42 @@ EOF
 
 ln -snf /system/product "$ROOT/product"
 ln -snf /system/system_ext "$ROOT/system_ext"
+# ALARM's absolute resolved symlink points outside an offline rootfs.
+rm -f "$ROOT/etc/resolv.conf"
 cat > "$ROOT/etc/resolv.conf" <<'EOF'
 nameserver 1.1.1.1
 nameserver 8.8.8.8
 options timeout:2 attempts:3
 EOF
+
+if [ "$PROFILE" = arch ]; then
+    install -d "$ROOT/etc/systemd/system" "$ROOT/etc/ssh/sshd_config.d"
+    for service in systemd-networkd.service systemd-networkd.socket \
+                   systemd-resolved.service systemd-timesyncd.service \
+                   getty@tty1.service console-getty.service; do
+        ln -sf /dev/null "$ROOT/etc/systemd/system/$service"
+    done
+    # 4.14 has no Landlock: pacman's filesystem sandbox can never work here.
+    if [ -f "$ROOT/etc/pacman.conf" ]; then
+        sed -i 's/^#DisableSandboxFilesystem/DisableSandboxFilesystem/' "$ROOT/etc/pacman.conf"
+        # systemd 261+ needs statx mount IDs absent before 6.8: PID1 exits on 4.14.
+        # Determination ships a 257.13 replacement (build/omarchy-alarm); keep
+        # pacman from upgrading the init system back over it. Belongs in
+        # [options]: appending would land in a trailing repo section.
+        grep -q '^IgnorePkg = .*systemd' "$ROOT/etc/pacman.conf" 2>/dev/null || \
+            sed -i 's/^#IgnorePkg   =/#IgnorePkg   =\
+IgnorePkg = systemd systemd-libs systemd-sysvcompat systemd-resolvconf/' \
+                "$ROOT/etc/pacman.conf"
+    fi
+    cat > "$ROOT/etc/ssh/sshd_config.d/00-determination.conf" <<'EOF_SSH'
+PermitRootLogin no
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+PubkeyAuthentication yes
+AllowUsers melissa
+EOF_SSH
+fi
 
 cat > "$ROOT/root/determination-firstboot" <<'EOF'
 #!/bin/sh
@@ -84,6 +115,10 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 [ ! -e /etc/determination-ready ] || { echo "Determination guest already provisioned"; exit 0; }
 
 echo "== refresh package metadata =="
+if [ "$(det-platform id)" = arch ]; then
+    pacman-key --init
+    pacman-key --populate archlinuxarm
+fi
 det-platform package-refresh
 echo "== base runtime =="
 det-platform deps runtime

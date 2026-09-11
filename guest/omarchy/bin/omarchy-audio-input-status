@@ -1,0 +1,16 @@
+#!/bin/sh
+set -u
+
+if command -v wpctl >/dev/null 2>&1; then
+    status=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null || true)
+    case "$status" in
+        *Volume:*) case "$status" in *'[MUTED]'*) printf '%s\n' 1 ;; *) printf '%s\n' 0 ;; esac; exit 0 ;;
+    esac
+fi
+
+if command -v pactl >/dev/null 2>&1; then
+    mute=$(pactl get-source-mute @DEFAULT_SOURCE@ 2>/dev/null | awk '/Mute:/ { print ($2 == "yes" ? 1 : 0); exit }')
+    [ -z "$mute" ] || { printf '%s\n' "$mute"; exit 0; }
+fi
+
+exit 0

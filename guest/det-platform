@@ -76,7 +76,7 @@ package_installed() {
 package_refresh() {
     case "$(platform_id)" in
         debian) DEBIAN_FRONTEND=noninteractive apt-get update -qq ;;
-        arch) pacman -Sy --noconfirm ;;
+        arch) pacman -Syu --noconfirm ;;
         alpine) apk update ;;
         *) echo "unsupported package manager" >&2; return 1 ;;
     esac

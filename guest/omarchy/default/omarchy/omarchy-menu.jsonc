@@ -1,0 +1,14 @@
+{
+  "apps": {"icon":"󰀻","label":"Apps","aliases":["app","applications"],"provider":"apps"},
+  "terminal": {"icon":"","label":"Terminal","action":"omarchy-launch-terminal"},
+  "files": {"icon":"","label":"Files","action":"omarchy-launch-file-manager"},
+  "browser": {"icon":"󰖟","label":"Browser","action":"omarchy-launch-browser"},
+  "audio": {"icon":"","label":"Audio","action":"det-omarchy audio"},
+  "learn": {"icon":"󰧑","label":"Learn"},
+  "learn.omarchy": {"label":"Omarchy manual","action":"omarchy-launch-webapp https://omarchy.org/manual/"},
+  "learn.arch": {"label":"Arch Linux ARM","action":"omarchy-launch-webapp https://archlinuxarm.org"},
+  "system": {"icon":"","label":"System","aliases":["power-menu"]},
+  "system.about": {"label":"About","action":"omarchy-launch-about"},
+  "system.reload": {"label":"Restart shell","action":"omarchy-restart-shell"},
+  "system.logout": {"icon":"󰍃","label":"Return to Android","action":"omarchy-system-logout"}
+}

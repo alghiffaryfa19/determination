@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "idle": {
+    "screensaver": 150,
+    "lock": 300
+  },
+  "bar": {
+    "position": "top",
+    "transparent": false,
+    "centerAnchor": "omarchy.clock",
+    "layout": {
+      "left": [
+        { "id": "omarchy.menu" },
+        { "id": "omarchy.workspaces" }
+      ],
+      "center": [
+        { "id": "omarchy.clock", "format": "ddd HH:mm", "formatAlt": "d MMMM yyyy" },
+        { "id": "omarchy.media" }
+      ],
+      "right": [
+        { "id": "omarchy.tray" },
+        { "id": "omarchy.audio" },
+        { "id": "determination.battery" }
+      ]
+    }
+  },
+  "plugins": []
+}

@@ -1,0 +1,38 @@
+Arch Linux ARM guest qualification, systemd 257.13-determination — 2026-09-11, guacamoleb.
+
+Failure (stock ALARM rootfs):
+- /usr/lib/systemd/systemd 261.2-1-arch as container PID1 exits in <100ms:
+  "Failed to determine whether /proc is a mount point: Protocol driver not
+  attached" … "Failed to mount API filesystems. Exiting PID 1."
+- Even `systemd --version` under chroot warns "Failed to chase and open
+  directory … Protocol driver not attached" for every config lookup.
+- Cause: 261 path-chasing uses statx mount-ID requests (STATX_MNT_ID_UNIQUE)
+  unsupported on the 4.14 kernel; Debian's systemd 257 boots fine in the
+  same container config. See artifacts/omarchy-alarm/arch-systemd.strace
+  (openat+statx STATX_MNT_ID_UNIQUE pattern before each warning).
+
+Fix (build/omarchy-alarm, gitignored build tree):
+- Cross-built systemd 257.13 (tag 257.13-determination) for aarch64 against
+  the ALARM rootfs sysroot in localhost/determination/alarm-cross:trixie.
+- -Dimportd=false -Dremote=false: systemd-pull/journal-upload fail to link
+  (ALARM libcurl needs GLIBC_2.43 symbols absent from the link sysroot);
+  neither daemon belongs in the guest.
+- 670-file usr+etc overlay extracted over the on-device Arch slot; 261 set
+  backed up to /data/determination/backups/arch-systemd-261-backup.tar.gz.
+
+On-device validation (all via adb/su + lxc-attach):
+- chroot systemd --version → "systemd 257 (257.13-determination)", no warnings.
+- arch-probe container: PID1=systemd, `systemctl is-system-running` → running,
+  zero failed units.
+- guest-distro select arch → "active guest: arch (base boots…)".
+- guest-distro provision → ready=yes. Two 4.14-specific fixes, now encoded in
+  guest/customize-portable-rootfs.sh:
+  - DisableSandboxFilesystem in pacman.conf (no Landlock before 5.13).
+  - IgnorePkg systemd/systemd-libs/systemd-sysvcompat/systemd-resolvconf in
+    [options] (keeps pacman from upgrading PID1 back to 261).
+- melissa uid 1000, groups video/input/render/audio + android_graphics(1003),
+  android_input(1004), android_audio(1005).
+- Omarchy files synced into the Arch slot; `det-omarchy check` correctly
+  reports the missing /opt/dethyprland quickshell runtime — Dethyprland for
+  Arch is not built yet, so graphics stays unqualified (ready file:
+  profile=arch, libc=glibc, init=systemd, contract=1, graphics=unqualified).

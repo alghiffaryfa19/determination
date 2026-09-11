@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+/usr/local/bin/det-omarchy check
+export DET_HYPRLAND_CONFIG=/etc/determination/hyprland-omarchy.conf
+# Keep this shell's helpers and processes scoped to its compositor lifetime.
+trap '/usr/local/bin/det-omarchy stop >/dev/null 2>&1 || true' EXIT
+trap '[ -z "${child:-}" ] || kill -TERM "$child" 2>/dev/null || true' HUP INT TERM
+/usr/local/bin/det-hyprland "$@" &
+child=$!
+status=0
+wait "$child" || status=$?
+exit "$status"

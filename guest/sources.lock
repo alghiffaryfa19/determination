@@ -17,3 +17,5 @@ QUICKSHELL_REPO=https://github.com/quickshell-mirror/quickshell.git
 QUICKSHELL_COMMIT=59e9c47b0eb48a9e4bcf9631fa062ee939bd2e83
 WAYLAND_PROTOCOLS_REPO=https://gitlab.freedesktop.org/wayland/wayland-protocols.git
 WAYLAND_PROTOCOLS_COMMIT=afb614d5fcbd02d261a6ae91920aa91cf3915a8a
+OMARCHY_REPO=https://github.com/omacom/omarchy.git
+OMARCHY_COMMIT=5ead870507dfb68db696b3ddb948cc3d178e8d62
