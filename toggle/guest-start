@@ -20,6 +20,36 @@ GUEST_ROOT=$(readlink -f "$DET/active-guest" 2>/dev/null)
 }
 export DET_GUEST_ROOT="$GUEST_ROOT"
 
+# Normalize legacy and imported rootfs images to the project-owned account
+# before copying units that reference it. Never rename an account in a running
+# guest. uid 1000 is part of the device-node contract, so preserve the numeric
+# identity while replacing the login name.
+if ! lxc-info -P "$DET" -n guest 2>/dev/null | grep -q RUNNING; then
+    current_guest_user=$(awk -F: '$3 == 1000 { print $1; exit }' "$GUEST_ROOT/etc/passwd" 2>/dev/null)
+    if [ -n "$current_guest_user" ] && [ "$current_guest_user" != detuser ]; then
+        chroot "$GUEST_ROOT" /bin/sh -c '
+            old_user=$1
+            old_group=$(id -gn "$old_user")
+            usermod -l detuser -d /home/detuser -m "$old_user"
+            if [ "$old_group" != detuser ] && ! getent group detuser >/dev/null 2>&1; then
+                groupmod -n detuser "$old_group"
+            fi
+        ' sh "$current_guest_user" || {
+            echo "FATAL: could not normalize the uid-1000 guest account" >&2
+            exit 1
+        }
+    fi
+    if grep -q '^detuser:' "$GUEST_ROOT/etc/passwd" 2>/dev/null; then
+        mkdir -p "$GUEST_ROOT/etc/sudoers.d"
+        printf '%s\n' 'detuser ALL=(ALL) ALL' > "$GUEST_ROOT/etc/sudoers.d/detuser"
+        chmod 0440 "$GUEST_ROOT/etc/sudoers.d/detuser"
+        ssh_config="$GUEST_ROOT/etc/ssh/sshd_config.d/50-determination.conf"
+        if [ -f "$ssh_config" ]; then
+            sed -i 's/^AllowUsers .*/AllowUsers detuser/' "$ssh_config"
+        fi
+    fi
+fi
+
 # Keep SSH host identity outside replaceable guest slots.
 SSH_IDENTITY="$DET/etc/ssh-host-keys"
 if [ ! -f "$SSH_IDENTITY/ssh_host_ed25519_key" ]; then

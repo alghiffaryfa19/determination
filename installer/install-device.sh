@@ -1,11 +1,15 @@
 #!/system/bin/sh
 # The PC validates every artifact and retains a verified boot backup before this script runs.
 set -eu
-stage=$1 distro=$2 hostname=$3 version=$4
+stage=$1 distro=$2 hostname=$3 version=$4 display_name=$5
 DET=/data/determination
 case "$distro" in debian|arch|alpine) ;; *) exit 2 ;; esac
 case "$hostname" in ''|*[!a-z0-9-]*) exit 2 ;; esac
 case "$version" in ''|*[!0-9]*) exit 2 ;; esac
+[ -n "$display_name" ] && [ "${#display_name}" -le 64 ] || exit 2
+if printf '%s' "$display_name" | grep -q '[[:cntrl:]:,]'; then
+    exit 2
+fi
 if [ -x "$DET/lxc/bin/lxc-info" ]; then
     [ "$("$DET/lxc/bin/lxc-info" -P "$DET" -n guest -sH)" = STOPPED ]
 fi
@@ -41,6 +45,20 @@ fi
 "$DET/bin/guest-distro" activate "$distro"
 root=$("$DET/bin/guest-distro" root)
 [ -d "$root/etc" ]
+[ -f "$root/etc/passwd" ] || { echo 'Active guest has no passwd database.'; exit 1; }
+passwd_new="$root/etc/passwd.new.$$"
+export DET_DISPLAY_NAME="$display_name"
+if ! awk -F: -v OFS=: '
+    $3 == 1000 { $5 = ENVIRON["DET_DISPLAY_NAME"]; found = 1 }
+    { print }
+    END { if (!found) exit 1 }
+' "$root/etc/passwd" > "$passwd_new"; then
+    rm -f "$passwd_new"
+    echo 'Active guest has no uid-1000 account.'
+    exit 1
+fi
+chmod 0644 "$passwd_new"
+mv -f "$passwd_new" "$root/etc/passwd"
 printf '%s\n' "$hostname" > "$root/etc/hostname"
 printf 'hostname=%s\n' "$hostname" > "$DET/etc/installer.conf.new"
 chmod 0600 "$DET/etc/installer.conf.new"

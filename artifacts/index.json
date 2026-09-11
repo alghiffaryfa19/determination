@@ -9,8 +9,8 @@
     {
       "path": "artifacts/alpine-rootfs-qualification-20260811.txt",
       "retention": "tracked-evidence",
-      "sha256": "6b9f6fe6ee52987332200587a401917431c04a4b76c0d25a8415603814929c90",
-      "size": 2644
+      "sha256": "9471abfcb1c274da198f54fb979df1886e29b9f03587c73ba3f7980f94e4bb3d",
+      "size": 2785
     },
     {
       "path": "artifacts/config.gz",
@@ -147,8 +147,8 @@
     {
       "path": "artifacts/node-perms-probe.txt",
       "retention": "tracked-evidence",
-      "sha256": "36cfd6d6272062b193cda06fff74f0e80f45371eeb0b7f39422e7e4ecfbad14f",
-      "size": 3661
+      "sha256": "bd41a12feb4af8b4931dd60331ee26b00d49cb89e89b348c96f6a6518ef7acc6",
+      "size": 3812
     },
     {
       "path": "artifacts/opal-deployed.png",

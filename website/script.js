@@ -1,5 +1,17 @@
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+const configuredRepository = document
+  .querySelector('meta[name="determination-repository-url"]')
+  ?.content.trim();
+const githubPagesOwner = location.hostname.match(/^([^.]+)\.github\.io$/)?.[1];
+const repositoryUrl = configuredRepository ||
+  (githubPagesOwner ? `https://github.com/${githubPagesOwner}/determination` : '');
+document.querySelectorAll('[data-repository-link]').forEach(link => {
+  if (!repositoryUrl) return;
+  link.href = repositoryUrl;
+  link.hidden = false;
+});
+
 const wipe = document.createElement('div');
 wipe.className = 'page-wipe';
 wipe.setAttribute('aria-hidden', 'true');

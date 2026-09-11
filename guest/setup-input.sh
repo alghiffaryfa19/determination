@@ -79,7 +79,7 @@ cat > /usr/local/sbin/det-input-udevdb <<'EOF'
 # ("Q:seat"), or session_device_verify then manager_process_seat_device skips it
 # and TakeDevice returns ENODEV. Verified against systemd v257 source.
 set -e
-# systemd v257 may create these 0700 root:root. libinput runs as melissa and
+# systemd v257 may create these 0700 root:root. libinput runs as detuser and
 # treats every event node as unconfigured if it cannot traverse the database.
 install -d -m 0755 /run/udev /run/udev/data
 for ev in /sys/class/input/event*; do

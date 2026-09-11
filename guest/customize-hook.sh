@@ -60,25 +60,25 @@ EOF
 echo 'precedence ::ffff:0:0/96  100' >> "$R/etc/gai.conf"
 
 # Android device-node groups (recon 2026-07-12, artifacts/node-perms-probe.txt):
-# the session runs as the unprivileged user melissa, NOT root. GPU/dri/binder/
-# ashmem are world-rw and kgsl/ion are owned by uid/gid 1000 (== melissa ==
+# the session runs as the unprivileged user detuser, NOT root. GPU/dri/binder/
+# ashmem are world-rw and kgsl/ion are owned by uid/gid 1000 (== detuser ==
 # Android AID_SYSTEM); the ONLY node that gates a non-root compositor is
 # /dev/input/* (0660 root:1004, AID_INPUT). Debian's input group (gid 995) does
 # not match, so make a group at Android's numeric gid. seatd's socket is group
-# video(44), which melissa already gets.
+# video(44), which detuser already gets.
 chroot "$R" sh -c 'getent group android_input   >/dev/null || groupadd -g 1004 android_input'
 chroot "$R" sh -c 'getent group android_graphics >/dev/null || groupadd -g 1003 android_graphics'
 chroot "$R" sh -c 'getent group android_audio    >/dev/null || groupadd -g 1005 android_audio'
 
-# Guest user matching the phone owner. uid 1000 is load-bearing (owner of
-# kgsl/ion). usermod makes membership idempotent whether or not melissa exists.
-chroot "$R" sh -c 'id melissa >/dev/null 2>&1 || useradd -m -u 1000 -s /bin/bash melissa'
-chroot "$R" usermod -aG video,input,render,audio,android_input,android_graphics,android_audio melissa
+# The project guest account uses load-bearing uid 1000. Rename any existing
+# uid-1000 account so upgrades and imported rootfs images converge cleanly.
+chroot "$R" sh -c 'uid1000_user=$(getent passwd 1000 | cut -d: -f1 || true); if [ -n "$uid1000_user" ] && [ "$uid1000_user" != detuser ]; then uid1000_group=$(id -gn "$uid1000_user"); usermod -l detuser -d /home/detuser -m "$uid1000_user"; if [ "$uid1000_group" != detuser ] && ! getent group detuser >/dev/null 2>&1; then groupmod -n detuser "$uid1000_group"; fi; elif ! id detuser >/dev/null 2>&1; then useradd -m -u 1000 -s /bin/bash detuser; fi'
+chroot "$R" usermod -aG video,input,render,audio,android_input,android_graphics,android_audio detuser
 
 # Password-gated sudo (proper sudo, not NOPASSWD-ALL). No password is baked into
 # the image --- set one on-device with `det passwd` before sudo will work.
-echo 'melissa ALL=(ALL) ALL' > "$R/etc/sudoers.d/melissa"
-chmod 440 "$R/etc/sudoers.d/melissa"
+echo 'detuser ALL=(ALL) ALL' > "$R/etc/sudoers.d/detuser"
+chmod 440 "$R/etc/sudoers.d/detuser"
 
 # The libhybris packages themselves install on first boot of the guest (needs
 # the device's vendor blobs visible to configure linker namespaces sanely):

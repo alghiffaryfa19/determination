@@ -193,7 +193,7 @@ object Root {
             .filter { it.code >= 32 && it !in "/\\" }
             .take(120)
             .ifBlank { "Shared file" }
-        val inbox = "$DET/active-guest/home/melissa/Downloads/From Android"
+        val inbox = "$DET/active-guest/home/detuser/Downloads/From Android"
         val destination = "$inbox/$safeName"
         return run(
             "install -d -m 0755 -o 1000 -g 1000 ${shellQuote(inbox)}; " +

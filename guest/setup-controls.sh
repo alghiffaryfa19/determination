@@ -59,7 +59,7 @@ After=local-fs.target
 
 [Service]
 Type=simple
-User=melissa
+User=detuser
 ExecStart=/usr/local/bin/det-guest-agent serve
 Restart=on-failure
 RestartSec=5
@@ -359,7 +359,7 @@ cat > /usr/local/bin/det-console <<'EOS'
 # Determination console --- fullscreen terminal on Ctrl+Alt+F<n>.
 # Called by phoc's patched VT-switch handler (keyboard.c PATCH 3).
 # Inherit the Wayland env from whoever invoked phoc (desktop-on 5e). phoc runs
-# as melissa (uid 1000), so its VT-switch handler spawns us as melissa too.
+# as detuser (uid 1000), so its VT-switch handler spawns us as detuser too.
 export XDG_RUNTIME_DIR=/run/user/1000
 export WAYLAND_DISPLAY=wayland-0
 export LANG=C.UTF-8

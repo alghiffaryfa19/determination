@@ -853,7 +853,7 @@ Every roadmap item is tracked as one of:
 - **host-tested:** deterministic local tests pass;
 - **built:** target artifact compiles/packages;
 - **device-observed:** machine evidence exists on the target;
-- **interactive:** Melissa verified the human-visible behaviour;
+- **interactive:** a device operator verified the human-visible behaviour;
 - **stress-qualified:** declared cycle/soak/failure gate passes;
 - **release-qualified:** reproducible install, upgrade, rollback, and recovery
   pass for a declared support profile.

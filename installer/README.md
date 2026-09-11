@@ -43,16 +43,22 @@ never resolved by choosing the first device. The next question asks whether to
 install, build a port, or recover.
 
 `determination-installer install` accepts a schema 2 HTTPS manifest or a local manifest with its
-artifacts beside it. Select Debian, Arch, or Alpine and enter a hostname. Each
+artifacts beside it. Select Debian, Arch, or Alpine, enter the Linux display name,
+and enter a hostname. The display name is stored in the uid-1000 account's GECOS
+field while the stable service and login identity remains `detuser`. Each
 artifact must have a matching SHA-256 and length. Device and exact-build filters
 apply before boot preparation, and ambiguous matches fail. Experimental releases
 are available by default, including newly generated ports. Qualification remains
 artifact metadata, without a separate permission question.
 
+Distributors can set `DETERMINATION_UPDATE_MANIFEST_URL` in the environment to
+provide a default HTTPS release manifest without baking a repository owner into
+the installer. If it is unset, the interview asks for a manifest explicitly.
+
 When asked, **prepare and verify** downloads, validates, backs up, and repacks without
 installing userspace or writing a partition. **Install Determination** repeats
 those checks, installs the module and static runtime, installs a missing guest
-slot, sets the hostname, installs the companion APK, then writes boot last.
+slot, sets the display name and hostname, installs the companion APK, then writes boot last.
 Existing guest slots are retained. This is not an in-place distro upgrade.
 A reboot is never automatic.
 

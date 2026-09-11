@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app import Interview, compiler_value, jobs_value
-from core import DEFAULT_MANIFEST, Engine, Failure
+from core import DEFAULT_MANIFEST, Engine, Failure, display_name_value
 from test_core import device
 
 
@@ -22,9 +22,9 @@ class InterviewTests(unittest.TestCase):
         self.engine = Engine(self.directory.name)
         self.interview = Interview(self.engine)
 
-    def test_default_manifest_preserves_https(self):
-        with patch('builtins.input', return_value=''):
-            self.assertEqual(self.interview.manifest(), DEFAULT_MANIFEST)
+    def test_manifest_requires_explicit_source_without_distributor_default(self):
+        with patch('builtins.input', return_value='https://example.org/determination-update.json'):
+            self.assertEqual(self.interview.manifest(), 'https://example.org/determination-update.json')
 
     def test_invalid_answer_repeats_same_question(self):
         with patch('builtins.input', side_effect=['maybe', 'yes']) as read, contextlib.redirect_stdout(io.StringIO()):
@@ -39,13 +39,18 @@ class InterviewTests(unittest.TestCase):
 
     def test_complete_install_interview_passes_validated_values(self):
         self.interview.device = device()
-        answers = ['', 'debian', 'workstation', 'yes']
+        manifest = DEFAULT_MANIFEST or 'https://example.org/determination-update.json'
+        answers = [manifest, 'debian', 'Determination User', 'workstation', 'yes']
         with patch('builtins.input', side_effect=answers), contextlib.redirect_stdout(io.StringIO()), \
              patch.object(self.engine, 'install', return_value={'status': 'prepared'}) as install:
             self.interview.install()
-        install.assert_called_once_with(device(), DEFAULT_MANIFEST, 'debian', 'workstation', True, True)
+        install.assert_called_once_with(
+            device(), manifest, 'debian', 'workstation', True, True,
+            display_name='Determination User',
+        )
         saved = json.loads(self.interview.settings_path.read_text())
         self.assertEqual(saved['hostname'], 'workstation')
+        self.assertEqual(saved['display_name'], 'Determination User')
         self.assertNotIn('experimental', saved)
 
     def test_multiple_devices_require_an_explicit_serial(self):
@@ -65,6 +70,12 @@ class InterviewTests(unittest.TestCase):
         with self.assertRaises(Failure):
             compiler_value('O=/tmp/wrong')
         self.assertEqual(compiler_value('LLVM=1 CC=clang'), 'LLVM=1 CC=clang')
+
+    def test_display_name_validation(self):
+        self.assertEqual(display_name_value('  Ada Lovelace  '), 'Ada Lovelace')
+        for value in ('', 'name:admin', 'name,room', 'bad\nname', 'x' * 65):
+            with self.subTest(value=value), self.assertRaises(Failure):
+                display_name_value(value)
 
     @unittest.skipUnless(os.name == 'posix', 'POSIX signals required')
     def test_interrupt_is_deferred_during_mutation(self):

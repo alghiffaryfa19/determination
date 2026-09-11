@@ -32,7 +32,7 @@ Android's `/data` is `nosuid,nodev`; the container rootfs inherits it after
 pivot, so setuid bits are ignored. `guest-start` remounts the container root
 `suid,dev,exec` post-start (the host-side bind remount does not reach the
 pivoted root on 4.14). If sudo still fails, also run `det passwd` once -
-sudo is password-gated for melissa.
+sudo is password-gated for detuser.
 
 ## Watchdog kill-loop right after entering desktop mode
 

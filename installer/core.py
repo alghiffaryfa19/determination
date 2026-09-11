@@ -22,7 +22,7 @@ import zipfile
 from discovery import PARTITIONS, PROBES, partitions, profile_values
 
 REPO = Path(__file__).resolve().parents[1]
-DEFAULT_MANIFEST = 'https://github.com/kriscrossapplesauce2004/determination/releases/latest/download/determination-update.json'
+DEFAULT_MANIFEST = os.environ.get('DETERMINATION_UPDATE_MANIFEST_URL', '')
 KINDS = ('module', 'runtime', 'rootfs', 'boot', 'companion')
 LXC_TOOLS = {'lxc-start', 'lxc-stop', 'lxc-attach', 'lxc-info', 'lxc-ls', 'lxc-console', 'lxc-execute'}
 REQUIRED = ('NAMESPACES', 'PID_NS', 'IPC_NS', 'USER_NS', 'NET_NS', 'CGROUPS', 'CGROUP_PIDS', 'VETH', 'OVERLAY_FS', 'ANDROID_BINDER_IPC', 'ANDROID_BINDERFS', 'SYNC_FILE', 'VT', 'POSIX_MQUEUE')
@@ -66,6 +66,17 @@ def https_url(value):
     parsed = urllib.parse.urlsplit(value)
     if parsed.scheme != 'https' or not parsed.hostname or parsed.username or parsed.password:
         raise Failure('Downloads require an HTTPS URL without credentials.')
+    return value
+
+
+def display_name_value(value):
+    if not isinstance(value, str):
+        raise Failure('Enter a Linux display name.')
+    value = value.strip()
+    if not value:
+        raise Failure('Enter a Linux display name.')
+    if len(value) > 64 or any(not char.isprintable() or char in ':,' for char in value):
+        raise Failure('Display name must be at most 64 printable characters without colon or comma.')
     return value
 
 
@@ -662,9 +673,11 @@ fi
         self.log('Built installable port: ' + str(bundle))
         return str(bundle / 'determination-update.json')
 
-    def install(self, device, source, distro, hostname, experimental=True, prepare_only=False):
+    def install(self, device, source, distro, hostname, experimental=True, prepare_only=False,
+                display_name='Determination User'):
         if not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', hostname):
             raise Failure('Hostname must contain lowercase letters, digits, and internal hyphens.')
+        display_name = display_name_value(display_name)
         self.assert_device(device)
         manifest = self.load_manifest(source)
         artifacts = select_artifacts(manifest, device, distro, experimental)
@@ -684,6 +697,7 @@ fi
             raise Failure('The repacked boot image does not fit.')
         plan = {'device': device['device'], 'serial': device['serial'], 'fingerprint': device['fingerprint'],
                 'version': manifest['version'], 'distro': distro, 'hostname': hostname,
+                'displayName': display_name,
                 'backup': str(backup), 'image': str(image), 'artifacts': artifacts, 'status': 'prepared'}
         save_json(self.workspace / 'installation.json', plan)
         if prepare_only:
@@ -705,7 +719,9 @@ fi
                 self.stage(path, remote + '/' + kind)
             self.phase('Installing the root integration, runtime, and guest')
             script = (REPO / 'installer/install-device.sh').read_text()
-            script = 'set -- ' + shlex.join([remote, distro, hostname, str(manifest['versionCode'])]) + '\n' + script
+            script = 'set -- ' + shlex.join(
+                [remote, distro, hostname, str(manifest['versionCode']), display_name]
+            ) + '\n' + script
             with self.critical():
                 self.shell(script, root=True, timeout=3600)
             self.phase('Installing the companion controller')

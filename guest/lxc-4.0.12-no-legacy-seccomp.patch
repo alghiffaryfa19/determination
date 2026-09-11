@@ -1,4 +1,4 @@
-## SPDX-FileCopyrightText: 2026 Melissa <theonest262@gmail.com>
+## SPDX-FileCopyrightText: 2026 Determination contributors
 ## SPDX-License-Identifier: LGPL-2.1-or-later
 ##
 ## Determination patch for LXC 4.0.12. It modifies src/lxc/attach.c, which

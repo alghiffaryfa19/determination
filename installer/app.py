@@ -11,7 +11,7 @@ import shutil
 import sys
 import time
 
-from core import DEFAULT_MANIFEST, Engine, Failure, https_url, save_json
+from core import DEFAULT_MANIFEST, Engine, Failure, display_name_value, https_url, save_json
 
 
 def choice(text, values):
@@ -206,15 +206,28 @@ class Interview:
         self.common()
         manifest = self.manifest(manifest_default)
         distro = self.one_of('Linux distribution', ('debian', 'arch', 'alpine'), distro_default or self.settings.get('distro', 'debian'))
+        display_name = self.ask(
+            'Your name in Linux',
+            self.settings.get('display_name', 'Determination User'),
+            display_name_value,
+        )
         hostname = self.ask('Guest hostname', self.settings.get('hostname', 'determination'), hostname_value)
-        self.remember(manifest=manifest, distro=distro, hostname=hostname)
+        self.remember(manifest=manifest, distro=distro, display_name=display_name, hostname=hostname)
         experimental = True
         prepare_only = self.yes_no('Prepare and verify only; do not install or flash', False)
         if not prepare_only:
             if not self.yes_no('Continue with installation', False):
                 print('  Installation cancelled.', flush=True)
                 return
-        plan = self.engine.install(self.device, manifest, distro, hostname, experimental, prepare_only)
+        plan = self.engine.install(
+            self.device,
+            manifest,
+            distro,
+            hostname,
+            experimental,
+            prepare_only,
+            display_name=display_name,
+        )
         print(f'\n{self.palette.good("Complete")}: {plan["status"]}', flush=True)
         if plan.get('backup'):
             print(f'  Boot backup: {plan["backup"]}', flush=True)

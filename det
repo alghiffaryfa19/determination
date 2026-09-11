@@ -6,15 +6,15 @@
 #   det find              discover the phone's current wireless port (mdns)
 #   det connect           discover + connect
 #   det shell [cmd...]    root shell (Magisk su) on the phone
-#   det guest [cmd...]    shell inside the LXC guest AS melissa (bash -l if no cmd)
+#   det guest [cmd...]    shell inside the LXC guest AS detuser (bash -l if no cmd)
 #   det guest-root [cmd]  root shell inside the guest (admin escape hatch)
 #   det distro CMD        list/status/install/select/provision/qualify rootfs slots
 #   det power MODE        sip/balanced/performance CPU+GPU profile (status too)
-#   det passwd            set melissa's guest password (needed before sudo works)
+#   det passwd            set detuser's guest password (needed before sudo works)
 #   det ssh-setup [key]   install sshd + authorize key (default: dedicated key)
 #   det motd-setup        install/refresh the guest login MOTD
 #   det ssh-route         route the guest subnet directly through the phone
-#   det ssh [command...]  direct SSH to melissa@192.168.117.2
+#   det ssh [command...]  direct SSH to detuser@192.168.117.2
 #   det on | det off      enter / leave desktop mode (detached; panel changes!)
 #   det linux-first CMD   status, enable, disable, or apply the boot profile
 #   det compat CMD        setup or inspect the application compatibility layer
@@ -62,7 +62,7 @@ SELF=$DET_SOURCE_DIR/$(basename "$DET_SOURCE")
 . release/version.sh
 det_load_version version.properties
 
-for pt in "$HOME"/platform-tools /tmp/claude-*/-home-melissa/*/scratchpad/platform-tools; do
+for pt in "${ANDROID_SDK_ROOT:-$HOME/android-sdk}"/platform-tools "$HOME"/platform-tools; do
     [ -x "$pt/adb" ] && PATH="$pt:$PATH" && break
 done
 
@@ -112,8 +112,8 @@ safe_arg() {
     return 0
 }
 
-gs_user() { # gs_user <sh-cmd> - run inside container as melissa, login env
-    adb shell "su -c '$GUEST/lxc/bin/lxc-attach -P $GUEST -n guest -- /usr/local/bin/det-platform run-user melissa /bin/sh -lc \"$1\"'"
+gs_user() { # gs_user <sh-cmd> - run inside container as detuser, login env
+    adb shell "su -c '$GUEST/lxc/bin/lxc-attach -P $GUEST -n guest -- /usr/local/bin/det-platform run-user detuser /bin/sh -lc \"$1\"'"
 }
 
 gs_root() { # gs_root <sh-cmd> - run inside container as root
@@ -153,14 +153,14 @@ shell)
 guest)
     ensure; shift
     G=/data/determination
-    # Attach as the unprivileged guest user melissa (root shell: det guest-root).
+    # Attach as the unprivileged guest user detuser (root shell: det guest-root).
     # det-platform chooses the distro's supplementary-group-safe launcher.
     # lxc-attach --uid is deliberately avoided because it drops android_input.
     # The whole su -c argument must be ONE quoted string (see AGENTS.md).
     if [ $# -gt 0 ]; then
-        adb shell "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/local/bin/det-platform run-user melissa /bin/sh -lc \"$*\"'"
+        adb shell "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/local/bin/det-platform run-user detuser /bin/sh -lc \"$*\"'"
     else
-        adb shell -t "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/local/bin/det-platform run-user melissa /bin/sh -l'"
+        adb shell -t "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/local/bin/det-platform run-user detuser /bin/sh -l'"
     fi ;;
 guest-root)
     ensure; shift
@@ -174,20 +174,20 @@ guest-root)
 passwd)
     ensure
     G=/data/determination
-    # Set melissa's guest password. passwd(1) reads /dev/tty with echo off, and
+    # Set detuser's guest password. passwd(1) reads /dev/tty with echo off, and
     # that controlling tty does NOT survive adb->su->lxc-attach (the prompt is
     # lost and the typed password just echoes to the shell). So read it HERE,
     # where there is a real terminal, and feed chpasswd over STDIN - never argv,
     # so it stays out of ps. No -t: we want raw stdin piped through, not a pty.
-    printf 'New password for guest user melissa: ' >&2
+    printf 'New password for guest user detuser: ' >&2
     stty -echo 2>/dev/null; read pw;  stty echo 2>/dev/null; echo >&2
     printf 'Retype new password: '                 >&2
     stty -echo 2>/dev/null; read pw2; stty echo 2>/dev/null; echo >&2
     [ -n "$pw" ]     || { echo 'det: empty password refused' >&2; exit 1; }
     [ "$pw" = "$pw2" ] || { echo 'det: passwords do not match' >&2; exit 1; }
-    if printf 'melissa:%s\n' "$pw" | \
+    if printf 'detuser:%s\n' "$pw" | \
         adb shell "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/sbin/chpasswd'"
-    then echo 'det: password set - sudo now works for melissa' >&2
+    then echo 'det: password set - sudo now works for detuser' >&2
     else echo 'det: chpasswd failed' >&2; exit 1; fi ;;
 ssh-setup)
     ensure
@@ -200,7 +200,7 @@ ssh-setup)
         command -v ssh-keygen >/dev/null || { echo 'det: ssh-keygen is not installed' >&2; exit 1; }
         mkdir -p "$HOME/.ssh"
         chmod 0700 "$HOME/.ssh"
-        ssh-keygen -q -t ed25519 -N '' -C 'melissa@determination' \
+        ssh-keygen -q -t ed25519 -N '' -C 'detuser@determination' \
             -f "$private_key"
         echo "det: generated dedicated client key: $private_key" >&2
     fi
@@ -232,7 +232,7 @@ ssh-setup)
     install -d -m 0700 "$HOME/.ssh" "$HOME/.ssh/config.d"
     printf '%s\n' \
         'Host 192.168.117.2' \
-        '    User melissa' \
+        '    User detuser' \
         '    IdentityFile ~/.ssh/determination_ed25519' \
         '    IdentitiesOnly yes' \
         > "$HOME/.ssh/config.d/determination"
@@ -273,10 +273,10 @@ ssh-route)
         exit 1
     fi
     echo "det: direct route ready via $phone_ip ($host_dev)" >&2
-    echo 'det: connect with: ssh melissa@192.168.117.2' >&2 ;;
+    echo 'det: connect with: ssh detuser@192.168.117.2' >&2 ;;
 ssh)
     shift
-    exec ssh melissa@192.168.117.2 "$@" ;;
+    exec ssh detuser@192.168.117.2 "$@" ;;
 on)
     ensure
     # setsid-detach: the SF handoff must not die with this adb session.
@@ -337,7 +337,7 @@ compat)
                 install -m 0755 /data/local/tmp/det-plasma-client \$ROOT/usr/local/bin/det-plasma-client; \
                 install -m 0644 /data/local/tmp/det-plasma.service \$ROOT/etc/systemd/system/det-plasma.service; \
                 $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh /usr/local/sbin/setup-identity.sh \"$DET_VERSION\" \"$DET_CODENAME\"; \
-                $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh -c \"/usr/local/sbin/setup-compatibility.sh; if ! pgrep -x firefox-esr >/dev/null 2>&1; then /usr/local/bin/det-platform run-user melissa env HOME=/home/melissa USER=melissa LOGNAME=melissa /usr/local/bin/det-firefox-content-defaults; fi\"'"
+                $G/lxc/bin/lxc-attach -P $G -n guest -- /bin/sh -c \"/usr/local/sbin/setup-compatibility.sh; if ! pgrep -x firefox-esr >/dev/null 2>&1; then /usr/local/bin/det-platform run-user detuser env HOME=/home/detuser USER=detuser LOGNAME=detuser /usr/local/bin/det-firefox-content-defaults; fi\"'"
             ;;
         check)
             adb shell "su -c '$G/lxc/bin/lxc-attach -P $G -n guest -- /usr/local/bin/det-compat-check --live'"
@@ -391,7 +391,7 @@ distro)
             gate os-identity gs_root 'grep -q "^PRETTY_NAME=\"Determination" /etc/os-release'
             gate wl-clipboard gs_user 'command -v wl-copy >/dev/null && command -v wl-paste >/dev/null'
             gate grim-present gs_user 'command -v grim >/dev/null'
-            gate input-access gs_root 'su - melissa -c "test -r /dev/input/event1"'
+            gate input-access gs_root 'su - detuser -c "test -r /dev/input/event1"'
             gate haptics-tagged gs_root 'n=$(grep -A2 "qti-haptics" /proc/bus/input/devices | grep -o "event[0-9]*" | head -n1); [ -n "$n" ] && udevadm info -q property -n /dev/input/$n 2>/dev/null | grep -q feedbackd:rumble'
             gate pipewire-smoke gs_user 'test -x /usr/local/bin/det-pipewire-smoke && /usr/local/bin/det-pipewire-smoke'
             gate gpu-smoke gs_user 'test -x /usr/local/bin/gpu-smoke.sh && /usr/local/bin/gpu-smoke.sh'
@@ -631,10 +631,10 @@ shot)
     ensure
     need_guest
     out=${2:-det-shot-$(date +%Y%m%d-%H%M%S).png}
-    remote=home/melissa/.det-shot.png
+    remote=home/detuser/.det-shot.png
     # grim talks to the session compositor socket; failure here almost always
     # means the phosh session is not up rather than grim missing.
-    gs_user "grim -t png /home/melissa/.det-shot.png" || {
+    gs_user "grim -t png /home/detuser/.det-shot.png" || {
         echo "screenshot failed - is the desktop session running? (det on)" >&2
         exit 1; }
     adb pull "$GUEST/active-guest/$remote" "$out" >/dev/null
@@ -649,7 +649,7 @@ cast)
         awk '{ split($3, a, "/"); print a[1]; exit }' | tr -d '\r')
     [ -n "$phone_ip" ] || { echo 'phone has no wlan0 IPv4 address' >&2; exit 1; }
     if gs_user 'command -v wayvnc >/dev/null 2>&1'; then
-        adb shell "su -c '$GUEST/lxc/bin/lxc-attach -P $GUEST -n guest -- /usr/local/bin/det-platform run-user melissa /bin/sh -lc \"setsid wayvnc 0.0.0.0 $port >/dev/null 2>&1 &\"'" </dev/null
+        adb shell "su -c '$GUEST/lxc/bin/lxc-attach -P $GUEST -n guest -- /usr/local/bin/det-platform run-user detuser /bin/sh -lc \"setsid wayvnc 0.0.0.0 $port >/dev/null 2>&1 &\"'" </dev/null
         echo "wayvnc streaming - connect a VNC client to: $phone_ip:$port"
         echo "stop it later with: det app pkill wayvnc"
     elif gs_user 'command -v ffmpeg >/dev/null 2>&1' && gs_user 'command -v grim >/dev/null 2>&1'; then
@@ -687,7 +687,7 @@ drop)
     ensure
     shift
     [ $# -gt 0 ] || { echo "usage: det drop FILE..." >&2; exit 2; }
-    incoming=$GUEST/active-guest/home/melissa/Incoming
+    incoming=$GUEST/active-guest/home/detuser/Incoming
     adb shell "su -c 'mkdir -p $incoming && chown 1000:1000 $incoming'" >/dev/null
     for f in "$@"; do
         [ -r "$f" ] || { echo "not readable: $f" >&2; exit 1; }
@@ -703,15 +703,15 @@ fetch)
     gpath=${2:-}; dest=${3:-$(basename "$gpath")}
     case $gpath in ''|..|*/..*|/*..*) echo "usage: det fetch GUEST_RELATIVE_PATH [DEST]" >&2; exit 2 ;; esac
     # The active-guest tree is root-only from adb's uid; stage via su.
-    if ! adb shell "su -c 'test -f $GUEST/active-guest/home/melissa/$gpath'" </dev/null; then
+    if ! adb shell "su -c 'test -f $GUEST/active-guest/home/detuser/$gpath'" </dev/null; then
         echo "not found in guest home: $gpath" >&2
         exit 1
     fi
-    adb shell "su -c 'cp -f $GUEST/active-guest/home/melissa/$gpath /data/local/tmp/det-fetch && chmod 0644 /data/local/tmp/det-fetch'" </dev/null || {
+    adb shell "su -c 'cp -f $GUEST/active-guest/home/detuser/$gpath /data/local/tmp/det-fetch && chmod 0644 /data/local/tmp/det-fetch'" </dev/null || {
         echo "staging failed" >&2; exit 1; }
     adb pull /data/local/tmp/det-fetch "$dest" >/dev/null
     adb shell "su -c 'rm -f /data/local/tmp/det-fetch'" >/dev/null
-    echo "pulled: ~melissa/$gpath -> $dest" ;;
+    echo "pulled: ~detuser/$gpath -> $dest" ;;
 stats)
     ensure
     watch=false; interval=2

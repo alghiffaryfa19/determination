@@ -4,8 +4,8 @@ set -eu
 
 if [ "$(id -u)" = 0 ]; then
     install -d -o 1000 -g 1000 -m 0700 /run/user/1000
-    exec /usr/sbin/runuser -u melissa -- /usr/bin/env \
-        HOME=/home/melissa USER=melissa LOGNAME=melissa \
+    exec /usr/sbin/runuser -u detuser -- /usr/bin/env \
+        HOME=/home/detuser USER=detuser LOGNAME=detuser \
         PATH=/usr/local/bin:/usr/bin:/bin \
         XDG_RUNTIME_DIR=/run/user/1000 \
         /usr/local/bin/det-pipewire-smoke "$@"

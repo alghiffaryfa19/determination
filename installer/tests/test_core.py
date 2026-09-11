@@ -184,6 +184,11 @@ class CoreTests(unittest.TestCase):
             self.engine.install(device(), '', 'debian', 'x;reboot')
         inspect.assert_not_called()
 
+    def test_wrong_display_name_stops_before_device_io(self):
+        with patch.object(self.engine, 'assert_device') as inspect, self.assertRaises(Failure):
+            self.engine.install(device(), '', 'debian', 'test', display_name='root:admin')
+        inspect.assert_not_called()
+
     def test_wrong_device_backup_stops_restore(self):
         backup = self.root / 'backup.img'
         backup.write_bytes(b'ANDROID!backup')

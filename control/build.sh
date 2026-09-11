@@ -4,7 +4,7 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 CONTROL="$ROOT/control"
 MODE=${1:-all}
-NDK=${NDK:-/home/melissa/android-sdk/ndk/27.2.12479018}
+NDK=${NDK:-${ANDROID_NDK_HOME:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}/ndk/27.2.12479018}}
 
 build_host() {
     cmake -S "$CONTROL" -B "$CONTROL/build/host" -G Ninja \

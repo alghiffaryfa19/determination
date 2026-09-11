@@ -68,7 +68,7 @@ if [ "$platform" = debian ] || [ "$platform" = arch ]; then
 fi
 
 # Create standard folders and MIME state as the actual desktop user.
-det-platform run-user melissa env HOME=/home/melissa USER=melissa LOGNAME=melissa \
+det-platform run-user detuser env HOME=/home/detuser USER=detuser LOGNAME=detuser \
     xdg-user-dirs-update
 update-desktop-database /usr/share/applications 2>/dev/null || true
 update-mime-database /usr/share/mime 2>/dev/null || true

@@ -878,7 +878,7 @@ transition, presenter and audio builds await deployment and recovery testing.
 - A benchmark without presentation/vsync is not desktop frame latency.
 - A dma-buf fd without the private native-handle data is not a portable Android
   buffer.
-- A recovery path which means “Melissa remembers the magic adb command” is not
+- A recovery path which means “the operator remembers the magic adb command” is not
   recovery.
 - A colour-temperature preference silently written during a transition is not
   display restoration.

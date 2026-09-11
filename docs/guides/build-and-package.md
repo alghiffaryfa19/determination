@@ -31,12 +31,14 @@ release; development branches are not release inputs.
 | Online update bundle | `release/build-online-bundle.sh https://host/release/path` | app manifest, versioned artifacts, and checksums in `dist/online-release/` |
 | Release audit | `release/check.sh check` | static development checks |
 
-The companion defaults to the matching GitHub `releases/latest` manifest and
-allows an HTTPS mirror in Settings. The online packager does not build or sign
-anything. It refuses missing inputs, hashes the exact existing module, static
-LXC runtime, guest rootfs, boot image, and signed APK, and emits the v2 schema
-consumed by the app. Optional Arch and Alpine archives are included as
-`experimental`; Debian is the qualified default.
+Distributors set the companion's packaged update source with the
+`determinationUpdateManifestUrl` Gradle property; users can override it with an
+HTTPS mirror in Settings. An unset property leaves online updates unconfigured
+instead of silently coupling builds to one repository owner. The online
+packager does not build or sign anything. It refuses missing inputs, hashes the
+exact existing module, static LXC runtime, guest rootfs, boot image, and signed
+APK, and emits the v2 schema consumed by the app. Optional Arch and Alpine
+archives are included as `experimental`; Debian is the qualified default.
 
 Set `UPDATE_DEVICES` to a comma-separated list of Android product aliases and
 `UPDATE_ANDROID_BUILDS` to the exact qualified Android build fingerprints.
@@ -44,10 +46,11 @@ The latter is mandatory: matching only `ro.product.device` is not enough to
 authorize an unattended boot-partition write across ROM or OTA revisions.
 
 ```sh
+REPOSITORY_URL=https://github.com/your-project/determination \
 UPDATE_DEVICES=guacamoleb,OnePlus7 \
 UPDATE_ANDROID_BUILDS='oneplus/guacamoleb/...:16/BUILD/...' \
 release/build-online-bundle.sh \
-  "https://github.com/kriscrossapplesauce2004/determination/releases/download/v$VERSION"
+  "$REPOSITORY_URL/releases/download/v$VERSION"
 ```
 
 The generated `determination-update.json`, every artifact, and `SHA256SUMS`

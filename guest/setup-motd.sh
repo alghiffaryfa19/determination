@@ -164,7 +164,7 @@ row() {
     printf '%b%-31s%b%-9s%b%s%b\n' "$pink" "$left" "$pink" "$2" "$text" "$3" "$reset"
 }
 
-row '       _,met$$$$$gg.' 'melissa' '@determination'
+row '       _,met$$$$$gg.' 'detuser' '@determination'
 row '    ,g$$$$$$$$$$$$$$$P.' '---------' '--------------'
 row '  ,g$$P"     """Y$$.".' 'OS:' "$PRETTY_NAME $arch"
 row ' ,$$P\047              `$$$.' 'Host:' "$host"

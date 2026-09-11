@@ -5,8 +5,8 @@ After=dbus.service det-gralloc-pool.service
 
 [Service]
 Type=simple
-User=melissa
-Group=melissa
+User=detuser
+Group=detuser
 Environment=DET_PLASMA_WIDTH=1920
 Environment=DET_PLASMA_HEIGHT=1080
 ExecStart=/usr/local/bin/det-plasma-presenter-session

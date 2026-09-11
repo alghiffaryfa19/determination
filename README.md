@@ -95,7 +95,7 @@ directly reachable address:
 
 ```sh
 det ssh-setup                    # server, public key, SSH config, host route
-ssh melissa@192.168.117.2        # exactly this; no ProxyCommand
+ssh detuser@192.168.117.2        # exactly this; no ProxyCommand
 det ssh-route                    # refresh after phone DHCP or host route changes
 det motd-setup                   # refresh the guest's dynamic login banner
 ```

@@ -3,8 +3,8 @@
 set -eu
 
 DET=${DET_ROOT:-/data/determination}
-HOST_TONE=${1:-$DET/guest/home/melissa/determination-audio-tone.wav}
-GUEST_TONE=${2:-/home/melissa/determination-audio-tone.wav}
+HOST_TONE=${1:-$DET/guest/home/detuser/determination-audio-tone.wav}
+GUEST_TONE=${2:-/home/detuser/determination-audio-tone.wav}
 MODE=${3:-alsa}
 ROUTE='QUAT_MI2S_RX Audio Mixer MultiMedia1'
 SELECTOR='TFA_CHIP_SELECTOR'

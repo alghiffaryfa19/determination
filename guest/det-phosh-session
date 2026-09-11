@@ -4,7 +4,7 @@
 set -eu
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-export HOME=${HOME:-/home/melissa} USER=${USER:-melissa} LOGNAME=${LOGNAME:-melissa}
+export HOME=${HOME:-/home/detuser} USER=${USER:-detuser} LOGNAME=${LOGNAME:-detuser}
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/1000}
 export XDG_SESSION_TYPE=wayland XDG_SESSION_CLASS=user
 export XDG_CURRENT_DESKTOP=Phosh:GNOME XDG_SESSION_DESKTOP=phosh
