@@ -1,0 +1,29 @@
+## SPDX-FileCopyrightText: 2026 Melissa <theonest262@gmail.com>
+## SPDX-License-Identifier: MIT
+##
+## Determination patch for BSD-3-Clause Hyprland. Retain Hyprland's
+## copyright and BSD-3-Clause notice with this patch and its output.
+
+## Toolchain compat: MiscFunctions.cpp and Monitor.cpp use LONG_MAX without
+## including <climits>. Older libstdc++/glibc provided it transitively;
+## current glibc + clang do not (use of undeclared identifier 'LONG_MAX').
+
+--- a/src/helpers/MiscFunctions.cpp
++++ b/src/helpers/MiscFunctions.cpp
+@@ -9,6 +9,7 @@
+ #include <optional>
+ #include <cstring>
+ #include <cmath>
++#include <climits>
+ #include <filesystem>
+ #include <set>
+ #include <sys/utsname.h>
+--- a/src/helpers/Monitor.cpp
++++ b/src/helpers/Monitor.cpp
+@@ -31,5 +31,6 @@
+ #include <hyprutils/utils/ScopeGuard.hpp>
+ #include <cstring>
++#include <climits>
+ #include <ranges>
+ 
+ using namespace Hyprutils::String;

@@ -483,6 +483,33 @@ print("gskfix: patched", SRC)
 GSKFIXEOF
 fi
 
+# Vulkan CUDA->Cu rename (rolling headers, e.g. Arch 2026): VK_HEADER_VERSION
+# >= 269 guards a block loading vkCreateCudaModuleNV & family, but current
+# headers removed those symbols (renamed to vkCreateCu...NVX, already loaded
+# unconditionally above). Drop the stale block when the header no longer
+# declares the old names; leave older distros untouched.
+if grep -q "VULKAN_IDLOAD(vkCreateCudaModuleNV);" "$SRC/hybris/vulkan/vulkan.c" 2>/dev/null && \
+   ! grep -q "vkCreateCudaModuleNV" /usr/include/vulkan/vulkan_core.h 2>/dev/null; then
+    python3 - "$SRC/hybris/vulkan/vulkan.c" <<'VULKANFIXEOF'
+import pathlib, sys
+p = pathlib.Path(sys.argv[1])
+s = p.read_text()
+block = """#if VK_HEADER_VERSION >= 269
+VULKAN_IDLOAD(vkCreateCudaModuleNV);
+VULKAN_IDLOAD(vkGetCudaModuleCacheNV);
+VULKAN_IDLOAD(vkCreateCudaFunctionNV);
+VULKAN_IDLOAD(vkDestroyCudaModuleNV);
+VULKAN_IDLOAD(vkDestroyCudaFunctionNV);
+VULKAN_IDLOAD(vkCmdCudaLaunchKernelNV);
+#endif
+"""
+assert block in s, "stale CUDA block changed shape"
+s = s.replace(block, "/* Determination: VK_HEADER_VERSION>=269 CUDA block removed: headers renamed this family to Cu...NVX (already loaded above). */\n", 1)
+p.write_text(s)
+print("vulkan CUDA rename: stale block removed")
+VULKANFIXEOF
+fi
+
 cd "$SRC/hybris"
 
 [ -x configure ] || NOCONFIGURE=1 ./autogen.sh

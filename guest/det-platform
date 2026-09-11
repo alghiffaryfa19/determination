@@ -257,6 +257,19 @@ install_deps() {
                 json-glib-dev xwayland xwayland-dev libxcb-dev xcb-util-wm-dev libdisplay-info-dev \
                 libliftoff-dev foot font-dejavu dbus grim
             ;;
+        arch:dethyprland)
+            package_install_raw base-devel clang cmake ninja meson git pkgconf curl binutils \
+                pugixml pixman wayland wayland-protocols libinput libdrm mesa \
+                systemd libdisplay-info hwdata libglvnd cairo pango libjpeg-turbo \
+                libwebp file libspng libzip librsvg tomlplusplus libxkbcommon \
+                libxcursor re2 libxcb xcb-util-wm xcb-util-renderutil xcb-util-errors \
+                xorg-xwayland seatd
+            ;;
+        arch:quickshell)
+            package_install_raw qt6-base qt6-declarative qt6-shadertools qt6-wayland \
+                cli11 libdrm mesa vulkan-headers spirv-tools dbus glib2 wayland \
+                wayland-protocols systemd
+            ;;
         *)
             echo "unsupported dependency set: $distro/$component" >&2
             return 2

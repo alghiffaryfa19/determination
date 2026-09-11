@@ -1,0 +1,31 @@
+## SPDX-FileCopyrightText: 2026 Melissa <theonest262@gmail.com>
+## SPDX-License-Identifier: MIT
+##
+## Determination patch for BSD-3-Clause hyprutils. Retain hyprutils'
+## copyright and BSD-3-Clause notice with this patch and its output.
+
+## Toolchain compat: the pinned hyprutils uses uintptr_t in its custom smart
+## pointers but never includes <cstdint>. Older libstdc++/glibc provided it
+## transitively; current glibc + clang do not (unknown type name 'uintptr_t').
+## Upstream fixed this the same way in later revisions.
+
+--- a/include/hyprutils/memory/SharedPtr.hpp
++++ b/include/hyprutils/memory/SharedPtr.hpp
+@@ -1,5 +1,7 @@
+ #pragma once
+ 
++#include <cstdint>
++
+ #include "ImplBase.hpp"
+ 
+ /*
+--- a/include/hyprutils/memory/UniquePtr.hpp
++++ b/include/hyprutils/memory/UniquePtr.hpp
+@@ -1,5 +1,7 @@
+ #pragma once
+ 
++#include <cstdint>
++
+ #include "ImplBase.hpp"
+ 
+ /*

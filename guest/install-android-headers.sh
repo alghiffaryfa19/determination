@@ -6,6 +6,8 @@
 set -eu
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export HOME=/root
+export TMPDIR=/tmp
+mkdir -p /tmp
 HERE=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 . "$HERE/sources.lock"
 
