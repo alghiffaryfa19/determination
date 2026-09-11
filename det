@@ -848,22 +848,8 @@ push-module)
     adb shell su -c 'magisk --install-module /data/local/tmp/determination.zip && rm /data/local/tmp/determination.zip'
     echo "installed - reboot the phone to activate" ;;
 publish)
-    ensure
-    [ -d dist/usb-payload ] || { echo "no payload - run usb-install/build-usb-payload.sh" >&2; exit 1; }
-    # A mounted OTG drive shows up under /mnt/media_rw/<VOLUME>. adb push can't
-    # write there (shell uid), so push to /data/local/tmp and su-copy over.
-    vol=$(adb shell su -c 'ls /mnt/media_rw/ 2>/dev/null' </dev/null | tr -d '\r' | head -n1)
-    adb push dist/usb-payload /data/local/tmp/usb-payload
-    if [ -n "$vol" ]; then
-        dest="/mnt/media_rw/$vol/Determination"
-        adb shell su -c "rm -rf '$dest' && cp -r /data/local/tmp/usb-payload '$dest' && rm -rf /data/local/tmp/usb-payload && sync" </dev/null
-        echo "published to USB drive: $dest"
-    else
-        dest=/sdcard/Determination
-        adb shell su -c "rm -rf $dest && cp -r /data/local/tmp/usb-payload $dest && rm -rf /data/local/tmp/usb-payload" </dev/null
-        echo "no USB drive mounted - published to $dest instead"
-    fi
-    echo "next: usb-install/README.md (patch determination-boot.img in Magisk, flash install zip)" ;;
+    echo 'Phone-side payload publication has been retired. Run ./determination-installer on the PC.' >&2
+    exit 2 ;;
 migrate)
     ensure
     adb push migrate-to-determination.sh /sdcard/Download/migrate-to-determination.sh >/dev/null

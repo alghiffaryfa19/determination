@@ -65,7 +65,6 @@ private val POLL_CHOICES = listOf("5 s" to 5, "15 s" to 15, "60 s" to 60, "Off" 
 @Composable
 fun SettingsScreen(
     vm: DetViewModel,
-    onOpenInstaller: () -> Unit,
     modifier: Modifier = Modifier,
     bottomPad: Dp = 0.dp,
 ) {
@@ -78,10 +77,8 @@ fun SettingsScreen(
 
     var externalExpanded by remember { mutableStateOf(vm.externalDisplay.enabled) }
     var buttonsExpanded by remember { mutableStateOf(false) }
-    var localUpdatesExpanded by remember { mutableStateOf(false) }
     var maintenanceExpanded by remember { mutableStateOf(false) }
     var diagnosticsExpanded by remember { mutableStateOf(false) }
-    var advancedExpanded by remember { mutableStateOf(false) }
     var confirmPower by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -168,28 +165,12 @@ fun SettingsScreen(
         SectionLabel("System")
         GlassCard {
             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Guided installer", style = MaterialTheme.typography.titleSmall)
+                Text("PC installation", style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "Compatibility checks, distro selection and complete device setup in one focused journey.",
+                    "Use Determination Installer on your PC to install, update, port, or restore this device.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                FilledTonalButton(
-                    onClick = onOpenInstaller,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Open guided installer") }
-            }
-        }
-        ExpandableSettingsCard(
-            title = "Local updates",
-            summary = if (vm.artifacts.isEmpty()) "No staged files"
-            else "${vm.artifacts.size} staged artifact(s)",
-            icon = Icons.Rounded.SystemUpdateAlt,
-            expanded = localUpdatesExpanded,
-            onClick = { localUpdatesExpanded = !localUpdatesExpanded },
-        ) {
-            Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp)) {
-                LocalUpdatesPanel(vm)
             }
         }
         ExpandableSettingsCard(
@@ -225,44 +206,6 @@ fun SettingsScreen(
                         row.forEach { LogChip(it, vm) }
                     }
                 }
-            }
-        }
-        ExpandableSettingsCard(
-            title = "Advanced",
-            summary = "Update mirrors and development channels",
-            icon = Icons.Rounded.Tune,
-            expanded = advancedExpanded,
-            onClick = { advancedExpanded = !advancedExpanded },
-        ) {
-            Column(
-                Modifier.padding(horizontal = 16.dp).padding(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                SettingRow(
-                    title = "Verification mode",
-                    blurb = "Prove the complete release and recovery path without installing or flashing.",
-                    checked = vm.installerDryRun,
-                    enabled = !busy,
-                    onChange = vm::updateInstallerDryRun,
-                )
-                Text("Update source", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    "HTTPS manifest for official releases, mirrors, or a self-hosted channel.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedTextField(
-                    value = vm.updateManifestUrl,
-                    onValueChange = vm::updateManifestUrl,
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                    label = { Text("Manifest URL") },
-                )
-                OutlinedButton(
-                    onClick = vm::resetManifestUrl,
-                    enabled = vm.updateManifestUrl != Prefs.UPDATE_MANIFEST_DEFAULT,
-                ) { Text("Use official releases") }
             }
         }
     }

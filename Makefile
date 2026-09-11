@@ -5,10 +5,10 @@
 #   make module     build the Magisk module zip for the current version
 #   make zygisk     ndk-build the Zygisk module (both ABIs required)
 #   make companion  assemble the companion APK debug build
-#   make payload    build the USB install payload
+#   make installer  start the PC porting and installation interview
 #   make kernel     merge config overlay and compile the kernel (slow)
 
-.PHONY: check doctor module zygisk companion payload kernel
+.PHONY: check doctor module zygisk companion installer installer-test kernel
 
 check:
 	./scripts/check.sh
@@ -25,8 +25,11 @@ zygisk:
 companion:
 	~/android-sdk/gradle-8.7/bin/gradle --no-daemon -p companion assembleDebug
 
-payload:
-	./usb-install/build-usb-payload.sh
+installer:
+	./determination-installer
+
+installer-test:
+	python3 -m unittest discover -s installer/tests -v
 
 kernel:
 	./kernel/build.sh
