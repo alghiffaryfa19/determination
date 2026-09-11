@@ -21,6 +21,7 @@ done
 python3 -m py_compile \
     recon/classify.py docs/check-links.py artifacts/build-index.py \
     website/check-site.py website/optimize-images.py
+python3 -m unittest discover -s installer/tests
 sh recon/tests/test-classify.sh
 sh toggle/tests/lifecycle-test.sh
 sh toggle/tests/guest-distro-test.sh
@@ -41,8 +42,7 @@ else
     CXX=${CXX:-g++}
     "$CXX" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
         -Icontrol/include \
-        control/src/adapter.cpp control/src/observability.cpp \
-        control/src/journal.cpp \
+        control/src/adapter.cpp control/src/journal.cpp control/src/observability.cpp \
         control/src/policy.cpp control/src/protocol.cpp control/src/state.cpp \
         control/src/system.cpp control/src/transition.cpp \
         control/tests/control_tests.cpp -o "$WORK/control-tests"

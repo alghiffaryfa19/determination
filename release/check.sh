@@ -59,8 +59,6 @@ check_template() {
 }
 
 check_template magisk-module/module.prop.in
-check_template usb-install/install/module.prop.in
-check_template usb-install/restore/module.prop.in
 
 grep -Fq 'rootProject.file("../version.properties")' companion/app/build.gradle.kts \
     && grep -Fq 'versionCode = determinationVersionCode' companion/app/build.gradle.kts \
@@ -70,7 +68,6 @@ grep -Fq 'rootProject.file("../version.properties")' companion/app/build.gradle.
 
 for DET_PACKAGER in \
     magisk-module/build-module.sh \
-    usb-install/build-usb-payload.sh \
     release/build-online-bundle.sh
 do
     grep -Fq 'det_load_version' "$DET_PACKAGER" \

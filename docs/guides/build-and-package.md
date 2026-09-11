@@ -27,7 +27,7 @@ release; development branches are not release inputs.
 | Companion | Gradle wrapper in `companion/` | debug or signed release APK |
 | Debian guest | `guest/build-rootfs.sh` | qualified baseline rootfs archive |
 | Arch/Alpine guest | `guest/build-portable-rootfs.sh arch|alpine` | experimental profile archive; source verification required |
-| Module and USB payload | `magisk-module/build-module.sh`, `usb-install/build-usb-payload.sh` | versioned archive and checksums |
+| Module and PC bundle | `magisk-module/build-module.sh`, `release/build-online-bundle.sh` | versioned archives and checksums |
 | Online update bundle | `release/build-online-bundle.sh https://host/release/path` | app manifest, versioned artifacts, and checksums in `dist/online-release/` |
 | Release audit | `release/check.sh check` | static development checks |
 
