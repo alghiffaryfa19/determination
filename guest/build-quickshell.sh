@@ -34,7 +34,7 @@ esac
     echo 'quickshell source is not the pinned revision' >&2; exit 1;
 }
 if ! patch --dry-run -R -s -d "$SRC" -p1 < "$HERE/quickshell-vendor-egl.patch" 2>/dev/null; then
-    patch -d "$SRC" -p1 < "$HERE/quickshell-vendor-egl.patch"
+    patch --forward -d "$SRC" -p1 < "$HERE/quickshell-vendor-egl.patch" </dev/null
 fi
 
 export CMAKE_PREFIX_PATH=$PREFIX
