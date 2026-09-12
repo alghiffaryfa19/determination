@@ -1,3 +1,5 @@
+compat-commands
+det-omarchy-compat
 omarchy
 omarchy-agent
 omarchy-agent-crash
@@ -94,9 +96,9 @@ omarchy-hw-asus-expertbook-b9406
 omarchy-hw-asus-rog
 omarchy-hw-asus-zenbook-ux5406aa
 omarchy-hw-clamshell
+omarchy-hw-dell-xps13-sidecar-amps
 omarchy-hw-dell-xps-haptic-touchpad
 omarchy-hw-dell-xps-oled
-omarchy-hw-dell-xps13-sidecar-amps
 omarchy-hw-display
 omarchy-hw-elgato-camlink-4k
 omarchy-hw-external-monitors
@@ -158,6 +160,8 @@ omarchy-install-editor-emacs
 omarchy-install-editor-helix
 omarchy-install-editor-vscode
 omarchy-install-editor-zed
+omarchy-installed-service-dropbox
+omarchy-installed-service-tailscale
 omarchy-install-font
 omarchy-install-gaming-battlenet
 omarchy-install-gaming-geforce-now
@@ -180,8 +184,6 @@ omarchy-install-service-spotify
 omarchy-install-service-sunshine
 omarchy-install-service-tailscale
 omarchy-install-terminal
-omarchy-installed-service-dropbox
-omarchy-installed-service-tailscale
 omarchy-launch-1password
 omarchy-launch-about
 omarchy-launch-battlenet

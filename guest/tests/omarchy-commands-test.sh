@@ -18,7 +18,8 @@ MOCK
 chmod +x "$WORK/bin/xdg-open" "$WORK/bin/pacman"
 printf 'preserved\n' > "$WORK/links/omarchy-launch-terminal"
 "$DET_OMARCHY_PATH/bin/det-omarchy-compat" --install-links "$WORK/links"
-export PATH="$WORK/links:$PATH"
+# Mirror production precedence: bin/ first, compat links second.
+export PATH="$WORK/links:$DET_OMARCHY_PATH/bin:$PATH"
 grep -qx preserved "$WORK/links/omarchy-launch-terminal"
 omarchy-launch-webapp 'https://example.org/path?a=1&b=2'
 grep -Fxq 'https://example.org/path?a=1&b=2' "$TEST_LOG"
@@ -28,13 +29,40 @@ omarchy-pkg-missing absent
 ! omarchy-pkg-missing installed
 ! omarchy-pkg-present --help
 ! omarchy-system-reboot
+! omarchy-system-shutdown
 ! omarchy-update
+! omarchy-brightness-display
+! omarchy-brightness-display-ddc
 ! "$DET_OMARCHY_PATH/bin/det-omarchy-compat"
+# uwsm-app shim passes the command through with or without the `--` separator.
+[ "$(uwsm-app -- echo shimmed)" = shimmed ]
+[ "$(uwsm-app echo shimmed)" = shimmed ]
+# The floating-terminal launcher must not depend on the absent uwsm stack.
+! grep -q uwsm "$DET_OMARCHY_PATH/bin/omarchy-launch-floating-terminal-with-presentation"
+grep -q 'org.omarchy.terminal' "$DET_OMARCHY_PATH/bin/omarchy-launch-floating-terminal-with-presentation"
+# Every upstream command name resolves: either a vendored file in bin/ or a
+# Determination-owned name served by the compat shim.
+while IFS= read -r name; do
+    case "$name" in
+        compat-commands|det-omarchy-compat) continue ;;
+    esac
+    if [ ! -f "$DET_OMARCHY_PATH/bin/$name" ]; then
+        [ -e "$WORK/links/$name" ] || { echo "unresolved: $name" >&2; exit 1; }
+    fi
+done < "$DET_OMARCHY_PATH/bin/compat-commands"
 python3 - "$DET_OMARCHY_PATH" <<'PY'
-import json, pathlib, sys
+import json, pathlib, re, sys
 root = pathlib.Path(sys.argv[1])
-menu = json.loads((root / 'default/omarchy/omarchy-menu.jsonc').read_text())
+raw = (root / 'default/omarchy/omarchy-menu.jsonc').read_text()
+stripped = re.sub(r'^\s*//[^\n]*', '', raw, flags=re.M)
+stripped = re.sub(r',(\s*[}\]])', r'\1', stripped)
+menu = json.loads(stripped)
 assert menu['system.logout']['action'] == 'omarchy-system-logout'
-assert not any(key in menu for key in ('system.reboot', 'system.shutdown', 'system.suspend'))
+assert menu['system.logout']['label'] == 'Return to Android'
+assert not any(key in menu for key in ('system.reboot', 'system.shutdown', 'system.suspend', 'system.hibernate'))
+for section in ('learn', 'trigger', 'style', 'setup', 'install', 'remove', 'update'):
+    count = sum(1 for key in menu if key == section or key.startswith(section + '.'))
+    assert count > 1, (section, count)
+assert menu['learn.arch']['action'] == "omarchy-launch-webapp 'https://archlinuxarm.org'"
 PY
 echo 'Omarchy command tests passed'

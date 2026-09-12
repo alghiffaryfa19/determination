@@ -57,12 +57,16 @@ case "$command_name" in
         [ -w /mnt/det-control ] && : > /mnt/det-control/exit
         exit 0
         ;;
-    omarchy-system-lock)
-        loginctl lock-session 2>/dev/null || true
-        exit 0
-        ;;
     omarchy-system-reboot|omarchy-system-shutdown|omarchy-system-factory-reset)
         echo "$command_name: Android power control is unavailable from this session" >&2
+        exit 69
+        ;;
+    omarchy-update)
+        echo "$command_name: full-system update is not supported in this session; use the Update submenus for shell, config and hardware restarts" >&2
+        exit 69
+        ;;
+    omarchy-brightness-display|omarchy-brightness-display-apple|omarchy-brightness-display-ddc)
+        echo "$command_name: Android owns panel brightness in this session" >&2
         exit 69
         ;;
     omarchy-cmd-present)
@@ -103,10 +107,6 @@ case "$command_name" in
         ;;
     omarchy-launch-about)
         exec foot /bin/sh -c 'cat /etc/os-release; printf "\nOmarchy on Determination: vendor EGL through libhybris\n"; printf "Press Enter to close"; read -r answer'
-        ;;
-    omarchy-toggle-enabled)
-        # No Omarchy toggle state is implemented in this guest yet.
-        exit 1
         ;;
     omarchy-hw-touchscreen)
         exit 0
