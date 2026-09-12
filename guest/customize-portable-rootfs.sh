@@ -100,7 +100,7 @@ PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitEmptyPasswords no
 PubkeyAuthentication yes
-AllowUsers melissa
+AllowUsers detuser
 EOF_SSH
 fi
 
