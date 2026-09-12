@@ -10,8 +10,8 @@
 #   adb shell "su -c 'sh /data/local/tmp/native-smoke.sh'" \
 #       | tee artifacts/native-smoke-$(date +%Y%m%d).txt
 set -u
-DET=/data/determination
-LXC="$DET/lxc/bin/lxc-attach -P $DET -n guest --"
+AURORA=/data/aurora
+LXC="$AURORA/lxc/bin/lxc-attach -P $AURORA -n guest --"
 
 exec $LXC /bin/sh -c '
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

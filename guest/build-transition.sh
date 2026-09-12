@@ -2,14 +2,14 @@
 # Build the finite HWC transition client inside the running guest.
 #
 # Prerequisite: guest/build-libhybris.sh has completed, leaving its build tree
-# at /root/build/libhybris/hybris. Copy det-transition.cpp to /root first, then
+# at /root/build/libhybris/hybris. Copy aurora-transition.cpp to /root first, then
 # run this script through lxc-attach in phone mode.
 set -euo pipefail
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export TMPDIR=/tmp
 
-SRC=${1:-/root/det-transition.cpp}
+SRC=${1:-/root/aurora-transition.cpp}
 HYBRIS=/root/build/libhybris/hybris
 TESTS=$HYBRIS/tests
 
@@ -29,10 +29,10 @@ CXXFLAGS=(
     -std=gnu++17 -O2 -Wall -Wextra -Werror
 )
 
-g++ "${CXXFLAGS[@]}" -c "$SRC" -o det-transition-main.o
+g++ "${CXXFLAGS[@]}" -c "$SRC" -o aurora-transition-main.o
 
 /bin/bash ../libtool --tag=CXX --mode=link g++ "${CXXFLAGS[@]}" \
-    -o det-transition det-transition-main.o "$COMMON" -lm \
+    -o aurora-transition aurora-transition-main.o "$COMMON" -lm \
     ../common/libhybris-common.la \
     ../platforms/common/libhybris-platformcommon.la \
     ../egl/platforms/common/libhybris-eglplatformcommon.la \
@@ -40,5 +40,5 @@ g++ "${CXXFLAGS[@]}" -c "$SRC" -o det-transition-main.o
     ../hwc2/libhwc2.la ../libsync/libsync.la \
     ../egl/platforms/hwcomposer/libhybris-hwcomposerwindow.la
 
-install -m 0755 .libs/det-transition /usr/local/bin/det-transition
-echo "Installed /usr/local/bin/det-transition"
+install -m 0755 .libs/aurora-transition /usr/local/bin/aurora-transition
+echo "Installed /usr/local/bin/aurora-transition"

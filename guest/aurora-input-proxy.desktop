@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Aurora Input Proxy
+Comment=Routes explicitly captured external peripherals to the Aurora compositor
+Exec=/usr/local/bin/aurora-input-proxy
+NoDisplay=true
+X-KDE-Wayland-Interfaces=org_kde_kwin_fake_input

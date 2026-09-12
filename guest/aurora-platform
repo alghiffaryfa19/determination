@@ -1,0 +1,311 @@
+#!/bin/sh
+# Stable guest-userspace adapter for Aurora.
+#
+# Host-side lifecycle code must not know whether the active rootfs uses apt,
+# pacman, or apk; systemd or OpenRC; /usr/sbin/runuser or /usr/bin/runuser.
+# Every supported rootfs installs this file at /usr/local/bin/aurora-platform.
+
+set -eu
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+platform_id() {
+    id=
+    [ ! -r /etc/os-release ] || id=$(sed -n 's/^ID=//p' /etc/os-release | head -n 1 | tr -d '"')
+    case "$id" in
+        debian|ubuntu|droidian) echo debian ;;
+        arch|archarm) echo arch ;;
+        alpine) echo alpine ;;
+        *) echo "${id:-unknown}" ;;
+    esac
+}
+
+platform_libc() {
+    if command -v getconf >/dev/null 2>&1 && getconf GNU_LIBC_VERSION >/dev/null 2>&1; then
+        echo glibc
+    elif ls /lib/ld-musl-*.so.1 >/dev/null 2>&1; then
+        echo musl
+    else
+        echo unknown
+    fi
+}
+
+platform_init() {
+    if command -v systemctl >/dev/null 2>&1; then
+        echo systemd
+    elif command -v rc-service >/dev/null 2>&1; then
+        echo openrc
+    else
+        echo unknown
+    fi
+}
+
+safe_name() {
+    case "$1" in
+        ''|*[!A-Za-z0-9+_.@:-]*) return 1 ;;
+    esac
+}
+
+package_name() {
+    distro=$(platform_id)
+    logical=$1
+    safe_name "$logical" || { echo "invalid package id: $logical" >&2; return 2; }
+    case "$distro:$logical" in
+        arch:firefox-esr) echo firefox ;;
+        arch:epiphany-browser) echo epiphany ;;
+        arch:gnome-loupe) echo loupe ;;
+        arch:libreoffice) echo libreoffice-fresh ;;
+        arch:openssh-server) echo openssh ;;
+        alpine:epiphany-browser) echo epiphany ;;
+        alpine:gnome-loupe) echo loupe ;;
+        alpine:openssh-server) echo openssh-server ;;
+        alpine:squeekboard) echo phosh-keyboard ;;
+        *) echo "$logical" ;;
+    esac
+}
+
+package_installed() {
+    pkg=$(package_name "$1")
+    case "$(platform_id)" in
+        debian) dpkg-query -W -f='${db:Status-Status}' "$pkg" 2>/dev/null | grep -qx installed ;;
+        arch) pacman -Q "$pkg" >/dev/null 2>&1 ;;
+        alpine) apk info -e "$pkg" >/dev/null 2>&1 ;;
+        *) return 1 ;;
+    esac
+}
+
+package_refresh() {
+    case "$(platform_id)" in
+        debian) DEBIAN_FRONTEND=noninteractive apt-get update -qq ;;
+        arch) pacman -Syu --noconfirm ;;
+        alpine) apk update ;;
+        *) echo "unsupported package manager" >&2; return 1 ;;
+    esac
+}
+
+package_install_raw() {
+    [ "$#" -gt 0 ] || return 0
+    for pkg in "$@"; do safe_name "$pkg" || { echo "invalid package name: $pkg" >&2; return 2; }; done
+    case "$(platform_id)" in
+        debian)
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
+            ;;
+        arch) pacman -S --needed --noconfirm "$@" ;;
+        alpine) apk add "$@" ;;
+        *) echo "unsupported package manager" >&2; return 1 ;;
+    esac
+}
+
+package_install() {
+    mapped=
+    for logical in "$@"; do
+        pkg=$(package_name "$logical")
+        mapped="$mapped $pkg"
+    done
+    # Package names have already passed safe_name; intentional word splitting.
+    # shellcheck disable=SC2086
+    package_install_raw $mapped
+}
+
+package_remove() {
+    mapped=
+    for logical in "$@"; do
+        pkg=$(package_name "$logical")
+        mapped="$mapped $pkg"
+    done
+    case "$(platform_id)" in
+        debian) DEBIAN_FRONTEND=noninteractive apt-get remove -y $mapped ;;
+        arch) pacman -R --noconfirm $mapped ;;
+        alpine) apk del $mapped ;;
+        *) echo "unsupported package manager" >&2; return 1 ;;
+    esac
+}
+
+service_name() {
+    distro=$(platform_id)
+    case "$distro:$1" in
+        arch:ssh|alpine:ssh) echo sshd ;;
+        *) echo "$1" ;;
+    esac
+}
+
+service_start() {
+    service=$(service_name "$1")
+    case "$(platform_init)" in
+        systemd) systemctl start "$service" ;;
+        openrc) rc-service "$service" start ;;
+        *) return 1 ;;
+    esac
+}
+
+service_restart() {
+    service=$(service_name "$1")
+    case "$(platform_init)" in
+        systemd) systemctl restart "$service" ;;
+        openrc) rc-service "$service" restart ;;
+        *) return 1 ;;
+    esac
+}
+
+service_enable() {
+    service=$(service_name "$1")
+    case "$(platform_init)" in
+        systemd) systemctl enable "$service" ;;
+        openrc) rc-update add "$service" default ;;
+        *) return 1 ;;
+    esac
+}
+
+service_active() {
+    service=$(service_name "$1")
+    case "$(platform_init)" in
+        systemd) systemctl is-active --quiet "$service" ;;
+        openrc) rc-service "$service" status >/dev/null 2>&1 ;;
+        *) return 1 ;;
+    esac
+}
+
+run_user() {
+    user=$1
+    shift
+    [ "$#" -gt 0 ] || { echo "run-user needs a command" >&2; return 2; }
+    for runuser in /usr/sbin/runuser /usr/bin/runuser; do
+        [ ! -x "$runuser" ] || exec "$runuser" -u "$user" -- "$@"
+    done
+    if command -v setpriv >/dev/null 2>&1; then
+        exec setpriv --reuid "$user" --regid "$user" --init-groups "$@"
+    fi
+    echo "no supplementary-group-safe user launcher is installed" >&2
+    return 1
+}
+
+install_deps() {
+    component=$1
+    distro=$(platform_id)
+    case "$distro:$component" in
+        debian:runtime)
+            package_install_raw sudo dbus udev seatd pipewire pipewire-pulse wireplumber \
+                alsa-utils openssh-server wayland-protocols util-linux \
+                wl-clipboard xdg-desktop-portal xdg-desktop-portal-wlr
+            ;;
+        arch:runtime)
+            package_install_raw sudo dbus systemd seatd pipewire pipewire-pulse wireplumber \
+                alsa-utils openssh wayland-protocols util-linux shadow \
+                wl-clipboard xdg-desktop-portal xdg-desktop-portal-wlr
+            ;;
+        alpine:runtime)
+            package_install_raw openrc dbus sudo eudev seatd pipewire pipewire-pulse wireplumber \
+                alsa-utils openssh-server wayland-protocols util-linux shadow \
+                wl-clipboard xdg-desktop-portal xdg-desktop-portal-wlr
+            ;;
+        debian:phosh)
+            package_install_raw phosh squeekboard libinput-tools xkb-data fonts-cantarell \
+                gnome-settings-daemon-common adwaita-icon-theme feedbackd
+            ;;
+        arch:phosh)
+            package_install_raw phosh squeekboard libinput xkeyboard-config cantarell-fonts \
+                gnome-settings-daemon adwaita-icon-theme
+            ;;
+        alpine:phosh)
+            package_install_raw phosh phosh-keyboard libinput xkeyboard-config font-cantarell \
+                gnome-settings-daemon adwaita-icon-theme
+            ;;
+        debian:libhybris)
+            package_install_raw git build-essential automake libtool pkg-config android-headers-30 \
+                libwayland-dev wayland-protocols libwayland-egl-backend-dev
+            ;;
+        arch:libhybris)
+            package_install_raw base-devel git automake autoconf libtool pkgconf wayland wayland-protocols
+            ;;
+        alpine:libhybris)
+            package_install_raw build-base binutils git curl ca-certificates xz tar automake \
+                autoconf libtool pkgconf python3 wayland-dev wayland-protocols libbsd-dev
+            ;;
+        debian:libgbinder)
+            package_install_raw git build-essential pkg-config libglib2.0-dev
+            ;;
+        arch:libgbinder)
+            package_install_raw base-devel git pkgconf glib2
+            ;;
+        alpine:libgbinder)
+            package_install_raw build-base git pkgconf glib-dev
+            ;;
+        debian:wlroots-phoc)
+            package_install_raw meson ninja-build git ca-certificates pkg-config gettext \
+                wayland-protocols libwayland-dev libdrm-dev libgbm-dev libinput-dev \
+                libxkbcommon-dev libpixman-1-dev libseat-dev libudev-dev hwdata \
+                libegl-dev libgles-dev glslang-tools libevdev-dev libglib2.0-dev \
+                libgirepository1.0-dev libsystemd-dev systemd-dev libgnome-desktop-3-dev \
+                gsettings-desktop-schemas mutter-common libgmobile-dev libjson-glib-dev \
+                xwayland libxcb1-dev libxcb-composite0-dev libxcb-render0-dev \
+                libxcb-res0-dev libxcb-xfixes0-dev libxcb-icccm4-dev libxcb-ewmh-dev \
+                libxcb-xinput-dev libxcb-dri3-dev libxcb-present-dev libxcb-shm0-dev \
+                libdisplay-info-dev libliftoff-dev foot fonts-dejavu-core dbus grim
+            ;;
+        arch:wlroots-phoc)
+            package_install_raw base-devel meson ninja git ca-certificates pkgconf gettext \
+                wayland-protocols wayland libdrm mesa libinput libxkbcommon pixman seatd \
+                systemd hwdata libglvnd glslang libevdev glib2 gobject-introspection \
+                gnome-desktop gsettings-desktop-schemas mutter libgmobile json-glib \
+                xorg-xwayland libxcb libdisplay-info libliftoff foot ttf-dejavu dbus grim
+            ;;
+        alpine:wlroots-phoc)
+            package_install_raw build-base meson samurai git ca-certificates pkgconf gettext \
+                wayland-protocols wayland-dev libdrm-dev mesa-dev libinput-dev \
+                libxkbcommon-dev pixman-dev seatd libseat-dev eudev-dev hwdata hwdata-dev mesa-egl mesa-gles \
+                glslang libevdev-dev glib-dev gobject-introspection-dev elogind-dev \
+                gnome-desktop-dev gsettings-desktop-schemas mutter-dev gmobile-dev \
+                json-glib-dev xwayland xwayland-dev libxcb-dev xcb-util-wm-dev libdisplay-info-dev \
+                libliftoff-dev foot font-dejavu dbus grim
+            ;;
+        arch:aurorahyprland)
+            package_install_raw base-devel clang cmake ninja meson git pkgconf curl binutils \
+                pugixml pixman wayland wayland-protocols libinput libdrm mesa \
+                systemd libdisplay-info hwdata libglvnd cairo pango libjpeg-turbo \
+                libwebp file libspng libzip librsvg tomlplusplus libxkbcommon \
+                libxcursor re2 libxcb xcb-util-wm xcb-util-renderutil xcb-util-errors \
+                xorg-xwayland seatd
+            ;;
+        arch:quickshell)
+            package_install_raw qt6-base qt6-declarative qt6-shadertools qt6-wayland \
+                cli11 libdrm mesa vulkan-headers spirv-tools dbus glib2 wayland \
+                wayland-protocols systemd
+            ;;
+        *)
+            echo "unsupported dependency set: $distro/$component" >&2
+            return 2
+            ;;
+    esac
+}
+
+cmd=${1:-info}
+[ "$#" -eq 0 ] || shift
+case "$cmd" in
+    id) platform_id ;;
+    libc) platform_libc ;;
+    init) platform_init ;;
+    info)
+        echo "id=$(platform_id)"
+        echo "libc=$(platform_libc)"
+        echo "init=$(platform_init)"
+        ;;
+    run-user) run_user "$@" ;;
+    service-start) service_start "$@" ;;
+    service-restart) service_restart "$@" ;;
+    service-enable) service_enable "$@" ;;
+    service-active) service_active "$@" ;;
+    package-name) package_name "$@" ;;
+    package-refresh) package_refresh ;;
+    package-install) package_install "$@" ;;
+    package-remove) package_remove "$@" ;;
+    package-status)
+        for logical in "$@"; do
+            if package_installed "$logical"; then state=installed; else state=absent; fi
+            printf '%s=%s\n' "$logical" "$state"
+        done
+        ;;
+    deps) install_deps "$@" ;;
+    *)
+        echo "usage: aurora-platform info|id|libc|init|run-user|service-*|package-*|deps" >&2
+        exit 2
+        ;;
+esac

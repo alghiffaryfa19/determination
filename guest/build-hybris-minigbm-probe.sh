@@ -7,8 +7,8 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 SRC=${1:-/root/hybris-minigbm-probe.c}
 MODE=${2:-probe}
 OUT=/usr/local/bin/hybris-minigbm-probe
-PRESENTER_CLIENT=${DET_PRESENTER_CLIENT_SRC:-/root/presenter-client.c}
-PRESENTER_HEADERS=${DET_PRESENTER_HEADERS:-/root/determination-graphics}
+PRESENTER_CLIENT=${AURORA_PRESENTER_CLIENT_SRC:-/root/presenter-client.c}
+PRESENTER_HEADERS=${AURORA_PRESENTER_HEADERS:-/root/aurora-graphics}
 
 [ -r "$SRC" ] || {
     echo "FATAL: probe source missing: $SRC" >&2
@@ -40,15 +40,15 @@ echo "== libhybris vendor EGL + Android gralloc + minigbm gate =="
 export LD_LIBRARY_PATH=/usr/local/lib:/opt/minigbm/lib
 export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
 export ANDROID_ROOT=/system
-[ -r /etc/determination-device.conf ] && . /etc/determination-device.conf
-: "${DET_GRAPHICS_RENDERER:=libhybris}"
-: "${DET_GBM_PROVIDER:=minigbm}"
-[ "$DET_GRAPHICS_RENDERER" = libhybris ] || {
-    echo "FATAL: compatibility probe requires DET_GRAPHICS_RENDERER=libhybris" >&2
+[ -r /etc/aurora-device.conf ] && . /etc/aurora-device.conf
+: "${AURORA_GRAPHICS_RENDERER:=libhybris}"
+: "${AURORA_GBM_PROVIDER:=minigbm}"
+[ "$AURORA_GRAPHICS_RENDERER" = libhybris ] || {
+    echo "FATAL: compatibility probe requires AURORA_GRAPHICS_RENDERER=libhybris" >&2
     exit 2
 }
-[ "$DET_GBM_PROVIDER" = minigbm ] || {
-    echo "FATAL: compatibility probe requires DET_GBM_PROVIDER=minigbm" >&2
+[ "$AURORA_GBM_PROVIDER" = minigbm ] || {
+    echo "FATAL: compatibility probe requires AURORA_GBM_PROVIDER=minigbm" >&2
     exit 2
 }
 # Null owns no display but still initializes vendor EGL and gralloc. This gate
@@ -56,24 +56,24 @@ export ANDROID_ROOT=/system
 export EGL_PLATFORM=null HYBRIS_EGLPLATFORM=null
 case "$MODE" in
     probe)
-        exec "$OUT" "${DET_DRM_RENDER_NODE:-/dev/dri/renderD128}"
+        exec "$OUT" "${AURORA_DRM_RENDER_NODE:-/dev/dri/renderD128}"
         ;;
     benchmark)
         fb_size=$(cat /sys/class/graphics/fb0/virtual_size 2>/dev/null || true)
-        bench_width=${3:-${DET_PANEL_WIDTH:-${fb_size%,*}}}
-        bench_height=${4:-${DET_PANEL_HEIGHT:-${fb_size#*,}}}
+        bench_width=${3:-${AURORA_PANEL_WIDTH:-${fb_size%,*}}}
+        bench_height=${4:-${AURORA_PANEL_HEIGHT:-${fb_size#*,}}}
         bench_frames=${5:-240}
         bench_width=${bench_width:-1080}
         bench_height=${bench_height:-2340}
-        exec "$OUT" "${DET_DRM_RENDER_NODE:-/dev/dri/renderD128}" \
+        exec "$OUT" "${AURORA_DRM_RENDER_NODE:-/dev/dri/renderD128}" \
             --benchmark "$bench_width" "$bench_height" "$bench_frames"
         ;;
     present)
-        socket=${3:-/mnt/determination-presenter/presenter.sock}
+        socket=${3:-/mnt/aurora-presenter/presenter.sock}
         width=${4:-1920}
         height=${5:-1080}
         hold=${6:-20}
-        exec "$OUT" "${DET_DRM_RENDER_NODE:-/dev/dri/renderD128}" \
+        exec "$OUT" "${AURORA_DRM_RENDER_NODE:-/dev/dri/renderD128}" \
             --present "$socket" "$width" "$height" "$hold"
         ;;
     *)

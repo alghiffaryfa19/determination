@@ -30,7 +30,7 @@ def bundle(directory):
         files[kind] = directory / (kind + '.zip')
         with zipfile.ZipFile(files[kind], 'w') as archive:
             if kind == 'module':
-                archive.writestr('module.prop', 'id=determination\nversionCode=12\n')
+                archive.writestr('module.prop', 'id=aurora\nversionCode=12\n')
                 for name in ('customize.sh', 'tools/guest-distro', 'tools/desktop-on', 'zygisk/arm64-v8a.so', 'zygisk/armeabi-v7a.so'):
                     archive.writestr(name, 'fixture')
             else:
@@ -165,8 +165,8 @@ class CoreTests(unittest.TestCase):
 
     def test_profile_uses_detected_dimensions_and_vendor_graphics(self):
         profile = self.engine.device_profile(device()).read_text()
-        self.assertIn('DET_PANEL_HEIGHT=2400', profile)
-        self.assertIn('DET_GRAPHICS_RENDERER=libhybris', profile)
+        self.assertIn('AURORA_PANEL_HEIGHT=2400', profile)
+        self.assertIn('AURORA_GRAPHICS_RENDERER=libhybris', profile)
 
     def test_preparation_does_not_install_or_flash(self):
         backup = self.root / 'backup.img'
@@ -231,7 +231,7 @@ class CoreTests(unittest.TestCase):
         (remote / 'backup.img').write_bytes(original)
         import re
         import shlex
-        script = re.sub(r'/data/local/tmp/det-flash-[a-f0-9]+', str(remote), script)
+        script = re.sub(r'/data/local/tmp/aurora-flash-[a-f0-9]+', str(remote), script)
         functions = f'''getprop() {{
             case "$1" in
                 ro.boot.slot_suffix) printf '%s' '_a';;
@@ -273,8 +273,8 @@ class CoreTests(unittest.TestCase):
         selected = select_artifacts(manifest, device(), 'debian', True)
         with zipfile.ZipFile(Path(path).parent / selected['module']['name']) as archive:
             profile = archive.read('device-profiles/testphone.conf').decode()
-            self.assertIn('DET_GRAPHICS_RENDERER=libhybris', profile)
-            self.assertIn('DET_PANEL_WIDTH=1080', profile)
+            self.assertIn('AURORA_GRAPHICS_RENDERER=libhybris', profile)
+            self.assertIn('AURORA_PANEL_WIDTH=1080', profile)
         for artifact in selected.values():
             self.assertEqual(digest(Path(path).parent / artifact['name']), artifact['sha256'])
         self.assertTrue(any(call.args[0][-1] == 'olddefconfig' for call in runner.call_args_list))

@@ -2,7 +2,7 @@
 # The PC validates every artifact and retains a verified boot backup before this script runs.
 set -eu
 stage=$1 distro=$2 hostname=$3 version=$4 display_name=$5
-DET=/data/determination
+AURORA=/data/aurora
 case "$distro" in debian|arch|alpine) ;; *) exit 2 ;; esac
 case "$hostname" in ''|*[!a-z0-9-]*) exit 2 ;; esac
 case "$version" in ''|*[!0-9]*) exit 2 ;; esac
@@ -10,12 +10,12 @@ case "$version" in ''|*[!0-9]*) exit 2 ;; esac
 if printf '%s' "$display_name" | grep -q '[[:cntrl:]:,]'; then
     exit 2
 fi
-if [ -x "$DET/lxc/bin/lxc-info" ]; then
-    [ "$("$DET/lxc/bin/lxc-info" -P "$DET" -n guest -sH)" = STOPPED ]
+if [ -x "$AURORA/lxc/bin/lxc-info" ]; then
+    [ "$("$AURORA/lxc/bin/lxc-info" -P "$AURORA" -n guest -sH)" = STOPPED ]
 fi
-if [ -d "$DET/versions/$version" ]; then
-    [ -x "$DET/bin/guest-distro" ] || { echo 'Existing module version is incomplete.'; exit 1; }
-    [ "$(readlink -f "$DET/current")" = "$DET/versions/$version" ] || {
+if [ -d "$AURORA/versions/$version" ]; then
+    [ -x "$AURORA/bin/guest-distro" ] || { echo 'Existing module version is incomplete.'; exit 1; }
+    [ "$(readlink -f "$AURORA/current")" = "$AURORA/versions/$version" ] || {
         echo 'This module version exists but is not active. Resolve the existing installation before retrying.'
         exit 1
     }
@@ -23,8 +23,8 @@ if [ -d "$DET/versions/$version" ]; then
 else
     magisk --install-module "$stage/module"
 fi
-mkdir -p "$DET/lxc"
-runtime="$DET/lxc/bin.new.$$"
+mkdir -p "$AURORA/lxc"
+runtime="$AURORA/lxc/bin.new.$$"
 mkdir -m 700 "$runtime"
 tar -xzf "$stage/runtime" -C "$runtime"
 for tool in lxc-start lxc-stop lxc-attach lxc-info lxc-ls lxc-console lxc-execute; do
@@ -32,24 +32,24 @@ for tool in lxc-start lxc-stop lxc-attach lxc-info lxc-ls lxc-console lxc-execut
     chmod 0755 "$runtime/$tool"
 done
 "$runtime/lxc-start" --version
-previous="$DET/lxc/bin.previous.$$"
-[ ! -d "$DET/lxc/bin" ] || mv "$DET/lxc/bin" "$previous"
-if ! mv "$runtime" "$DET/lxc/bin"; then
-    [ ! -d "$previous" ] || mv "$previous" "$DET/lxc/bin"
+previous="$AURORA/lxc/bin.previous.$$"
+[ ! -d "$AURORA/lxc/bin" ] || mv "$AURORA/lxc/bin" "$previous"
+if ! mv "$runtime" "$AURORA/lxc/bin"; then
+    [ ! -d "$previous" ] || mv "$previous" "$AURORA/lxc/bin"
     exit 1
 fi
-inventory=$("$DET/bin/guest-distro" list)
+inventory=$("$AURORA/bin/guest-distro" list)
 if ! printf '%s\n' "$inventory" | grep -q "^$distro|installed|"; then
-    "$DET/bin/guest-distro" install "$distro" "$stage/rootfs"
+    "$AURORA/bin/guest-distro" install "$distro" "$stage/rootfs"
 fi
-"$DET/bin/guest-distro" activate "$distro"
-root=$("$DET/bin/guest-distro" root)
+"$AURORA/bin/guest-distro" activate "$distro"
+root=$("$AURORA/bin/guest-distro" root)
 [ -d "$root/etc" ]
 [ -f "$root/etc/passwd" ] || { echo 'Active guest has no passwd database.'; exit 1; }
 passwd_new="$root/etc/passwd.new.$$"
-export DET_DISPLAY_NAME="$display_name"
+export AURORA_DISPLAY_NAME="$display_name"
 if ! awk -F: -v OFS=: '
-    $3 == 1000 { $5 = ENVIRON["DET_DISPLAY_NAME"]; found = 1 }
+    $3 == 1000 { $5 = ENVIRON["AURORA_DISPLAY_NAME"]; found = 1 }
     { print }
     END { if (!found) exit 1 }
 ' "$root/etc/passwd" > "$passwd_new"; then
@@ -60,7 +60,7 @@ fi
 chmod 0644 "$passwd_new"
 mv -f "$passwd_new" "$root/etc/passwd"
 printf '%s\n' "$hostname" > "$root/etc/hostname"
-printf 'hostname=%s\n' "$hostname" > "$DET/etc/installer.conf.new"
-chmod 0600 "$DET/etc/installer.conf.new"
-mv "$DET/etc/installer.conf.new" "$DET/etc/installer.conf"
+printf 'hostname=%s\n' "$hostname" > "$AURORA/etc/installer.conf.new"
+chmod 0600 "$AURORA/etc/installer.conf.new"
+mv "$AURORA/etc/installer.conf.new" "$AURORA/etc/installer.conf"
 echo "Userspace installed. Previous runtime retained at $previous."

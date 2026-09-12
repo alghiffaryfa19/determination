@@ -19,4 +19,4 @@ case "$target:$method:$#" in
     shell:summon:1|shell:toggle:1) set -- "$1" "{}" ;;
 esac
 
-exec /usr/local/bin/det-omarchy ipc "$target" "$method" "$@"
+exec /usr/local/bin/aurora-omarchy ipc "$target" "$method" "$@"

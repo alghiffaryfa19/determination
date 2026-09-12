@@ -34,9 +34,9 @@ mkdir -p /tmp        # config.guess needs a writable one.
 # Build deps. android-headers-30 provides the pkg-config 'android-headers'
 # module and hardware/hwcomposer2.h (gates the hwc2 path). Newer header
 # packages don't exist in the repo; 30 is fine, the A16 support is runtime.
-if command -v det-platform >/dev/null 2>&1; then
-    det-platform package-refresh
-    det-platform deps libhybris
+if command -v aurora-platform >/dev/null 2>&1; then
+    aurora-platform package-refresh
+    aurora-platform deps libhybris
     if ! pkg-config --exists 'android-headers >= 9.0.0'; then
         "$(dirname "$0")/install-android-headers.sh"
     fi
@@ -60,7 +60,7 @@ mkdir -p "$(dirname "$SRC")"
 # libc.so (offset 0x83b28 on this ROM). Also hook the *_l family: hooked
 # newlocale() hands out GLIBC locale_t objects, so bionic's *_l consumers
 # would misinterpret them; and the mb/wc conversions libc++ facets use.
-HOST_LIBC=$(det-platform libc 2>/dev/null || echo glibc)
+HOST_LIBC=$(aurora-platform libc 2>/dev/null || echo glibc)
 if [ "$HOST_LIBC" = musl ]; then
     # libhybris' bundled bionic linker includes <sys/cdefs.h>. musl does not
     # ship that glibc/BSD compatibility header, but Alpine's libbsd overlay
@@ -69,7 +69,7 @@ if [ "$HOST_LIBC" = musl ]; then
         echo "FATAL: musl libhybris build needs libbsd-overlay (libbsd-dev)" >&2
         exit 1
     }
-    MUSL_COMPAT="$SRC/hybris/common/det-musl-compat.h"
+    MUSL_COMPAT="$SRC/hybris/common/aurora-musl-compat.h"
     cat > "$MUSL_COMPAT" <<'MUSLEOF'
 #pragma once
 /* Android's bundled linker expects glibc large-file aliases. On 64-bit musl,
@@ -160,7 +160,7 @@ HOOKPATCH
 fi
 [ "$HOST_LIBC" != musl ] || echo "musl host: skipping the glibc locale_t/TLS hook set"
 
-# test_hwcomposer is Determination's TEMP §4 render placeholder: toggle/desktop-on
+# test_hwcomposer is Aurora's TEMP §4 render placeholder: toggle/desktop-on
 # runs it as the stand-in "compositor" until sway/phoc lands. Upstream's demo
 # renders a FIXED frame count (`for (i=0; i<1020*60; ++i)`) then exits ~24s,
 # which tears the hwc2 display down; desktop-on needs it to render CONTINUOUSLY
@@ -296,7 +296,7 @@ HWCW="$SRC/hybris/egl/platforms/hwcomposer"
 if ! grep -q HWCNativeWindowSetBufferCount "$HWCW/hwcomposer.h"; then
     sed -i '/void HWCNativeWindowDestroy(struct ANativeWindow \*window);/a\
 \
-/* Determination (droidian API parity): set swapchain depth. droidian wlroots\
+/* Aurora (droidian API parity): set swapchain depth. droidian wlroots\
  * hwcomposer backend calls this for triple buffering. */\
 void HWCNativeWindowSetBufferCount(struct ANativeWindow *window, int cnt);' \
         "$HWCW/hwcomposer.h"
@@ -347,7 +347,7 @@ SRC = sys.argv[1]
 MACRO_LINE = "HYBRIS_IMPLEMENT_VOID_FUNCTION4(glesv2, glShaderSource, GLuint, GLsizei, const GLchar *const *, const GLint *);"
 
 IMPL = r"""
-/* Determination: Adreno struct-varying miscompilation workaround.
+/* Aurora: Adreno struct-varying miscompilation workaround.
  * The Adreno GLES blob (seen on A640 V@0502) mishandles struct varyings
  * matched by name across stages: a "flat in Rect/RoundedRect" read as a
  * whole struct (e.g. passed into a function) yields zeros, while per-field
@@ -477,7 +477,7 @@ if "_gskfix_rewrite" in src:
 if MACRO_LINE not in src:
     print("gskfix: ERROR macro line not found", file=sys.stderr)
     sys.exit(1)
-src = src.replace(MACRO_LINE, "/* Determination: replaced by custom glShaderSource below. */" + IMPL)
+src = src.replace(MACRO_LINE, "/* Aurora: replaced by custom glShaderSource below. */" + IMPL)
 open(SRC, "w").write(src)
 print("gskfix: patched", SRC)
 GSKFIXEOF
@@ -504,7 +504,7 @@ VULKAN_IDLOAD(vkCmdCudaLaunchKernelNV);
 #endif
 """
 assert block in s, "stale CUDA block changed shape"
-s = s.replace(block, "/* Determination: VK_HEADER_VERSION>=269 CUDA block removed: headers renamed this family to Cu...NVX (already loaded above). */\n", 1)
+s = s.replace(block, "/* Aurora: VK_HEADER_VERSION>=269 CUDA block removed: headers renamed this family to Cu...NVX (already loaded above). */\n", 1)
 p.write_text(s)
 print("vulkan CUDA rename: stale block removed")
 VULKANFIXEOF

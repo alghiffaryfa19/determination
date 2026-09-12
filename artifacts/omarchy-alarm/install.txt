@@ -1,1 +1,1 @@
-installed arch at /data/determination/guests/arch/rootfs
+installed arch at /data/aurora/guests/arch/rootfs

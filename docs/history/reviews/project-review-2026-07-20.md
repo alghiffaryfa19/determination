@@ -7,7 +7,7 @@
 
 **Reviewed state:** `main` at `4811f05`, plus the current uncommitted external-presenter/audio work
 
-**Bottom line:** Determination is a successful, unusually complete device-specific alpha. It is no longer a feasibility experiment. It is also not yet a dependable release or a portable convergence platform. The hard problem has changed from “can this work?” to “can this recover, reproduce, survive, and work somewhere other than the original reference phone?”
+**Bottom line:** Aurora is a successful, unusually complete device-specific alpha. It is no longer a feasibility experiment. It is also not yet a dependable release or a portable convergence platform. The hard problem has changed from “can this work?” to “can this recover, reproduce, survive, and work somewhere other than the original reference phone?”
 
 ## The honest answer
 
@@ -21,7 +21,7 @@
 - The system can be entered and exited repeatedly without the old SurfaceFlinger/watchdog crash loop.
 - There is now a credible recovery and restore story rather than a one-way demo.
 
-That is a hell of an achievement. Most projects in this area stop at a compositor drawing one frame, require a Frankenstein mainline kernel, or quietly replace Android. Determination has a real daily-usable environment on the downstream Android kernel and keeps the original device stack intact.
+That is a hell of an achievement. Most projects in this area stop at a compositor drawing one frame, require a Frankenstein mainline kernel, or quietly replace Android. Aurora has a real daily-usable environment on the downstream Android kernel and keeps the original device stack intact.
 
 “Almost everything works” is not yet fair against the whole project promise:
 
@@ -41,7 +41,7 @@ The apparent disagreement between “it works” and “it isn't ready” disapp
 | --- | --- | --- |
 | Internal desktop on this OnePlus 7 | Boots, renders, accepts input, networks, wakes, exits, and is remotely usable | **Mostly achieved; hardening remains** |
 | Aqua release as currently scoped | Core experience exists, but ship gates, signing, cycle tests, soak, and reproducible artifacts are open | **Feature-complete-ish, release-incomplete** |
-| Determination north star | Live Android plus concurrent external desktop, portable across device families | **Architecture proven in pieces; product not yet assembled** |
+| Aurora north star | Live Android plus concurrent external desktop, portable across device families | **Architecture proven in pieces; product not yet assembled** |
 
 That distinction should stay explicit in the README, release notes, and milestone language. It prevents a technically honest internal-display release from being judged as a failed universal-convergence release, and it prevents a good demo from being advertised as a finished platform.
 
@@ -57,7 +57,7 @@ The proof is broad rather than cosmetic:
 - libhybris can talk to the Android 16 vendor EGL/GLES implementation;
 - the Droidian wlroots/phoc stack can drive the internal display through HWC;
 - real Wayland clients use GPU buffers rather than a screenshot or software-only path;
-- the session runs as `detuser`, not as an ornamental root shell;
+- the session runs as `aurora`, not as an ornamental root shell;
 - input ownership, PTYs, `nosuid`, pidfd incompatibility, battery lies, wake behavior, and session-manager behavior have all been chased down at their actual layer.
 
 That last point matters. The project repeatedly encountered bugs that look tiny in a screenshot but are the difference between a demo and a system: `/dev/ptmx`, input GIDs, `/etc/phoc.ini` permissions, a charger re-enumerating its power-supply node, and a half-backported pidfd API. The fixes are now encoded rather than living only in terminal history.
@@ -81,20 +81,20 @@ They are not an end-to-end compositor benchmark. They exclude KWin, presentation
 
 ### 3. The system now has a real escape path
 
-Recovery engineering is one of the strongest parts of Determination:
+Recovery engineering is one of the strongest parts of Aurora:
 
 - known-good boot images are backed up;
 - check/flash/restore/verify flows exist;
 - dry-run behavior exists;
 - pstore/ramoops provides post-crash evidence;
 - desktop-off restores Android rather than hoping a reboot hides state;
-- `det guest-root` remains an explicit escape hatch while normal use stays unprivileged.
+- `aurora guest-root` remains an explicit escape hatch while normal use stays unprivileged.
 
 That is more important than another settings screen. A convergence layer which can take over display, input, and Android services must make failure boring.
 
 ### 4. The project has become pleasant enough to inhabit
 
-Direct key-only SSH to `detuser@192.168.117.2`, a useful MOTD, correct terminal capabilities, a global `det` command, Fish, and a non-root desktop do not solve the core architecture. They do change the project from something only its author can nurse through ADB into something that can be used normally.
+Direct key-only SSH to `aurora@192.168.117.2`, a useful MOTD, correct terminal capabilities, a global `aurora` command, Fish, and a non-root desktop do not solve the core architecture. They do change the project from something only its author can nurse through ADB into something that can be used normally.
 
 The recent transition animation and UI polish are in the same category: valuable now that the core works, but not substitutes for correctness. The balance is currently reasonable.
 
@@ -127,7 +127,7 @@ That owner should provide:
 - a journal of completed steps;
 - reverse-order rollback;
 - reconciliation after host-agent death, guest death, or reboot;
-- machine-readable health for `det status` and the companion app.
+- machine-readable health for `aurora status` and the companion app.
 
 The current scripts have become much better: they validate more prerequisites, poll for real conditions, and handle known failure cases. But adding another loop every time a race appears will eventually make recovery less knowable, not more reliable. This is the highest-leverage engineering task after the first external frame.
 
@@ -189,7 +189,7 @@ Treat audio as its own system boundary: define the transport, route ownership, l
 At review time:
 
 - Aqua reported `0.5.0-alpha.1` / versionCode 12;
-- the determination kernel and module were active;
+- the aurora kernel and module were active;
 - the guest was running at `192.168.117.2`;
 - phoc, phosh, seatd, SSH, portals, PipeWire, and WirePlumber were present;
 - system_server was stopped in state `T`, as designed for internal desktop mode;
@@ -269,7 +269,7 @@ There are 110 commits, 13 commits ahead of `origin/main`, and a dirty working tr
 
 ## Testing and observability
 
-Determination has many valuable on-device probes and smoke gates. It has almost no conventional automated test suite and no CI. Those are different facts, and both matter.
+Aurora has many valuable on-device probes and smoke gates. It has almost no conventional automated test suite and no CI. Those are different facts, and both matter.
 
 The highest-value tests are not generic coverage metrics. They are tests for the boundaries that have already failed:
 
@@ -282,7 +282,7 @@ The highest-value tests are not generic coverage metrics. They are tests for the
 - reproducibility checks which reject moving refs in release mode;
 - a hardware test runner which records cycle outcomes and artifact hashes.
 
-Observability also needs consolidation. In desktop mode, system_server is frozen, some Android diagnostics hang, guest log access is fragmented, and routine `lxc-attach` output still carries noisy unsupported-seccomp warnings. A `det doctor --json` command should report, without needing framework services:
+Observability also needs consolidation. In desktop mode, system_server is frozen, some Android diagnostics hang, guest log access is fragmented, and routine `lxc-attach` output still carries noisy unsupported-seccomp warnings. A `aurora doctor --json` command should report, without needing framework services:
 
 - desired and observed mode;
 - transition owner and age;
@@ -396,7 +396,7 @@ Threat model, minimize nodes and permissions, authenticate IPC, add quotas, and 
 
 ## Final judgement
 
-Determination has crossed the most important line: it is real. It boots, renders, accepts input, survives, returns to Android, and is comfortable enough to SSH into and use. The project has solved enough obscure downstream-kernel and vendor-graphics problems that dismissing it as a hack would be ignorant.
+Aurora has crossed the most important line: it is real. It boots, renders, accepts input, survives, returns to Android, and is comfortable enough to SSH into and use. The project has solved enough obscure downstream-kernel and vendor-graphics problems that dismissing it as a hack would be ignorant.
 
 It is also standing at the point where clever hacks stop compounding positively. The system_server freezer, shell orchestration, broad device access, moving dependencies, and one-device evidence were all reasonable ways to reach proof quickly. If they remain the permanent architecture, they will cap the project below its stated ambition.
 
@@ -410,6 +410,6 @@ The next phase should be less visually dramatic and more ruthless:
 - prove the external buffer path;
 - then make a second phone expose every hidden assumption.
 
-If Aqua is scoped honestly, Determination is close to a releasable OnePlus 7 alpha. If the goal is the full “Android remains live while a Linux desktop runs externally across many phones” promise, the project is perhaps halfway through product engineering even though it is much further than halfway through technical discovery.
+If Aqua is scoped honestly, Aurora is close to a releasable OnePlus 7 alpha. If the goal is the full “Android remains live while a Linux desktop runs externally across many phones” promise, the project is perhaps halfway through product engineering even though it is much further than halfway through technical discovery.
 
-That is not a demotion. Technical discovery is where projects like this usually die. Determination survived it. Now it has to become boring on purpose.
+That is not a demotion. Technical discovery is where projects like this usually die. Aurora survived it. Now it has to become boring on purpose.

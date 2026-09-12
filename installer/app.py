@@ -98,7 +98,7 @@ class Interview:
         self.palette = Palette()
         self.device = None
         self.repo = Path(__file__).resolve().parents[1]
-        self.verbose = os.environ.get('DETERMINATION_VERBOSE') == '1'
+        self.verbose = os.environ.get('AURORA_VERBOSE') == '1'
         self.current_phase = ''
         self.engine.emit = self.event
         self.settings_path = self.engine.workspace / 'settings.json'
@@ -140,7 +140,7 @@ class Interview:
         print(self.palette.accent('  Android convergence installer'))
         print(self.palette.faint('  A linear interview for building, installing, and recovering the phone.'))
         if not self.verbose:
-            print(self.palette.faint('  Set DETERMINATION_VERBOSE=1 for full commands and probe output.'))
+            print(self.palette.faint('  Set AURORA_VERBOSE=1 for full commands and probe output.'))
         print()
 
     def ask(self, label, default=None, validate=None):
@@ -202,11 +202,11 @@ class Interview:
 
     def local_manifest(self):
         candidates = [
-            self.repo / 'dist/online-release/determination-update.json',
-            self.engine.workspace / 'determination-update.json',
+            self.repo / 'dist/online-release/aurora-update.json',
+            self.engine.workspace / 'aurora-update.json',
         ]
         candidates.extend(sorted(
-            self.engine.workspace.glob('ports/*/bundle-*/determination-update.json'),
+            self.engine.workspace.glob('ports/*/bundle-*/aurora-update.json'),
             key=lambda path: path.stat().st_mtime if path.exists() else 0,
             reverse=True,
         ))
@@ -245,12 +245,12 @@ class Interview:
         return normalize(remote) == normalize(profile['source_url']) and branch.strip() == profile['source_ref']
 
     def automatic_kernel_source(self, profile):
-        override = os.environ.get('DETERMINATION_KERNEL_SOURCE')
+        override = os.environ.get('AURORA_KERNEL_SOURCE')
         if override:
             if override.startswith('https://'):
                 return https_url(override)
             if not self.valid_kernel_source(override):
-                raise Failure('DETERMINATION_KERNEL_SOURCE is not a usable kernel source tree.')
+                raise Failure('AURORA_KERNEL_SOURCE is not a usable kernel source tree.')
             return str(Path(override).expanduser().resolve())
         candidates = (
             self.repo / 'kernel/src',
@@ -263,9 +263,9 @@ class Interview:
         return profile['source_url']
 
     def automatic_distro(self, manifest, preferred=None):
-        preferred = os.environ.get('DETERMINATION_DISTRO') or preferred or self.settings.get('distro') or 'debian'
+        preferred = os.environ.get('AURORA_DISTRO') or preferred or self.settings.get('distro') or 'debian'
         if preferred not in ('debian', 'arch', 'alpine'):
-            raise Failure('DETERMINATION_DISTRO must be debian, arch, or alpine.')
+            raise Failure('AURORA_DISTRO must be debian, arch, or alpine.')
         available = []
         if manifest and not manifest.startswith('https://'):
             data = self.engine.load_manifest(manifest)
@@ -290,17 +290,17 @@ class Interview:
                 return https_url(text)
             path = Path(text).expanduser()
             if path.is_dir():
-                path = path / 'determination-update.json'
+                path = path / 'aurora-update.json'
             if not text or not path.is_file():
                 raise Failure(
-                    'That bundle was not found. Enter its determination-update.json file, '
+                    'That bundle was not found. Enter its aurora-update.json file, '
                     'the folder containing that file, or an HTTPS URL.'
                 )
             return str(path.resolve())
 
         suggested = default or self.settings.get('manifest') or DEFAULT_MANIFEST or self.local_manifest()
         print(f'\n  {purpose}:', flush=True)
-        print('    This is the determination-update.json file that lists every install file', flush=True)
+        print('    This is the aurora-update.json file that lists every install file', flush=True)
         print('    and its checksum. You may paste the JSON file, its folder, or an HTTPS URL.', flush=True)
         if not suggested:
             print(self.palette.faint(
@@ -442,16 +442,16 @@ class Interview:
         if profile:
             print(f'\n  Port profile: {profile["label"]} (exact device, SDK, ROM, and kernel match)', flush=True)
             source = self.automatic_kernel_source(profile)
-            ref = os.environ.get('DETERMINATION_KERNEL_REF', profile['source_ref'])
-            target = os.environ.get('DETERMINATION_KERNEL_TARGET', profile['target'])
+            ref = os.environ.get('AURORA_KERNEL_REF', profile['source_ref'])
+            target = os.environ.get('AURORA_KERNEL_TARGET', profile['target'])
             print(f'  Kernel source: {source}', flush=True)
             print(f'  Kernel branch: {ref}', flush=True)
             print(f'  Kernel target: {target}', flush=True)
         else:
             print('\n  No exact maintained port profile matched this phone; source details are required.', flush=True)
             source = self.kernel_source()
-            ref = os.environ.get('DETERMINATION_KERNEL_REF', '')
-            target = os.environ.get('DETERMINATION_KERNEL_TARGET', 'Image')
+            ref = os.environ.get('AURORA_KERNEL_REF', '')
+            target = os.environ.get('AURORA_KERNEL_TARGET', 'Image')
         if source.startswith('https://'):
             if not ref:
                 print('  Use the branch or tag for the Android build shown above.', flush=True)
@@ -462,8 +462,8 @@ class Interview:
             source = self.engine.fetch_source(source, ref, profile['id'] if profile else self.device['device'])
         else:
             self.remember(kernel_source=source)
-        jobs = jobs_value(os.environ.get('DETERMINATION_BUILD_JOBS', str(min(os.cpu_count() or 2, 16))))
-        overrides = compiler_value(os.environ.get('DETERMINATION_KERNEL_MAKE_ARGS', ''))
+        jobs = jobs_value(os.environ.get('AURORA_BUILD_JOBS', str(min(os.cpu_count() or 2, 16))))
+        overrides = compiler_value(os.environ.get('AURORA_KERNEL_MAKE_ARGS', ''))
         print(f'  Build settings: {jobs} jobs; ROM toolchain defaults', flush=True)
         manifest = self.manifest(purpose='Base bundle for the Linux desktop and companion app')
         distro = self.automatic_distro(manifest, 'debian')
@@ -530,7 +530,7 @@ class Interview:
 def main():
     parser = argparse.ArgumentParser(prog='aurora-installer', description='Aurora PC porting and installation interview')
     parser.add_argument('command', nargs='?', choices=('init', 'install', 'port', 'recovery'), default='init')
-    parser.add_argument('--workspace', default=str(Path.home() / '.local/share/determination'))
+    parser.add_argument('--workspace', default=str(Path.home() / '.local/share/aurora'))
     parser.add_argument('--adb', default='adb')
     parser.add_argument('--magiskboot', default='magiskboot')
     args = parser.parse_args()

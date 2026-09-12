@@ -1,4 +1,4 @@
-# Determination release input manifest
+# Aurora release input manifest
 # Values are immutable identifiers or SHA-256 digests. UNRESOLVED is permitted
 # only during development and is a ship failure.
 schema=1

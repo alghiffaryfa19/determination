@@ -48,7 +48,7 @@ fi
 mkdir -p "$OUT"
 rm -f "$OUT/kernel-image.path"
 cp "$BASECONFIG" "$OUT/.config"
-set -- "$PWD/determination.config"
+set -- "$PWD/aurora.config"
 if [ "$DEVICE" = guacamoleb ]; then
     set -- "$@" "$PWD/profiles/guacamoleb.config"
 fi
@@ -64,7 +64,7 @@ if [ "$DEVICE" = guacamoleb ]; then
     grep -q '^CONFIG_QCA_CLD_WLAN=y' "$OUT/.config" || { echo 'MERGE FAILED: CONFIG_QCA_CLD_WLAN not set' >&2; exit 1; }
 fi
 ! grep -q '^CONFIG_FRAMEBUFFER_CONSOLE=y' "$OUT/.config" || { echo 'MERGE FAILED: fbcon enabled; would fight SF for the panel' >&2; exit 1; }
-echo 'config OK: all Determination options present'
+echo 'config OK: all Aurora options present'
 kmake -j"$JOBS" "$KERNEL_TARGET"
 IMAGE="$OUT/arch/arm64/boot/$KERNEL_TARGET"
 [ -s "$IMAGE" ] || { echo "Build produced no kernel: $IMAGE" >&2; exit 1; }

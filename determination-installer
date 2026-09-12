@@ -1,5 +1,0 @@
-#!/bin/sh
-# Compatibility launcher for the former project name.
-set -eu
-ROOT=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
-exec "$ROOT/aurora-installer" "$@"

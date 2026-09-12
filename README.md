@@ -1,4 +1,4 @@
-# Determination
+# Aurora
 
 Android convergence layer for Android 16
 
@@ -21,7 +21,7 @@ Magisk-patched ramdisk) plus a Zygisk module : **not a ROM** (though can be adap
 
 ## PC installation and porting
 
-Launch `./determination-installer` on a Linux PC to start the linear porting and
+Launch `./aurora-installer` on a Linux PC to start the linear porting and
 installation interview. It asks one validated question at a time for device
 discovery, verified releases, kernel builds, device bundle generation,
 installation, and PC-held boot backups. The Android companion controls the installed desktop;
@@ -36,10 +36,10 @@ See the [workbench guide](installer/README.md) for host setup and the complete f
 | `recon/` | §9 device recon : run first, with the phone attached |
 | `kernel/` | kconfig fragment (container enables) + fetch/build scripts for the downstream SM8150 kernel |
 | `boot/` | boot.img unpack/repack with the custom kernel; Magisk patching flow |
-| `magisk-module/` | the on-device Determination Magisk module: container launch, boot hooks, sepolicy rules |
+| `magisk-module/` | the on-device Aurora Magisk module: container launch, boot hooks, sepolicy rules |
 | `guest/` | Debian baseline plus experimental Arch Linux ARM/Alpine rootfs builders; shared LXC, libhybris, and session contract |
-| `toggle/` | §4 internal-panel handoff: SF stop + respawn suppression + compositor swap + input grab; plus `det-hostagent` (guest→host control channel) |
-| `control/` | native `detd` state/API owner, `detctl` client, durable-state/protocol core, and host tests |
+| `toggle/` | §4 internal-panel handoff: SF stop + respawn suppression + compositor swap + input grab; plus `aurora-hostagent` (guest→host control channel) |
+| `control/` | native `aurorad` state/API owner, `auroractl` client, durable-state/protocol core, and host tests |
 | `audio/` | direct ALSA hardware and ownership binaries |
 | `companion/` | Android UI and permission facade: mode confirmation, status/API, Quick Settings, share sheet, optional external presenter |
 | `tools/evgrab/` | small C daemon that holds `EVIOCGRAB` on evdev nodes during desktop mode |
@@ -58,7 +58,7 @@ Run every host-safe check from the repository root:
 
 ## Licensing
 
-Determination's original code is [MIT-licensed](LICENSE). Components we build,
+Aurora's original code is [MIT-licensed](LICENSE). Components we build,
 vendor, or modify retain their own licences; see
 [third-party notices](THIRD_PARTY_NOTICES.md) and the verbatim texts in
 [`LICENSES/`](LICENSES/) before redistributing a boot image, guest rootfs, module
@@ -73,10 +73,10 @@ retaining the minimum Android and vendor services needed for the downstream
 kernel, radio, thermal, power, binder, and qualified networking stack:
 
 ```sh
-det linux-first status
-det linux-first enable
-det linux-first apply
-det linux-first disable
+aurora linux-first status
+aurora linux-first enable
+aurora linux-first apply
+aurora linux-first disable
 ```
 
 . See the
@@ -94,15 +94,15 @@ subnet through the phone's current Wi-Fi address, giving the container a real
 directly reachable address:
 
 ```sh
-det ssh-setup                    # server, public key, SSH config, host route
-ssh detuser@192.168.117.2        # exactly this; no ProxyCommand
-det ssh-route                    # refresh after phone DHCP or host route changes
-det motd-setup                   # refresh the guest's dynamic login banner
+aurora ssh-setup                    # server, public key, SSH config, host route
+ssh aurora@192.168.117.2        # exactly this; no ProxyCommand
+aurora ssh-route                    # refresh after phone DHCP or host route changes
+aurora motd-setup                   # refresh the guest's dynamic login banner
 ```
 
-Pass an existing public key to `det ssh-setup` if preferred. Set
-its matching private key in `~/.ssh/config.d/determination` when it is not the
-default dedicated `~/.ssh/determination_ed25519` key.
+Pass an existing public key to `aurora ssh-setup` if preferred. Set
+its matching private key in `~/.ssh/config.d/aurora` when it is not the
+default dedicated `~/.ssh/aurora_ed25519` key.
 
 ## Status
 
@@ -112,15 +112,15 @@ default dedicated `~/.ssh/determination_ed25519` key.
       (crDroid 12.10/A16, HIDL composer 2.4, gralloc4, binderfs present,
       DP-alt works)
 - [x] Kernel built (crDroid 16.0 tree + running config + fragment, 3m13s),
-      `boot/determination-boot.img` repacked from the dumped boot_b and verified
-- [x] Module zip packaged with static aarch64 evgrab; `./det` host helper
-- [x] Cable-free install path: `usb-install/` action zips + `./det publish`
+      `boot/aurora-boot.img` repacked from the dumped boot_b and verified
+- [x] Module zip packaged with static aarch64 evgrab; `./aurora` host helper
+- [x] Cable-free install path: `usb-install/` action zips + `./aurora publish`
       (flash via Magisk app + `dd`; rescue from a *bootloop* still needs a cable)
 - [x] **FLASHED AND BOOTING** (2026-07-02, via the USB-drive path): kernel
       `4.14.357-perf-g96adfa8256dc` live on device, PID/USER/IPC_NS confirmed.
       WiFi initially exposed a `qca_cld3_wlan.ko` vermagic mismatch; the current
       kernel build carries the matching module directly, so the old Magisk WLAN
-      overlay has been retired. Full hardware smoke test green. Determination
+      overlay has been retired. Full hardware smoke test green. Aurora
       module installed. Milestone 1 done.
 - [x] Guest rootfs + libhybris smoke test on guacamoleb (2026-07-04, TLS wall
       cleared with upstream libhybris; `test_hwcomposer` GLES 3.2 on the panel)

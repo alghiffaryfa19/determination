@@ -1,0 +1,110 @@
+#!/bin/sh
+# Guest session launcher: desktop-on calls this for both halves of any session.
+#   compositor <binary> [args...]  env + exec the compositor (never returns)
+#   client <shell-path>            wait for wayland-0, run shell (empty = foot)
+#                                    hyprland-config = config owns its shell
+# Phosh keeps aurora-phosh-session: its systemd/portal/audio contracts stay put.
+set -eu
+
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export HOME=${HOME:-/home/aurora} USER=${USER:-aurora} LOGNAME=${LOGNAME:-aurora}
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/1000}
+export XDG_SESSION_TYPE=wayland XDG_SESSION_CLASS=user
+export LANG=${LANG:-C.UTF-8} TMPDIR=${TMPDIR:-/tmp}
+export WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-wayland-0}
+
+mode=${1:-}
+[ -n "$mode" ] || { echo "usage: aurora-session-launch compositor|client ..." >&2; exit 2; }
+
+compositor_env() {
+    export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/aarch64-linux-gnu
+    export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
+    # Vendor EGL via hwcomposer platform; clients use the wayland platform.
+    export EGL_PLATFORM=hwcomposer HYBRIS_EGLPLATFORM=hwcomposer ANDROID_ROOT=/system
+    if aurora-platform service-active seatd 2>/dev/null; then
+        WLR_BACKENDS=hwcomposer,libinput
+    else
+        WLR_BACKENDS=hwcomposer
+    fi
+    export WLR_BACKENDS LIBSEAT_BACKEND=seatd
+    [ -r /etc/aurora-device.conf ] && . /etc/aurora-device.conf
+    [ -z "${AURORA_PANEL_REFRESH_MHZ:-}" ] || export WLR_HWC_REFRESH_MHZ="$AURORA_PANEL_REFRESH_MHZ"
+    [ ! -f /usr/local/lib/aurora-pidfd-shim.so ] || \
+        export LD_PRELOAD=/usr/local/lib/aurora-pidfd-shim.so
+}
+
+case "$mode" in
+compositor)
+    shift
+    [ "$#" -ge 1 ] || { echo "aurora-session-launch: compositor needs a binary" >&2; exit 2; }
+    install -d -m 700 "$XDG_RUNTIME_DIR"
+    rm -f "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY.lock"
+    compositor_env
+    exec stdbuf -oL -eL "$@"
+    ;;
+client)
+    shell_path=${2:-}
+    i=0
+    until [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; do
+        i=$((i + 1))
+        [ "$i" -le 100 ] || { echo "aurora-session-launch: Wayland socket timed out" >&2; exit 9; }
+        sleep 0.2
+    done
+
+    # Clients are Wayland clients of the compositor, never direct HWC clients.
+    export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/aarch64-linux-gnu
+    export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
+    export EGL_PLATFORM=wayland HYBRIS_EGLPLATFORM=wayland ANDROID_ROOT=/system GSK_RENDERER=ngl
+    export GDK_BACKEND=wayland,x11 QT_QPA_PLATFORM=wayland MOZ_ENABLE_WAYLAND=1
+    [ ! -f /usr/local/lib/aurora-pidfd-shim.so ] || \
+        export LD_PRELOAD=/usr/local/lib/aurora-pidfd-shim.so
+
+    [ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] || {
+        if [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+            export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+        else
+            exec dbus-run-session -- "$0" client "$shell_path"
+        fi
+    }
+    dbus-update-activation-environment WAYLAND_DISPLAY XDG_RUNTIME_DIR \
+        XDG_SESSION_TYPE GDK_BACKEND QT_QPA_PLATFORM MOZ_ENABLE_WAYLAND \
+        EGL_PLATFORM HYBRIS_EGLPLATFORM HYBRIS_LD_LIBRARY_PATH ANDROID_ROOT \
+        GSK_RENDERER LD_LIBRARY_PATH PATH HOME USER LOGNAME LANG TMPDIR \
+        >/dev/null 2>&1 || true
+
+    children=
+    spawn() {
+        "$@" &
+        children="$children $!"
+    }
+    cleanup() {
+        trap - EXIT HUP INT TERM
+        [ -z "$children" ] || kill -TERM $children 2>/dev/null || true
+        [ -z "$children" ] || wait $children 2>/dev/null || true
+    }
+    trap cleanup EXIT HUP INT TERM
+
+    SM=$(command -v aurora-session-manager || true)
+    [ -z "$SM" ] || { spawn "$SM"; sleep 0.3; }
+
+    # Direct audio before clients can win the race with distro sockets.
+    command -v aurora-audio-session >/dev/null 2>&1 && \
+        command -v pipewire >/dev/null 2>&1 && spawn aurora-audio-session
+
+    if [ "$shell_path" = hyprland-config ]; then
+        : # Hyprland exec-once owns its shell; retain session manager and audio.
+    elif [ -n "$shell_path" ] && [ -x "$shell_path" ]; then
+        spawn "$shell_path"
+    else
+        command -v foot >/dev/null 2>&1 && spawn foot
+    fi
+    sleep 2
+    command -v aurora-input-actions >/dev/null 2>&1 && aurora-input-actions apply || true
+
+    wait $children
+    ;;
+*)
+    echo "usage: aurora-session-launch compositor|client ..." >&2
+    exit 2
+    ;;
+esac

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Build static aarch64 LXC tools for the Android host side and (optionally)
-# push them to the phone. Produces the /data/determination/lxc/bin toolset that
+# push them to the phone. Produces the /data/aurora/lxc/bin toolset that
 # guest-start / desktop-on / desktop-off exec.
 #
 # Toolchain: the repo's toolchain/usr/bin cross gcc + static glibc (same
@@ -51,9 +51,9 @@ if grep -q 'c->set_config_item(c, "lxc.seccomp", "")' src/lxc/attach.c; then
 fi
 
 [ -f Makefile ] || ./configure --host=aarch64-linux-gnu \
-    --prefix=/data/determination/lxc \
-    --with-config-path=/data/determination \
-    --with-runtime-path=/data/determination/run \
+    --prefix=/data/aurora/lxc \
+    --with-config-path=/data/aurora \
+    --with-runtime-path=/data/aurora/run \
     --disable-shared --enable-static \
     --disable-capabilities --disable-seccomp --disable-apparmor \
     --disable-selinux --disable-openssl --disable-doc --disable-api-docs \
@@ -73,5 +73,5 @@ echo "Static LXC tools staged in $OUT"
 if [ "${1:-}" = "--push" ]; then
     "$ADB" shell "mkdir -p /data/local/tmp/lxcbin"
     for t in $TOOLS; do "$ADB" push "$OUT/$t" /data/local/tmp/lxcbin/; done
-    "$ADB" shell "su -c 'mkdir -p /data/determination/lxc/bin && cp -f /data/local/tmp/lxcbin/* /data/determination/lxc/bin/ && chmod 755 /data/determination/lxc/bin/* && rm -rf /data/local/tmp/lxcbin && /data/determination/lxc/bin/lxc-start --version'"
+    "$ADB" shell "su -c 'mkdir -p /data/aurora/lxc/bin && cp -f /data/local/tmp/lxcbin/* /data/aurora/lxc/bin/ && chmod 755 /data/aurora/lxc/bin/* && rm -rf /data/local/tmp/lxcbin && /data/aurora/lxc/bin/lxc-start --version'"
 fi

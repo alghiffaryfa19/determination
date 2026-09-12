@@ -7,9 +7,9 @@
         android:shortcutShortLabel="@string/shortcut_enter_short"
         android:shortcutLongLabel="@string/shortcut_enter_long">
         <intent
-            android:action="com.determination.companion.action.ENTER_DESKTOP"
-            android:targetPackage="com.determination.companion"
-            android:targetClass="com.determination.companion.DesktopShortcutActivity" />
+            android:action="com.aurora.companion.action.ENTER_DESKTOP"
+            android:targetPackage="com.aurora.companion"
+            android:targetClass="com.aurora.companion.DesktopShortcutActivity" />
     </shortcut>
     <shortcut
         android:shortcutId="controls"
@@ -19,7 +19,7 @@
         android:shortcutLongLabel="@string/shortcut_open_long">
         <intent
             android:action="android.intent.action.VIEW"
-            android:targetPackage="com.determination.companion"
-            android:targetClass="com.determination.companion.MainActivity" />
+            android:targetPackage="com.aurora.companion"
+            android:targetClass="com.aurora.companion.MainActivity" />
     </shortcut>
 </shortcuts>

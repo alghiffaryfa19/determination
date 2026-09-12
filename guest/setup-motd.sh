@@ -1,5 +1,5 @@
 #!/bin/sh
-# Determination guest MOTD. Run inside the container as root.
+# Aurora guest MOTD. Run inside the container as root.
 set -eu
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -12,7 +12,7 @@ CODENAME=${2:-}
 
 # The soul greets first. Colors survive ssh since this is written into the
 # static MOTD, not printed per-login.
-ascii=/etc/determination.ascii
+ascii=/etc/aurora.ascii
 if [ -r "$ascii" ]; then
     {
         printf '\033[31m'
@@ -20,15 +20,15 @@ if [ -r "$ascii" ]; then
         printf '\033[0m\n v%s "%s"\n\n' "$VERSION" "${CODENAME:-~}"
     } > /etc/motd
 else
-    printf 'Determination v%s "%s"\n\n' "$VERSION" "${CODENAME:-~}" > /etc/motd
+    printf 'Aurora v%s "%s"\n\n' "$VERSION" "${CODENAME:-~}" > /etc/motd
 fi
 
 # SSH inherits the local terminal's TERM. Terra uses Kitty, and without its
 # terminfo entry even basic commands such as clear fail with "unknown terminal
 # type". Install the tiny definition package once; subsequent runs are no-ops.
 if ! infocmp xterm-kitty >/dev/null 2>&1; then
-    if [ -x /usr/local/bin/det-platform ]; then
-        det-platform package-install kitty-terminfo || true
+    if [ -x /usr/local/bin/aurora-platform ]; then
+        aurora-platform package-install kitty-terminfo || true
     else
         export DEBIAN_FRONTEND=noninteractive
         apt-get install -y -qq --no-install-recommends kitty-terminfo
@@ -37,10 +37,10 @@ fi
 
 # The MOTD is the welcome. Do not staple Fish's tutorial greeting beneath it.
 install -d -m 0755 /etc/fish/conf.d
-cat > /etc/fish/conf.d/00-determination.fish <<'EOF'
+cat > /etc/fish/conf.d/00-aurora.fish <<'EOF'
 set -g fish_greeting
 EOF
-chmod 0644 /etc/fish/conf.d/00-determination.fish
+chmod 0644 /etc/fish/conf.d/00-aurora.fish
 
 # Fastfetch's default module order probes GPU immediately after CPU. In this
 # guest that probe enters the Android/libhybris vendor stack and SIGSEGVs,
@@ -77,7 +77,7 @@ chmod 0644 /etc/xdg/fastfetch/config.jsonc
 # Keep the login visually MOTD -> prompt. Host-key and authentication policy
 # remain in the separate SSH setup drop-in.
 install -d -m 0755 /etc/ssh/sshd_config.d
-motd_sshd=/etc/ssh/sshd_config.d/55-determination-motd.conf
+motd_sshd=/etc/ssh/sshd_config.d/55-aurora-motd.conf
 : > "$motd_sshd"
 # OpenSSH-portable on Alpine omits PrintLastLog. Probe the running daemon's
 # option set instead of shipping a Debian-only directive that makes every
@@ -88,30 +88,30 @@ if sshd -T 2>/dev/null | grep -q '^printlastlog '; then
     printf '%s\n' 'PrintLastLog no' > "$motd_sshd"
 fi
 sshd -t
-if [ -x /usr/local/bin/det-platform ]; then
-    det-platform service-restart ssh 2>/dev/null || true
+if [ -x /usr/local/bin/aurora-platform ]; then
+    aurora-platform service-restart ssh 2>/dev/null || true
 else
     systemctl reload ssh 2>/dev/null || true
 fi
 
 # This is the canonical project hostname; older live rootfs images still carry
 # the pre-rename "decemberos" value.
-printf 'determination\n' > /etc/hostname
+printf 'aurora\n' > /etc/hostname
 if grep -qE '^127\.0\.1\.1[[:space:]]' /etc/hosts 2>/dev/null; then
-    sed -i 's/^127\.0\.1\.1.*/127.0.1.1\tdetermination/' /etc/hosts
+    sed -i 's/^127\.0\.1\.1.*/127.0.1.1\taurora/' /etc/hosts
 else
-    printf '127.0.1.1\tdetermination\n' >> /etc/hosts
+    printf '127.0.1.1\taurora\n' >> /etc/hosts
 fi
-hostname determination
+hostname aurora
 
-cat > /etc/determination-release <<EOF
-DET_VERSION='$VERSION'
-DET_CODENAME='$CODENAME'
+cat > /etc/aurora-release <<EOF
+AURORA_VERSION='$VERSION'
+AURORA_CODENAME='$CODENAME'
 EOF
-chmod 0644 /etc/determination-release
+chmod 0644 /etc/aurora-release
 
 install -d -m 0755 /etc/update-motd.d
-cat > /etc/update-motd.d/00-determination <<'EOF'
+cat > /etc/update-motd.d/00-aurora <<'EOF'
 #!/bin/sh
 # Fastfetch-style MOTD without fastfetch: that binary currently prints its
 # report and then SIGSEGVs on the downstream 4.14 kernel.
@@ -122,8 +122,8 @@ text=$(printf '\033[38;5;252m')
 reset=$(printf '\033[0m')
 
 . /etc/os-release
-[ ! -r /etc/determination-release ] || . /etc/determination-release
-[ ! -r /etc/determination-device.conf ] || . /etc/determination-device.conf
+[ ! -r /etc/aurora-release ] || . /etc/aurora-release
+[ ! -r /etc/aurora-device.conf ] || . /etc/aurora-device.conf
 
 arch=$(uname -m)
 kernel=$(uname -r)
@@ -149,13 +149,13 @@ session='headless'
 pgrep -x phoc >/dev/null 2>&1 && session='desktop'
 
 battery='unavailable'
-gauge=${DET_BATTERY_GAUGE:-bms}
+gauge=${AURORA_BATTERY_GAUGE:-bms}
 if [ -r "/sys/class/power_supply/$gauge/capacity" ]; then
     battery="$(cat "/sys/class/power_supply/$gauge/capacity")%"
 fi
 
-release=${DET_CODENAME:-Determination}
-[ "${DET_VERSION:-unknown}" = unknown ] || release="$release ${DET_VERSION}"
+release=${AURORA_CODENAME:-Aurora}
+[ "${AURORA_VERSION:-unknown}" = unknown ] || release="$release ${AURORA_VERSION}"
 
 row() {
     # BusyBox printf rejects field widths on %b. Expand the handful of escaped
@@ -164,7 +164,7 @@ row() {
     printf '%b%-31s%b%-9s%b%s%b\n' "$pink" "$left" "$pink" "$2" "$text" "$3" "$reset"
 }
 
-row '       _,met$$$$$gg.' 'detuser' '@determination'
+row '       _,met$$$$$gg.' 'aurora' '@aurora'
 row '    ,g$$$$$$$$$$$$$$$P.' '---------' '--------------'
 row '  ,g$$P"     """Y$$.".' 'OS:' "$PRETTY_NAME $arch"
 row ' ,$$P\047              `$$$.' 'Host:' "$host"
@@ -180,12 +180,12 @@ row '   `Y$$.' '' ''
 row '     `$$b.' '' ''
 printf '%b\n' "$reset"
 EOF
-chmod 0755 /etc/update-motd.d/00-determination
+chmod 0755 /etc/update-motd.d/00-aurora
 
 # Debian's stock entries duplicate fields above; /etc/motd contains the generic
 # warranty paragraph. Leave neither stapled below the custom output.
 for entry in /etc/update-motd.d/*; do
-    [ "$entry" = /etc/update-motd.d/00-determination ] || chmod -x "$entry"
+    [ "$entry" = /etc/update-motd.d/00-aurora ] || chmod -x "$entry"
 done
 : > /etc/motd
 

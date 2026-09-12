@@ -1,5 +1,5 @@
 /*
- * evgrab holds EVIOCGRAB on evdev nodes for Determination desktop mode.
+ * evgrab holds EVIOCGRAB on evdev nodes for Aurora desktop mode.
  *
  * On modern Android there is no standalone inputflinger process to stop:
  * input is EventHub/InputReader inside system_server, reading

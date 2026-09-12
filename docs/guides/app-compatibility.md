@@ -4,7 +4,7 @@ Status: core session contract device-qualified on Debian; broad app matrix ongoi
 Authority: guest session maintainers
 Last reviewed: 2026-08-21
 
-Determination's compatibility layer gives applications the same session
+Aurora's compatibility layer gives applications the same session
 contracts they expect from a conventional Phosh distribution. Rendering a
 shell is not enough: logind must know the user is logged in, D-Bus activation
 must inherit the Wayland environment, portals must have a Phosh backend, and
@@ -15,12 +15,12 @@ settings must belong to the desktop user rather than root.
 From phone mode with the guest running and networked:
 
 ```sh
-det compat setup
+aurora compat setup
 ```
 
 This installs the portal, Secret Service, accessibility, GVfs, Flatpak, MIME,
 font, and XDG user-directory runtime. It also installs the PAM-backed
-`det-phosh.service`. The service is started only during desktop mode.
+`aurora-phosh.service`. The service is started only during desktop mode.
 
 Fresh Debian rootfs builds include these packages. Portable Arch and Alpine
 profiles invoke the same setup through their distro adapter, but remain subject
@@ -28,7 +28,7 @@ to the qualification boundaries in [guest distro profiles](guest-distros.md).
 
 ## What applications see
 
-`det-phosh-session` publishes one canonical environment to launched programs
+`aurora-phosh-session` publishes one canonical environment to launched programs
 and D-Bus-activated services:
 
 - `XDG_CURRENT_DESKTOP=Phosh:GNOME`, a Wayland user session, and the standard
@@ -53,7 +53,7 @@ the qualified downstream 4.14 kernel.
 Enter desktop mode, then run from the host:
 
 ```sh
-det compat check
+aurora compat check
 ```
 
 The check distinguishes required failures from optional warnings and verifies
@@ -72,7 +72,7 @@ the phone-sized surface and lets sandboxed apps integrate correctly. It cannot
 make a fixed-width desktop UI adaptive; that requires an upstream responsive UI
 or an application-specific patch. Hardware APIs also remain separate work:
 camera, modem/SMS, location, Bluetooth, suspend, and every direct-audio route
-need explicit Determination bridges or qualification.
+need explicit Aurora bridges or qualification.
 
 Internal desktop mode still freezes Android `system_server`, so Android-backed
 portal implementations are not viable there. External convergence may later

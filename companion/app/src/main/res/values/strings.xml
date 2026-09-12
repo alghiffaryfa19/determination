@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Determination</string>
+    <string name="app_name">Aurora</string>
     <string name="subtitle">Stay determined. Android ↔ Linux control.</string>
 
     <string name="checking">Checking…</string>
     <string name="root_ok">● Root granted (Magisk)</string>
     <string name="no_root">✕ Root not granted</string>
-    <string name="no_root_hint">This app needs Magisk su. Open Magisk → Superuser and grant Determination (screen must be unlocked).</string>
-    <string name="not_installed">Determination is not installed under /data/determination. Flash the kernel + Magisk module first.</string>
+    <string name="no_root_hint">This app needs Magisk su. Open Magisk → Superuser and grant Aurora (screen must be unlocked).</string>
+    <string name="not_installed">Aurora is not installed under /data/aurora. Flash the kernel + Magisk module first.</string>
 
     <string name="sec_desktop">Desktop</string>
     <string name="sec_guest">Guest &amp; power</string>
@@ -49,21 +49,21 @@
     <string name="tile_guest_ready">Guest ready</string>
     <string name="tile_guest_stopped">Guest stopped</string>
 
-    <string name="external_display_channel">Determination external display</string>
+    <string name="external_display_channel">Aurora external display</string>
     <string name="external_display_notif">External display convergence ready</string>
     <string name="shortcut_enter_short">Start Linux</string>
     <string name="shortcut_enter_long">Enter Linux desktop mode</string>
     <string name="shortcut_open_short">Controls</string>
-    <string name="shortcut_open_long">Open Determination controls</string>
+    <string name="shortcut_open_long">Open Aurora controls</string>
     <string name="share_to_linux">Send to Linux</string>
     <string name="share_working">Sending to Linux…</string>
     <string name="share_done">Sent to Linux Downloads</string>
     <string name="share_failed">Couldn’t send to Linux: %1$s</string>
 
-    <string name="control_permission_label">Control Determination</string>
-    <string name="control_permission_description">Read native Determination state and request Linux or phone display mode without a confirmation dialog.</string>
+    <string name="control_permission_label">Control Aurora</string>
+    <string name="control_permission_description">Read native Aurora state and request Linux or phone display mode without a confirmation dialog.</string>
     <string name="api_enter_title">Allow Linux desktop mode?</string>
     <string name="api_enter_body">Another app requested Linux desktop mode. Android’s internal display will be handed to the guest until you exit back to phone mode.</string>
     <string name="api_exit_title">Return to phone mode?</string>
-    <string name="api_exit_body">Another app requested that Determination release the display and restore Android phone mode.</string>
+    <string name="api_exit_body">Another app requested that Aurora release the display and restore Android phone mode.</string>
 </resources>

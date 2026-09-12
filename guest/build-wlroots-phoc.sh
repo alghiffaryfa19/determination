@@ -1,5 +1,5 @@
 #!/bin/sh
-# Determination §3 finish: build the REAL guest compositor --- phoc 0.47 on the
+# Aurora §3 finish: build the REAL guest compositor --- phoc 0.47 on the
 # droidian wlroots fork's hwcomposer backend --- inside the trixie guest,
 # against OUR upstream libhybris in /usr/local (guest/build-libhybris.sh).
 # Run INSIDE the container as root. Non-destructive/idempotent-ish: safe to
@@ -60,9 +60,9 @@ echo "== build dependencies =="
 # requirement) + drm backend bits (libdisplay-info/liftoff) + runtime
 # (foot terminal, a font --- foot fails without one --- grim for screenshots,
 # dbus quiets phoc's session warnings).
-if command -v det-platform >/dev/null 2>&1; then
-    det-platform package-refresh
-    det-platform deps wlroots-phoc
+if command -v aurora-platform >/dev/null 2>&1; then
+    aurora-platform package-refresh
+    aurora-platform deps wlroots-phoc
     if ! pkg-config --exists libgbinder; then
         "$(dirname "$0")/build-libgbinder.sh"
     fi
@@ -126,11 +126,11 @@ cd wlroots
 
 # PATCH (upstream-able to droidian): SDM (qcom sm8150) starts every NEW
 # composer client at per-client brightness 0 and DSPP-dims its output to
-# pure black while validate/present succeed (determination b182d86). Call
+# pure black while validate/present succeed (aurora b182d86). Call
 # setDisplayBrightness(1.0) once after successful power-on. Idempotent.
 F=backend/hwcomposer/hwcomposer2.c
 grep -q hwc2_compat_display_set_brightness "$F" || sed -i \
-'s|\t\tif (enable \&\& change_backlight \&\&|\t\t/* Determination: SDM inits new composer clients at brightness 0 and\n\t\t * DSPP-dims their output to black; one set_brightness after\n\t\t * power-on fixes it (see determination b182d86). */\n\t\tif (enable)\n\t\t\thwc2_compat_display_set_brightness(hwc2_output->hwc2_display, 1.0f);\n\n\t\tif (enable \&\& change_backlight \&\&|' "$F"
+'s|\t\tif (enable \&\& change_backlight \&\&|\t\t/* Aurora: SDM inits new composer clients at brightness 0 and\n\t\t * DSPP-dims their output to black; one set_brightness after\n\t\t * power-on fixes it (see aurora b182d86). */\n\t\tif (enable)\n\t\t\thwc2_compat_display_set_brightness(hwc2_output->hwc2_display, 1.0f);\n\n\t\tif (enable \&\& change_backlight \&\&|' "$F"
 grep -q hwc2_compat_display_set_brightness "$F" || { echo "FATAL: brightness patch anchor missing"; exit 1; }
 
 # Select a profile-requested panel refresh without baking a Qualcomm or
@@ -209,7 +209,7 @@ print('HWC refresh selection patch: applied')
 PYEOF
 grep -q WLR_HWC_REFRESH_MHZ "$F" || { echo "FATAL: refresh selection patch failed"; exit 1; }
 
-# PATCH 2 (Determination §4, 2026-07-06): EVIOCGRAB handoff in the libinput
+# PATCH 2 (Aurora §4, 2026-07-06): EVIOCGRAB handoff in the libinput
 # backend. Android's EventHub (inside system_server) keeps every
 # /dev/input/event* open non-exclusively --- without a grab, events reach
 # BOTH stacks. The Android-side evgrab holds the grab through the SF stop;
@@ -230,7 +230,7 @@ inc_anchor = '#include "util/env.h"\n'
 assert inc_anchor in s, 'include anchor missing'
 s = s.replace(inc_anchor, inc_anchor + (
     '\n'
-    '/* Determination §4 input handoff */\n'
+    '/* Aurora §4 input handoff */\n'
     '#include <errno.h>\n'
     '#include <linux/input.h>\n'
     '#include <pthread.h>\n'
@@ -242,7 +242,7 @@ s = s.replace(inc_anchor, inc_anchor + (
 ), 1)
 
 helper = '''\
-/* Determination §4: Android's EventHub (inside system_server) keeps
+/* Aurora §4: Android's EventHub (inside system_server) keeps
  * /dev/input/event* open non-exclusively --- without EVIOCGRAB every event
  * is delivered to BOTH stacks (double input). During the handoff the
  * Android-side evgrab daemon still holds the grab, so retry from a
@@ -256,11 +256,11 @@ static void *dos_grab_thread(void *arg) {
 \t * version and left the session grabless (2026-07-06). */
 \tfor (int i = 0; i < 6000; i++) {
 \t\tif (ioctl(fd, EVIOCGRAB, (void *)1) == 0) {
-\t\t\tfprintf(stderr, "Determination: EVIOCGRAB acquired (fd %d)\\n", fd);
+\t\t\tfprintf(stderr, "Aurora: EVIOCGRAB acquired (fd %d)\\n", fd);
 \t\t\tbreak;
 \t\t}
 \t\tif (errno != EBUSY) {
-\t\t\tfprintf(stderr, "Determination: EVIOCGRAB failed (fd %d): %s\\n",
+\t\t\tfprintf(stderr, "Aurora: EVIOCGRAB failed (fd %d): %s\\n",
 \t\t\t\tfd, strerror(errno));
 \t\t\tbreak;
 \t\t}
@@ -316,7 +316,7 @@ print('grab patch: applied')
 PYEOF
 grep -q dos_grab_evdev backend/libinput/backend.c || { echo "FATAL: grab patch failed"; exit 1; }
 
-# PATCH 3 (Determination): fix HWC frame pacing. The Droidian backend predicts
+# PATCH 3 (Aurora): fix HWC frame pacing. The Droidian backend predicts
 # only `last_vsync + one period`. If compositor/client startup work misses two
 # or more periods, timerfd is armed in the past and immediately fires in a
 # burst, producing visible scroll/touch jitter until the pipeline catches up.
@@ -329,7 +329,7 @@ import pathlib, sys
 
 p = pathlib.Path('backend/hwcomposer/output.c')
 s = p.read_text()
-if 'Determination: advance stale HWC timestamps' in s:
+if 'Aurora: advance stale HWC timestamps' in s:
     print('HWC frame pacing patch: already applied')
     sys.exit(0)
 
@@ -341,7 +341,7 @@ old = '''\
 new = '''\
 \tnext_vsync = output->hwc_backend->hwc_vsync_last_timestamp + display_refresh;
 
-\t/* Determination: advance stale HWC timestamps to the first deadline that
+\t/* Aurora: advance stale HWC timestamps to the first deadline that
 \t * is still renderable. The original code added exactly one period; after
 \t * a startup stall it repeatedly armed timerfd in the past and generated a
 \t * burst of immediate frame callbacks. */
@@ -394,15 +394,15 @@ git clone --depth 1 -b group/102/keypad-slide-lights "$PHOC_REPO"
 cd phoc
 [ "$(git rev-parse HEAD)" = "$PHOC_COMMIT" ] || { echo "FATAL: phoc pin mismatch" >&2; exit 1; }
 
-# PATCH 4 (Determination): Ctrl+Alt+F2-F12 spawns a console terminal instead
+# PATCH 4 (Aurora): Ctrl+Alt+F2-F12 spawns a console terminal instead
 # of the no-op wlr_session_change_vt (no real VTs --- CONFIG_FRAMEBUFFER_CONSOLE
 # is off because it fights SF for the panel). VT 1 is left as-is (phosh). The
-# helper /usr/local/bin/det-console opens a fullscreen foot terminal; it can
+# helper /usr/local/bin/aurora-console opens a fullscreen foot terminal; it can
 # also be a dispatcher for VT-specific sessions later. Works from any external
 # keyboard; evdev-level is blocked by our EVIOCGRAB, so compositor-level is the
-# only viable hook. See guest/setup-controls.sh for the det-console script.
+# only viable hook. See guest/setup-controls.sh for the aurora-console script.
 F=src/keyboard.c
-grep -q 'det-console' "$F" || python3 - "$F" <<'PYEOF'
+grep -q 'aurora-console' "$F" || python3 - "$F" <<'PYEOF'
 import sys, pathlib
 p = pathlib.Path(sys.argv[1])
 s = p.read_text()
@@ -421,10 +421,10 @@ new = '''\
   if (keysym >= XKB_KEY_XF86Switch_VT_1 && keysym <= XKB_KEY_XF86Switch_VT_12) {
     unsigned vt = keysym - XKB_KEY_XF86Switch_VT_1 + 1;
     if (vt >= 2) {
-      /* Determination: no real VTs (fbcon off); spawn a console terminal.
+      /* Aurora: no real VTs (fbcon off); spawn a console terminal.
        * Fork+exec so the compositor never blocks on the child. */
       char cmd[64];
-      snprintf (cmd, sizeof(cmd), "/usr/local/bin/det-console %u", vt);
+      snprintf (cmd, sizeof(cmd), "/usr/local/bin/aurora-console %u", vt);
       g_spawn_command_line_async (cmd, NULL);
     } else {
       struct wlr_session *session = phoc_server_get_session (server);
@@ -436,9 +436,9 @@ new = '''\
 assert old in s, 'VT switch anchor missing in keyboard.c'
 s = s.replace(old, new, 1)
 p.write_text(s)
-print('PATCH 4 (det-console VT switch): applied')
+print('PATCH 4 (aurora-console VT switch): applied')
 PYEOF
-grep -q 'det-console' "$F" || { echo "FATAL: det-console VT patch failed"; exit 1; }
+grep -q 'aurora-console' "$F" || { echo "FATAL: aurora-console VT patch failed"; exit 1; }
 
 meson setup build --prefix=/usr/local -Dbuildtype=release \
     -Dembed-wlroots=disabled -Dman=false -Dxwayland=enabled

@@ -1,0 +1,15 @@
+[Unit]
+Description=Aurora USB/Bluetooth input compositor proxy
+After=seatd.service
+
+[Service]
+Type=simple
+User=aurora
+Group=aurora
+EnvironmentFile=-/etc/aurora-device.conf
+ExecStart=/usr/local/bin/aurora-input-proxy-session
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=3
+StandardOutput=journal
+StandardError=journal

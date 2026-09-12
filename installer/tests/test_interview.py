@@ -23,8 +23,8 @@ class InterviewTests(unittest.TestCase):
         self.interview = Interview(self.engine)
 
     def test_manifest_requires_explicit_source_without_distributor_default(self):
-        with patch('builtins.input', return_value='https://example.org/determination-update.json'):
-            self.assertEqual(self.interview.manifest(), 'https://example.org/determination-update.json')
+        with patch('builtins.input', return_value='https://example.org/aurora-update.json'):
+            self.assertEqual(self.interview.manifest(), 'https://example.org/aurora-update.json')
 
     def test_invalid_answer_repeats_same_question(self):
         with patch('builtins.input', side_effect=['maybe', 'yes']) as read, contextlib.redirect_stdout(io.StringIO()):
@@ -46,14 +46,14 @@ class InterviewTests(unittest.TestCase):
     def test_manifest_accepts_the_bundle_directory(self):
         bundle = Path(self.directory.name) / 'friendly bundle'
         bundle.mkdir()
-        manifest = bundle / 'determination-update.json'
+        manifest = bundle / 'aurora-update.json'
         manifest.write_text('{}')
         with patch('builtins.input', return_value=str(bundle)), contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(self.interview.manifest(), str(manifest.resolve()))
 
     def test_manifest_discovers_repo_bundle(self):
         repo = Path(self.directory.name) / 'repo'
-        manifest = repo / 'dist/online-release/determination-update.json'
+        manifest = repo / 'dist/online-release/aurora-update.json'
         manifest.parent.mkdir(parents=True)
         manifest.write_text('{}')
         self.interview.repo = repo
@@ -70,7 +70,7 @@ class InterviewTests(unittest.TestCase):
 
     def test_complete_install_interview_passes_validated_values(self):
         self.interview.device = device()
-        manifest = DEFAULT_MANIFEST or 'https://example.org/determination-update.json'
+        manifest = DEFAULT_MANIFEST or 'https://example.org/aurora-update.json'
         answers = [manifest, 'Aurora User', 'workstation', 'yes']
         with patch('builtins.input', side_effect=answers), contextlib.redirect_stdout(io.StringIO()), \
              patch.object(self.engine, 'install', return_value={'status': 'prepared'}) as install:

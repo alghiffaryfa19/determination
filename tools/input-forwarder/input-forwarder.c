@@ -26,18 +26,18 @@
 
 /* The final protocol source ID is reserved for MotionEvents forwarded by the
  * Android presenter. */
-#define DET_MAX_INPUTS (DET_INPUT_MAX_SOURCES - 1u)
-#define DET_BITS_PER_LONG (sizeof(unsigned long) * 8u)
-#define DET_BIT_WORDS(maximum) (((maximum) / DET_BITS_PER_LONG) + 1u)
+#define AURORA_MAX_INPUTS (AURORA_INPUT_MAX_SOURCES - 1u)
+#define AURORA_BITS_PER_LONG (sizeof(unsigned long) * 8u)
+#define AURORA_BIT_WORDS(maximum) (((maximum) / AURORA_BITS_PER_LONG) + 1u)
 
-struct det_source {
+struct aurora_source {
     int fd;
     uint32_t id;
     uint32_t flags;
     char path[256];
 };
 
-static struct det_source sources[DET_MAX_INPUTS];
+static struct aurora_source sources[AURORA_MAX_INPUTS];
 static size_t source_count;
 static volatile sig_atomic_t running = 1;
 
@@ -72,29 +72,29 @@ static int external_bus(unsigned short bus)
 
 static int bit_is_set(const unsigned long *bits, unsigned int bit)
 {
-    return (bits[bit / DET_BITS_PER_LONG] &
-            (1ul << (bit % DET_BITS_PER_LONG))) != 0;
+    return (bits[bit / AURORA_BITS_PER_LONG] &
+            (1ul << (bit % AURORA_BITS_PER_LONG))) != 0;
 }
 
 static uint32_t source_flags(int fd)
 {
-    unsigned long absolute[DET_BIT_WORDS(ABS_MAX)] = {0};
-    unsigned long properties[DET_BIT_WORDS(INPUT_PROP_MAX)] = {0};
+    unsigned long absolute[AURORA_BIT_WORDS(ABS_MAX)] = {0};
+    unsigned long properties[AURORA_BIT_WORDS(INPUT_PROP_MAX)] = {0};
     uint32_t flags = 0;
 
     if (ioctl(fd, EVIOCGBIT(EV_ABS, sizeof(absolute)), absolute) >= 0) {
         if ((bit_is_set(absolute, ABS_X) && bit_is_set(absolute, ABS_Y)) ||
             (bit_is_set(absolute, ABS_MT_POSITION_X) &&
              bit_is_set(absolute, ABS_MT_POSITION_Y)))
-            flags |= DET_INPUT_SOURCE_ABSOLUTE;
+            flags |= AURORA_INPUT_SOURCE_ABSOLUTE;
         if (bit_is_set(absolute, ABS_MT_POSITION_X) &&
             bit_is_set(absolute, ABS_MT_POSITION_Y) &&
             bit_is_set(absolute, ABS_MT_TRACKING_ID))
-            flags |= DET_INPUT_SOURCE_MULTITOUCH;
+            flags |= AURORA_INPUT_SOURCE_MULTITOUCH;
     }
     if (ioctl(fd, EVIOCGPROP(sizeof(properties)), properties) >= 0 &&
         bit_is_set(properties, INPUT_PROP_DIRECT))
-        flags |= DET_INPUT_SOURCE_DIRECT;
+        flags |= AURORA_INPUT_SOURCE_DIRECT;
     return flags;
 }
 
@@ -111,7 +111,7 @@ static int add_source(const char *path)
 {
     if (source_exists(path))
         return 0;
-    if (source_count >= DET_MAX_INPUTS) {
+    if (source_count >= AURORA_MAX_INPUTS) {
         errno = EOVERFLOW;
         return -1;
     }
@@ -127,24 +127,24 @@ static int add_source(const char *path)
     char name[128] = "?";
     ioctl(fd, EVIOCGNAME(sizeof(name)), name);
     if (ioctl(fd, EVIOCGRAB, (void *)1) != 0) {
-        fprintf(stderr, "det-input-forwarder: grab %s (%s): %s\n",
+        fprintf(stderr, "aurora-input-forwarder: grab %s (%s): %s\n",
                 path, name, strerror(errno));
         close(fd);
         return -1;
     }
-    struct det_source *source = &sources[source_count];
+    struct aurora_source *source = &sources[source_count];
     source->fd = fd;
     source->id = (uint32_t)source_count + 1;
     source->flags = source_flags(fd);
     snprintf(source->path, sizeof(source->path), "%s", path);
     ++source_count;
     fprintf(stderr,
-            "det-input-forwarder: captured %s (%s bus=0x%x id=%u "
+            "aurora-input-forwarder: captured %s (%s bus=0x%x id=%u "
             "absolute=%s direct-touch=%s multitouch=%s)\n",
             path, name, identity.bustype, source->id,
-            source->flags & DET_INPUT_SOURCE_ABSOLUTE ? "yes" : "no",
-            source->flags & DET_INPUT_SOURCE_DIRECT ? "yes" : "no",
-            source->flags & DET_INPUT_SOURCE_MULTITOUCH ? "yes" : "no");
+            source->flags & AURORA_INPUT_SOURCE_ABSOLUTE ? "yes" : "no",
+            source->flags & AURORA_INPUT_SOURCE_DIRECT ? "yes" : "no",
+            source->flags & AURORA_INPUT_SOURCE_MULTITOUCH ? "yes" : "no");
     return 0;
 }
 
@@ -154,7 +154,7 @@ static void remove_source(size_t index)
         return;
     ioctl(sources[index].fd, EVIOCGRAB, (void *)0);
     close(sources[index].fd);
-    fprintf(stderr, "det-input-forwarder: released %s\n",
+    fprintf(stderr, "aurora-input-forwarder: released %s\n",
             sources[index].path);
     for (size_t i = index + 1; i < source_count; ++i)
         sources[i - 1] = sources[i];
@@ -196,12 +196,12 @@ static void release_sources(void)
     source_count = 0;
 }
 
-static int forward_event(int socket_fd, const struct det_source *source,
+static int forward_event(int socket_fd, const struct aurora_source *source,
                          const struct input_event *event)
 {
-    struct det_input_forward_packet packet = {
-        .magic = DET_INPUT_FORWARD_MAGIC,
-        .version = DET_INPUT_FORWARD_VERSION,
+    struct aurora_input_forward_packet packet = {
+        .magic = AURORA_INPUT_FORWARD_MAGIC,
+        .version = AURORA_INPUT_FORWARD_VERSION,
         .size = sizeof(packet),
         .source_id = source->id,
         .type = event->type,
@@ -231,18 +231,18 @@ int main(int argc, char **argv)
     signal(SIGTERM, stop_running);
     int proxy = connect_proxy(argv[1]);
     if (proxy < 0) {
-        fprintf(stderr, "det-input-forwarder: open FIFO %s: %s\n",
+        fprintf(stderr, "aurora-input-forwarder: open FIFO %s: %s\n",
                 argv[1], strerror(errno));
         return 1;
     }
     if (scan_sources() != 0)
-        fprintf(stderr, "det-input-forwarder: initial scan was incomplete\n");
+        fprintf(stderr, "aurora-input-forwarder: initial scan was incomplete\n");
     if (source_count == 0)
         fprintf(stderr,
-                "det-input-forwarder: waiting for USB/Bluetooth input; "
+                "aurora-input-forwarder: waiting for USB/Bluetooth input; "
                 "phone controls remain excluded\n");
 
-    struct pollfd poll_items[DET_MAX_INPUTS];
+    struct pollfd poll_items[AURORA_MAX_INPUTS];
     while (running) {
         for (size_t i = 0; i < source_count; ++i) {
             poll_items[i].fd = sources[i].fd;

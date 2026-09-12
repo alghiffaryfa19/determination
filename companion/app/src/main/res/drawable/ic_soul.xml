@@ -3,7 +3,7 @@
     android:height="26dp"
     android:viewportWidth="13"
     android:viewportHeight="11">
-    <!-- The Determination SOUL, drawn pixel-by-pixel (each run = 1px-tall row).
+    <!-- The Aurora SOUL, drawn pixel-by-pixel (each run = 1px-tall row).
          Vector rects keep the pixels crisp at any size. -->
     <path
         android:fillColor="#FF0000"

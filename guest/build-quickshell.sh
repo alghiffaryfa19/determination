@@ -1,23 +1,23 @@
 #!/bin/sh
-# Native in-guest quickshell build for dethyprland (Arch; the Debian shell is
+# Native in-guest quickshell build for aurorahyprland (Arch; the Debian shell is
 # host-cross-built by build-opal-quickshell-cross.sh). Installs into
-# /opt/dethyprland alongside Hyprland. Run INSIDE the container.
+# /opt/aurorahyprland alongside Hyprland. Run INSIDE the container.
 set -eu
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export HOME=/root
 HERE=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 SRC=${1:-/root/build/quickshell}
 ACTION=${2:-build}
-PREFIX=/opt/dethyprland
-JOBS=${DET_BUILD_JOBS:-2}
+PREFIX=/opt/aurorahyprland
+JOBS=${AURORA_BUILD_JOBS:-2}
 
 case "$ACTION" in
     deps)
-        if command -v det-platform >/dev/null 2>&1; then
-            det-platform package-refresh
-            det-platform deps quickshell
+        if command -v aurora-platform >/dev/null 2>&1; then
+            aurora-platform package-refresh
+            aurora-platform deps quickshell
         else
-            echo 'det-platform is required for quickshell deps' >&2; exit 1
+            echo 'aurora-platform is required for quickshell deps' >&2; exit 1
         fi
         exit
         ;;
@@ -42,13 +42,13 @@ export PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig:$PREFIX/share/pkgconfig
 export PATH=$PREFIX/bin:$PATH
 export LD_LIBRARY_PATH=$PREFIX/lib
 
-cmake -S "$SRC" -B "$SRC/build-det" -G Ninja \
+cmake -S "$SRC" -B "$SRC/build-aurora" -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX="$PREFIX" \
-    -DDISTRIBUTOR=Determination \
+    -DDISTRIBUTOR=Aurora \
     -DCRASH_HANDLER=OFF -DUSE_JEMALLOC=OFF -DX11=OFF \
     -DSERVICE_PAM=OFF -DSERVICE_POLKIT=OFF -DSERVICE_PIPEWIRE=OFF
-cmake --build "$SRC/build-det" -j"$JOBS"
-cmake --install "$SRC/build-det"
+cmake --build "$SRC/build-aurora" -j"$JOBS"
+cmake --install "$SRC/build-aurora"
 "$PREFIX/bin/quickshell" --version
-echo 'Quickshell installed into /opt/dethyprland.'
+echo 'Quickshell installed into /opt/aurorahyprland.'

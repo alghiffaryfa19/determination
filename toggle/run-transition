@@ -6,9 +6,9 @@
 # bounded attempt and always returns control so recovery can continue.
 set -u
 
-DET=/data/determination
-LOG=$DET/log/transition.log
-. "$DET/bin/device-config"
+AURORA=/data/aurora
+LOG=$AURORA/log/transition.log
+. "$AURORA/bin/device-config"
 
 case "${1:-}" in
     desktop|phone) direction=$1 ;;
@@ -19,23 +19,23 @@ esac
     echo "run-transition: refusing while SurfaceFlinger owns HWC" >&2
     exit 3
 }
-[ -x "$DET/guest/usr/local/bin/det-transition" ] || {
+[ -x "$AURORA/guest/usr/local/bin/aurora-transition" ] || {
     echo "run-transition: guest renderer not installed; skipping" >&2
     exit 4
 }
 
-mkdir -p "$DET/log"
+mkdir -p "$AURORA/log"
 : > "$LOG"
-[ -n "$DET_BACKLIGHT_PATH" ] &&
-    echo "$DET_BACKLIGHT_LEVEL" > "$DET_BACKLIGHT_PATH" 2>/dev/null
+[ -n "$AURORA_BACKLIGHT_PATH" ] &&
+    echo "$AURORA_BACKLIGHT_LEVEL" > "$AURORA_BACKLIGHT_PATH" 2>/dev/null
 
 echo "--- $direction $(date)" >> "$LOG"
-"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
+"$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c '
     export PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/aarch64-linux-gnu
     export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
     export EGL_PLATFORM=hwcomposer HYBRIS_EGLPLATFORM=hwcomposer ANDROID_ROOT=/system TMPDIR=/tmp
-    exec /usr/bin/timeout -k 1 4 /usr/local/bin/det-transition "$1"
+    exec /usr/bin/timeout -k 1 4 /usr/local/bin/aurora-transition "$1"
 ' sh "$direction" >> "$LOG" 2>&1
 rc=$?
 echo "transition rc=$rc $(date)" >> "$LOG"

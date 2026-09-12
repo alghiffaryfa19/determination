@@ -1,10 +1,10 @@
-#include "determination/control/adapter.hpp"
-#include "determination/control/observability.hpp"
-#include "determination/control/policy.hpp"
-#include "determination/control/protocol.hpp"
-#include "determination/control/state.hpp"
-#include "determination/control/system.hpp"
-#include "determination/control/transition.hpp"
+#include "aurora/control/adapter.hpp"
+#include "aurora/control/observability.hpp"
+#include "aurora/control/policy.hpp"
+#include "aurora/control/protocol.hpp"
+#include "aurora/control/state.hpp"
+#include "aurora/control/system.hpp"
+#include "aurora/control/transition.hpp"
 
 #include <chrono>
 #include <cstdlib>
@@ -16,7 +16,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-using namespace determination::control;
+using namespace aurora::control;
 
 namespace {
 
@@ -31,7 +31,7 @@ namespace {
 
 std::string temporary_directory()
 {
-    char pattern[] = "/tmp/det-control-test-XXXXXX";
+    char pattern[] = "/tmp/aurora-control-test-XXXXXX";
     char *directory = mkdtemp(pattern);
     CHECK(directory != nullptr);
     return directory;
@@ -310,8 +310,8 @@ void utility_contracts()
     const char own_state = process_state(trim(read_file("/proc/self/comm", 256)));
     CHECK(own_state == 'R' || own_state == 'S' || own_state == 'D');
     const auto states = process_states(
-        {trim(read_file("/proc/self/comm", 256)), "not-a-real-det-process"});
-    CHECK(states.at("not-a-real-det-process") == '-');
+        {trim(read_file("/proc/self/comm", 256)), "not-a-real-aurora-process"});
+    CHECK(states.at("not-a-real-aurora-process") == '-');
     CHECK(endpoint_peer_allowed(Endpoint::Admin, 0));
     CHECK(!endpoint_peer_allowed(Endpoint::Admin, 1000));
     CHECK(!endpoint_peer_allowed(Endpoint::Admin, 2000));
@@ -339,7 +339,7 @@ void observability_contracts()
     CHECK(ensure_directory(root + "/bin", 0755, &error));
     CHECK(ensure_directory(root + "/run", 0755, &error));
     write_executable(root + "/bin/desktop-off", "#!/bin/sh\nexit 0\n");
-    write_executable(root + "/bin/det-audio-probe", "#!/bin/sh\nexit 0\n");
+    write_executable(root + "/bin/aurora-audio-probe", "#!/bin/sh\nexit 0\n");
 
     StateRecord state;
     state.generation = 17;

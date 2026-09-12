@@ -22,7 +22,7 @@ import zipfile
 from discovery import PARTITIONS, PROBES, partitions, profile_values
 
 REPO = Path(__file__).resolve().parents[1]
-DEFAULT_MANIFEST = os.environ.get('DETERMINATION_UPDATE_MANIFEST_URL', '')
+DEFAULT_MANIFEST = os.environ.get('AURORA_UPDATE_MANIFEST_URL', '')
 KINDS = ('module', 'runtime', 'rootfs', 'boot', 'companion')
 LXC_TOOLS = {'lxc-start', 'lxc-stop', 'lxc-attach', 'lxc-info', 'lxc-ls', 'lxc-console', 'lxc-execute'}
 REQUIRED = ('NAMESPACES', 'PID_NS', 'IPC_NS', 'USER_NS', 'NET_NS', 'CGROUPS', 'CGROUP_PIDS', 'VETH', 'OVERLAY_FS', 'ANDROID_BINDER_IPC', 'ANDROID_BINDERFS', 'SYNC_FILE', 'VT', 'POSIX_MQUEUE')
@@ -163,7 +163,7 @@ def validate_archive(path, kind, distro='debian'):
             if kind == 'module':
                 required = {'module.prop', 'customize.sh', 'tools/guest-distro', 'tools/desktop-on',
                             'zygisk/arm64-v8a.so', 'zygisk/armeabi-v7a.so'}
-                if not required <= names or b'id=determination' not in archive.read('module.prop').splitlines():
+                if not required <= names or b'id=aurora' not in archive.read('module.prop').splitlines():
                     raise Failure('The module is incomplete or has the wrong module ID.')
             elif 'AndroidManifest.xml' not in names:
                 raise Failure('The companion APK has no Android manifest.')
@@ -210,7 +210,7 @@ def validate_archive(path, kind, distro='debian'):
         if kind == 'runtime' and set(names) != LXC_TOOLS:
             raise Failure('The runtime is missing required LXC executables.')
         if kind == 'rootfs':
-            identity = 'etc/os-release' if distro == 'debian' else 'etc/determination-profile'
+            identity = 'etc/os-release' if distro == 'debian' else 'etc/aurora-profile'
             member = names.get(identity)
             if not member or not member.isfile() or member.size > 65536:
                 raise Failure('The rootfs identity file is missing or invalid.')
@@ -533,7 +533,7 @@ class Engine:
         if not kernel or not Path(kernel).is_file():
             raise Failure('The build produced no kernel image.')
         shutil.copyfile(kernel, current / 'kernel')
-        output = directory / 'determination-boot.img'
+        output = directory / 'aurora-boot.img'
         self.run([self.magiskboot, 'repack', Path(backup).resolve(), output], cwd=current)
         validate_archive(output, 'boot')
         verify = directory / 'verify'
@@ -556,7 +556,7 @@ class Engine:
         metadata = json.loads(Path(backup).with_name('backup.json').read_text())
         if digest(backup) != metadata['sha256'] or any(metadata[k] != device[k] for k in ('serial', 'fingerprint', 'slot')):
             raise Failure('The recovery backup does not match the selected device.')
-        remote = '/data/local/tmp/det-flash-' + uuid.uuid4().hex
+        remote = '/data/local/tmp/aurora-flash-' + uuid.uuid4().hex
         self.shell('mkdir -m 700 ' + remote)
         self.stage(image, remote + '/new.img')
         self.stage(backup, remote + '/backup.img')
@@ -612,14 +612,14 @@ fi
         base.write_text(device['config'])
         source_commit, _ = self.run(['git', '-C', source, 'rev-parse', 'HEAD'])
         source_changes, _ = self.run(['git', '-C', source, 'status', '--porcelain'])
-        overlay = profile.parent / 'determination.config'
-        overlay.write_text('\n'.join(line for line in (REPO / 'kernel/determination.config').read_text().splitlines()
+        overlay = profile.parent / 'aurora.config'
+        overlay.write_text('\n'.join(line for line in (REPO / 'kernel/aurora.config').read_text().splitlines()
                                      if line.startswith('CONFIG_')) + '\n# CONFIG_FRAMEBUFFER_CONSOLE is not set\n')
         config = output / '.config'
         shutil.copyfile(base, config)
         fragments = [str(overlay)]
         env = dict(os.environ, KCONFIG_CONFIG=str(config))
-        self.phase('Applying Determination kernel requirements to the running device configuration')
+        self.phase('Applying Aurora kernel requirements to the running device configuration')
         self.run(['sh', source / 'scripts/kconfig/merge_config.sh', '-m', '-O', output, config, *fragments], cwd=source, env=env)
         make = ['make', '-C', source, f'O={output}', 'ARCH=arm64', 'LLVM=1', 'LLVM_IAS=1', *arguments]
         self.run([*make, 'olddefconfig'], timeout=300)
@@ -662,19 +662,19 @@ fi
             artifact.update(devices=device['devices'], androidBuilds=[device['fingerprint']], support='experimental',
                             sha256=digest(destination), size=destination.stat().st_size)
             artifacts.append(artifact)
-        destination = bundle / 'determination-boot.img'
+        destination = bundle / 'aurora-boot.img'
         shutil.copyfile(boot, destination)
         artifacts.append(dict(type='boot', name=destination.name, url='https://localhost/' + destination.name,
                               devices=device['devices'], androidBuilds=[device['fingerprint']], abis=['arm64-v8a'],
                               support='experimental', sha256=digest(destination), size=destination.stat().st_size))
         manifest['artifacts'] = artifacts
-        save_json(bundle / 'determination-update.json', validate_manifest(manifest))
+        save_json(bundle / 'aurora-update.json', validate_manifest(manifest))
         save_json(bundle / 'device-evidence.json', device)
         save_json(bundle / 'port-build.json', {'device': device['device'], 'fingerprint': device['fingerprint'],
                   'source': str(source), 'sourceCommit': source_commit, 'sourceDirty': bool(source_changes), 'target': target, 'configSha256': digest(config), 'kernelSha256': digest(kernel),
                   'qualification': 'experimental', 'backup': str(backup)})
         self.log('Built installable port: ' + str(bundle))
-        return str(bundle / 'determination-update.json')
+        return str(bundle / 'aurora-update.json')
 
     def install(self, device, source, distro, hostname, experimental=True, prepare_only=False,
                 display_name='Aurora User'):
@@ -710,10 +710,10 @@ fi
         needed = expanded + sum(a['size'] for a in artifacts.values()) + device['boot_size'] * 3 + 512 * 1024**2
         if free < needed:
             raise Failure(f'Insufficient phone storage: require {needed // 1024**2} MiB free.')
-        self.shell('set -e; test ! -f /data/determination/run/desktop-mode; '
-                   'if [ -x /data/determination/lxc/bin/lxc-info ]; then '
-                   'state=$(/data/determination/lxc/bin/lxc-info -P /data/determination -n guest -sH) || exit 1; [ "$state" = STOPPED ]; fi', root=True)
-        remote = '/data/local/tmp/det-install-' + uuid.uuid4().hex
+        self.shell('set -e; test ! -f /data/aurora/run/desktop-mode; '
+                   'if [ -x /data/aurora/lxc/bin/lxc-info ]; then '
+                   'state=$(/data/aurora/lxc/bin/lxc-info -P /data/aurora -n guest -sH) || exit 1; [ "$state" = STOPPED ]; fi', root=True)
+        remote = '/data/local/tmp/aurora-install-' + uuid.uuid4().hex
         self.shell('mkdir -m 700 ' + remote)
         completed = False
         try:
@@ -754,11 +754,11 @@ fi
         missing = [key for key in REQUIRED if f'CONFIG_{key}=y' not in config]
         if missing:
             raise Failure('Running kernel is missing: ' + ', '.join(missing))
-        self.shell('test -x /data/determination/bin/desktop-on && '
-                   'test -x /data/determination/lxc/bin/lxc-start && '
-                   'test -f /data/determination/active-guest/etc/os-release && '
-                   'test -d /data/adb/modules/determination && '
-                   'test ! -f /data/adb/modules/determination/disable', root=True)
+        self.shell('test -x /data/aurora/bin/desktop-on && '
+                   'test -x /data/aurora/lxc/bin/lxc-start && '
+                   'test -f /data/aurora/active-guest/etc/os-release && '
+                   'test -d /data/adb/modules/aurora && '
+                   'test ! -f /data/adb/modules/aurora/disable', root=True)
         self.log('Kernel, module, runtime, and guest installation checks passed. Graphics qualification is separate.')
 
     def restore(self, device, backup):

@@ -1,8 +1,8 @@
-# Contributing to Determination
+# Contributing to Aurora
 
 ## Scope and safety
 
-Determination changes display ownership, boot images, and Android services. Do
+Aurora changes display ownership, boot images, and Android services. Do
 not run device mutation, flashing, or recovery commands as part of a host-side
 change unless the device qualification owner has explicitly approved that run.
 Phone mode is the recovery baseline.

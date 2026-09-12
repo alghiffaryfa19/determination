@@ -1,0 +1,25 @@
+#!/bin/sh
+set -eu
+
+runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+state="$runtime/aurora-opal"
+backend=/usr/local/share/aurora-opal/backend.py
+pidfile="$state/backend.pid"
+
+mkdir -p "$state"
+
+for proc in /proc/[0-9]*; do
+    old=${proc##*/}
+    if [ -r "$proc/cmdline" ] && tr '\000' '\n' < "$proc/cmdline" | grep -Fqx "$backend"; then
+        kill -TERM "$old" 2>/dev/null || true
+        attempt=0
+        while kill -0 "$old" 2>/dev/null && [ "$attempt" -lt 20 ]; do
+            sleep 0.1
+            attempt=$((attempt + 1))
+        done
+        kill -KILL "$old" 2>/dev/null || true
+    fi
+done
+
+printf '%s\n' "$$" > "$pidfile"
+exec python3 "$backend"

@@ -1,6 +1,6 @@
-# Determination companion app
+# Aurora companion app
 
-A native Android controller to drive Determination without a
+A native Android controller to drive Aurora without a
 computer attached. It uses the versioned local control bridge when available
 and labels the direct Magisk `su` path as an emergency compatibility fallback.
 
@@ -34,9 +34,9 @@ Install the debug APK: `adb install app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Requirements
 
-- Determination installed on-device (`/data/determination`, kernel + Magisk
+- Aurora installed on-device (`/data/aurora`, kernel + Magisk
   module flashed).
-- Magisk su granted to `com.determination.companion` (Superuser tab; screen
+- Magisk su granted to `com.aurora.companion` (Superuser tab; screen
   unlocked for the grant prompt).
 
 The companion reports bridge status when the installed module supports it. A

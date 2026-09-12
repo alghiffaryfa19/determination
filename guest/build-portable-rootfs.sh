@@ -1,7 +1,7 @@
 #!/bin/sh
-# Build Arch Linux ARM or Alpine Determination rootfs archives without running
+# Build Arch Linux ARM or Alpine Aurora rootfs archives without running
 # foreign-architecture binaries. Package/user provisioning happens on first LXC
-# boot through /root/determination-firstboot.
+# boot through /root/aurora-firstboot.
 
 set -eu
 [ "$(id -u)" -eq 0 ] || {
@@ -21,11 +21,11 @@ ALARM_KEY=${ALARM_KEY:-68B3537F39A313B3E574D06777193F152BDBE6A6}
 
 case "$PROFILE" in
     arch)
-        OUT=${OUT:-determination-rootfs-arch.tar.gz}
+        OUT=${OUT:-aurora-rootfs-arch.tar.gz}
         URL=${ALARM_URL:-http://os.archlinuxarm.org/os/ArchLinuxARM-aarch64-latest.tar.gz}
         ;;
     alpine)
-        OUT=${OUT:-determination-rootfs-alpine.tar.gz}
+        OUT=${OUT:-aurora-rootfs-alpine.tar.gz}
         URL=https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/aarch64/alpine-minirootfs-$ALPINE_VERSION-aarch64.tar.gz
         ;;
     *) echo "usage: $0 arch|alpine [source-tarball]" >&2; exit 2 ;;
@@ -68,9 +68,9 @@ fi
 tar --delay-directory-restore -xzf "$SOURCE" -C "$ROOT"
 ./customize-portable-rootfs.sh "$ROOT" "$PROFILE"
 source_hash=$(sha256sum "$SOURCE" | awk '{print $1}')
-printf '%s\n' "$source_hash" > "$ROOT/etc/determination-source-sha256"
+printf '%s\n' "$source_hash" > "$ROOT/etc/aurora-source-sha256"
 
 tar --numeric-owner -C "$ROOT" -czf "$OUT" .
 echo "Rootfs: $OUT"
-echo "Install: det distro install $PROFILE $OUT"
-echo "Then:    det distro select $PROFILE && det distro provision"
+echo "Install: aurora distro install $PROFILE $OUT"
+echo "Then:    aurora distro select $PROFILE && aurora distro provision"

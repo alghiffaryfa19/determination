@@ -6,7 +6,7 @@ Start `./aurora-installer` from the repository or run `make installer`.
 No Python packages are required beyond the standard library. The interaction is
 an interview: one question, one validated answer, then the next operation.
 Device probes and commands stay in the operation log while the terminal shows
-short progress steps. Set `DETERMINATION_VERBOSE=1` when the raw diagnostic
+short progress steps. Set `AURORA_VERBOSE=1` when the raw diagnostic
 stream is needed.
 
 The interaction follows the prompt/default/validation model documented by
@@ -49,13 +49,13 @@ install, build a port, or recover.
 artifacts beside it. It selects a compatible Debian, Arch, or Alpine guest from
 the bundle, then asks for the Linux display name and hostname. The display name
 is stored in the uid-1000 account's GECOS
-field while the stable service and login identity remains `detuser`. Each
+field while the stable service and login identity remains `aurora`. Each
 artifact must have a matching SHA-256 and length. Device and exact-build filters
 apply before boot preparation, and ambiguous matches fail. Experimental releases
 are available by default, including newly generated ports. Qualification remains
 artifact metadata, without a separate permission question.
 
-Distributors can set `DETERMINATION_UPDATE_MANIFEST_URL` in the environment to
+Distributors can set `AURORA_UPDATE_MANIFEST_URL` in the environment to
 provide a default HTTPS release manifest without baking a repository owner into
 the installer. If it is unset, the interview asks for a manifest explicitly.
 
@@ -71,12 +71,12 @@ match the device aliases, Android SDK, ROM identity property, and kernel family
 before selecting a known source checkout or repository, branch, image target,
 and build settings. A spoofed public fingerprint alone never selects a source.
 Unknown or ambiguous devices fall back to explicit source questions. Environment
-overrides (`DETERMINATION_KERNEL_SOURCE`, `DETERMINATION_KERNEL_REF`,
-`DETERMINATION_KERNEL_TARGET`, `DETERMINATION_BUILD_JOBS`, and
-`DETERMINATION_KERNEL_MAKE_ARGS`) remain available for port developers. If the
+overrides (`AURORA_KERNEL_SOURCE`, `AURORA_KERNEL_REF`,
+`AURORA_KERNEL_TARGET`, `AURORA_BUILD_JOBS`, and
+`AURORA_KERNEL_MAKE_ARGS`) remain available for port developers. If the
 running configuration cannot be read, a maintained profile may supply its checked
 recon artifact; otherwise the interview asks for a local file. The build uses
-the running config, merges Determination's common fragment, disables framebuffer
+the running config, merges Aurora's common fragment, disables framebuffer
 console ownership, resolves Kconfig defaults, checks mandatory container options,
 and compiles the profile's actual boot kernel target. Incremental
 build output is retained for retries.
@@ -132,7 +132,7 @@ of saved settings.
 
 ## Workspace and tests
 
-The default workspace is `~/.local/share/determination`; override it with
+The default workspace is `~/.local/share/aurora`; override it with
 `./aurora-installer --workspace /path/to/workspace`. It stores settings,
 content-addressed downloads, source checkouts, incremental kernel output, local
 port bundles, operation logs, transaction metadata, and versioned boot backups.

@@ -1,0 +1,76 @@
+#!/bin/bash
+# Small touch-friendly-enough connectivity menu for phosh/Plasma terminals.
+# Radio ownership remains on Android; aurora-connectivity is the transport.
+
+set -u
+RAW=/tmp/aurora-wifi-scan.$$
+LIST=/tmp/aurora-wifi-list.$$
+trap 'rm -f "$RAW" "$LIST"' EXIT
+
+scan_wifi() {
+    if ! aurora-connectivity wifi-scan >"$RAW"; then
+        read -r -p "Press Enter to continue" _
+        return
+    fi
+    awk '
+        /^[[:space:]]*[0-9a-f][0-9a-f]:/ {
+            flags=$0; sub(/^.*[[:space:]]\[/, "[", flags)
+            line=$0
+            sub(/^[[:space:]]*[^[:space:]]+[[:space:]]+[0-9]+[[:space:]]+[^[:space:]]+[[:space:]]+[^[:space:]]+[[:space:]]+/, "", line)
+            sub(/[[:space:]]+\[[^[]*$/, "", line)
+            security="open"
+            if (flags ~ /WEP/) security="wep"
+            else if (flags ~ /SAE/) security="wpa3"
+            else if (flags ~ /WPA/) security="wpa2"
+            if (length(line)) print security "\t" line
+        }
+    ' "$RAW" | awk '!seen[$0]++' >"$LIST"
+
+    clear
+    echo "Nearby Wi-Fi"
+    echo
+    nl -w2 -s'. ' "$LIST" | sed $'s/\t/  /g'
+    echo
+    read -r -p "Network number (blank cancels): " choice
+    case "$choice" in ''|*[!0-9]*) return;; esac
+    selected=$(sed -n "${choice}p" "$LIST")
+    [ -n "$selected" ] || return
+    security=${selected%%$'\t'*}
+    ssid=${selected#*$'\t'}
+    passphrase=
+    case "$security" in
+        open|owe) ;;
+        *) read -r -s -p "Passphrase for $ssid: " passphrase; echo ;;
+    esac
+    aurora-connectivity wifi-connect "$ssid" "$security" "$passphrase"
+    unset passphrase
+    read -r -p "Press Enter to continue" _
+}
+
+while :; do
+    clear
+    echo "Aurora Connectivity"
+    echo
+    aurora-connectivity wifi-status 2>/dev/null | sed -n '1,5p'
+    printf 'Bluetooth: '
+    aurora-connectivity bt-status 2>/dev/null || echo unavailable
+    echo
+    echo "1. Scan and connect to Wi-Fi"
+    echo "2. Show saved Wi-Fi networks"
+    echo "3. Enable Wi-Fi"
+    echo "4. Disable Wi-Fi"
+    echo "5. Enable Bluetooth"
+    echo "6. Disable Bluetooth"
+    echo "q. Close"
+    echo
+    read -r -p "> " action
+    case "$action" in
+        1) scan_wifi ;;
+        2) clear; aurora-connectivity wifi-list; read -r -p "Press Enter to continue" _ ;;
+        3) aurora-connectivity wifi-enable on; sleep 1 ;;
+        4) aurora-connectivity wifi-enable off; sleep 1 ;;
+        5) aurora-connectivity bt-enable; sleep 1 ;;
+        6) aurora-connectivity bt-disable; sleep 1 ;;
+        q|Q) exit 0 ;;
+    esac
+done

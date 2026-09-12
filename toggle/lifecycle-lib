@@ -2,7 +2,7 @@
 # Shared lifecycle primitives. These functions intentionally use only toybox
 # compatible tools so adapters remain usable when the native daemon is absent.
 
-LC_DET=${DET:-/data/determination}
+LC_DET=${AURORA:-/data/aurora}
 LC_RUN="$LC_DET/run"
 LC_BOOT_ID_FILE=/proc/sys/kernel/random/boot_id
 

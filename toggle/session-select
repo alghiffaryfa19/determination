@@ -1,10 +1,10 @@
 #!/system/bin/sh
-# Resolve $DET/etc/compositor + $DET/etc/sessions/<id>.session into KEY=value
+# Resolve $AURORA/etc/compositor + $AURORA/etc/sessions/<id>.session into KEY=value
 # launch parameters. Planned/incompatible selections refuse and fall back to
-# qualified phosh. Toybox-safe; testable via DET_SESSION_SELECT_ROOT.
+# qualified phosh. Toybox-safe; testable via AURORA_SESSION_SELECT_ROOT.
 set -u
 
-ROOT=${DET_SESSION_SELECT_ROOT:-${DET:-/data/determination}}
+ROOT=${AURORA_SESSION_SELECT_ROOT:-${AURORA:-/data/aurora}}
 
 warn() { echo "session-select: $*" >&2; }
 

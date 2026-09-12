@@ -1,7 +1,7 @@
-#include "determination/control/transition.hpp"
+#include "aurora/control/transition.hpp"
 
-#include "determination/control/adapter.hpp"
-#include "determination/control/system.hpp"
+#include "aurora/control/adapter.hpp"
+#include "aurora/control/system.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -9,7 +9,7 @@
 #include <iostream>
 #include <utility>
 
-namespace determination::control {
+namespace aurora::control {
 namespace {
 
 constexpr std::uint32_t kMinimumDeadlineMs = 5'000;
@@ -98,7 +98,7 @@ TransitionRequestResult TransitionController::request(
     TransitionRequestResult result;
     if (!allow_transitions_) {
         result.status = Status::Rejected;
-        result.message = "detd is observe-only; use the proven transition path";
+        result.message = "aurorad is observe-only; use the proven transition path";
         result.state = snapshot();
         return result;
     }
@@ -165,7 +165,7 @@ TransitionRequestResult TransitionController::request(
         entry.final_state = "accepted";
         std::string journal_error;
         if (journal_ && !journal_->append(entry, &journal_error))
-            std::cerr << "detd: journal append: " << journal_error << '\n';
+            std::cerr << "aurorad: journal append: " << journal_error << '\n';
     }
     worker_ = std::thread(&TransitionController::worker, this, target,
                           effective_deadline);
@@ -193,7 +193,7 @@ void TransitionController::journal_locked(const char *final_state)
     entry.error = state_.last_error;
     std::string error;
     if (!journal_->append(entry, &error))
-        std::cerr << "detd: journal append: " << error << '\n';
+        std::cerr << "aurorad: journal append: " << error << '\n';
 }
 
 TransitionCancelResult TransitionController::cancel(std::uint64_t transition_id)
@@ -227,7 +227,7 @@ bool TransitionController::persist_locked(std::string *error)
     std::string local_error;
     if (store_.save(state_, &local_error)) return true;
     if (error) *error = local_error;
-    std::cerr << "detd: persist state: " << local_error << '\n';
+    std::cerr << "aurorad: persist state: " << local_error << '\n';
     return false;
 }
 
@@ -428,4 +428,4 @@ void TransitionController::worker(Mode target, std::uint64_t deadline_ms)
     idle_condition_.notify_all();
 }
 
-} // namespace determination::control
+} // namespace aurora::control

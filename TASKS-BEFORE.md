@@ -1,4 +1,4 @@
-# Determination Repository Overhaul: Before
+# Aurora Repository Overhaul: Before
 
 Status: frozen implementation baseline  
 Baseline commit: `a55c19a9a910`  
@@ -42,8 +42,8 @@ The work is split across three non-overlapping implementation thirds:
 
 | ID | Priority | Task | Acceptance criteria |
 |---|---:|---|---|
-| N01 | P0 | Add bounded detd client receive and send deadlines | A stalled peer cannot block a concurrent ping beyond the configured RPC budget |
-| N02 | P0 | Add detd connection quota and clean rejection | Excess peers are rejected without unbounded allocation or daemon starvation |
+| N01 | P0 | Add bounded aurorad client receive and send deadlines | A stalled peer cannot block a concurrent ping beyond the configured RPC budget |
+| N02 | P0 | Add aurorad connection quota and clean rejection | Excess peers are rejected without unbounded allocation or daemon starvation |
 | N03 | P0 | Add slowloris and stalled-reader protocol tests | Tests cover partial headers, partial bodies, oversized packets, silent peers, and blocked response readers |
 | N04 | P0 | Install both required HWC compatibility libraries | The compatibility and UI libraries are staged, verified, and activated as one complete set |
 | N05 | P1 | Continuously drain adapter output after the capture limit | A verbose adapter can exit normally after more than 1 MiB of output and reports truncation |
@@ -81,13 +81,13 @@ The work is split across three non-overlapping implementation thirds:
 | L04 | P0 | Prevent phone restoration while a compositor still owns display resources | Exit escalates safely and reaches RECOVERY instead of starting SurfaceFlinger against an ambiguous owner |
 | L05 | P0 | Restrict the guest root command surface | Routine mode exit uses the capability RPC and privileged power actions require explicit authority |
 | L06 | P1 | Make desktop entry a bounded transaction | Every step has a deadline, structured result, and reverse rollback |
-| L07 | P1 | Keep an independent emergency phone restore path | Emergency recovery remains usable when detd or the guest is unavailable |
+| L07 | P1 | Keep an independent emergency phone restore path | Emergency recovery remains usable when aurorad or the guest is unavailable |
 | L08 | P1 | Replace shell-sourced device profiles with typed parsing | Unknown keys, injection, invalid paths, invalid enums, and invalid numeric values are rejected |
 | L09 | P1 | Add device-profile fixtures and golden output tests | Valid and invalid profiles produce deterministic LXC and guest configurations |
 | L10 | P1 | Make generated configuration atomic and private | Per-run temporary files are mode-restricted, validated, and atomically renamed |
 | L11 | P1 | Serialize config and manifest generation | Concurrent generation cannot produce mismatched or partial results |
 | L12 | P1 | Add socket deadlines and framing to the Zygisk bridge | Slow or partial clients cannot block the bridge indefinitely |
-| L13 | P1 | Make detd the routine Zygisk request path | Accepted, running, committed, rolled-back, and recovery states replace immediate legacy success |
+| L13 | P1 | Make aurorad the routine Zygisk request path | Accepted, running, committed, rolled-back, and recovery states replace immediate legacy success |
 | L14 | P1 | Create logging directories before redirection | First boot and fresh install logs are preserved |
 | L15 | P1 | Bound Magisk boot-completion waiting | Timeout records a degraded or recovery disposition instead of polling forever |
 | L16 | P1 | Stage module payloads as versioned complete sets | Installation verifies compatibility and hashes before atomic activation |
@@ -95,7 +95,7 @@ The work is split across three non-overlapping implementation thirds:
 | L18 | P1 | Share boot-image candidate validation | Host and action-zip paths choose the same newest valid image and explain rejected candidates |
 | L19 | P1 | Validate restore inputs before any write | Boot magic, partition fit, target slot, and hash are checked |
 | L20 | P2 | Add a typed persistent Linux-first boot profile | Desired profile, generation, previous known-good state, attempt count, deadline, and result are atomic |
-| L21 | P2 | Apply Linux-first through detd after guest health gates | Linux becomes primary only after LXC, session, display, and input readiness are confirmed |
+| L21 | P2 | Apply Linux-first through aurorad after guest health gates | Linux becomes primary only after LXC, session, display, and input readiness are confirmed |
 | L22 | P2 | Automatically fall back to phone mode after a failed Linux-first attempt | One failed automatic attempt disables retry until explicitly re-enabled |
 | L23 | P2 | Add explicit Linux-first recovery commands | Online and offline recovery paths force phone mode safely |
 | L24 | P2 | Define the minimum Android service policy as typed capabilities | The first profile retains init, required vendor HALs, radio, power, thermal, binder, and qualified networking |

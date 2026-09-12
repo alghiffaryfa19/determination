@@ -1,6 +1,6 @@
-#include "determination/control/state.hpp"
+#include "aurora/control/state.hpp"
 
-#include "determination/control/system.hpp"
+#include "aurora/control/system.hpp"
 
 #include <cerrno>
 #include <charconv>
@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace determination::control {
+namespace aurora::control {
 namespace {
 
 std::string encode(const std::string &value)
@@ -274,4 +274,4 @@ std::string state_json(const StateRecord &state)
     return output.str();
 }
 
-} // namespace determination::control
+} // namespace aurora::control

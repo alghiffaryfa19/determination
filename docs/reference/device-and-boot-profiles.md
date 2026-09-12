@@ -16,14 +16,14 @@ Linux-first boot behavior is experimental and device-profile gated. On the
 verified OnePlus 7 profile, enable it from the host with:
 
 ```sh
-det linux-first enable
+aurora linux-first enable
 ```
 
 The next boot starts Android's required kernel, init, vendor HAL, radio, power,
 thermal, binder, and networking layers, then hands the primary session to the
 Linux guest. The phone profile is restored automatically after one failed
-attempt. Disable the behavior with `det linux-first disable`; use
-`det linux-first apply` to test the saved profile without rebooting.
+attempt. Disable the behavior with `aurora linux-first disable`; use
+`aurora linux-first apply` to test the saved profile without rebooting.
 
 Linux-first uses the structured control operation when transition ownership is
 enabled. While the daemon remains observe-only, it falls back to the fixed,

@@ -1,6 +1,6 @@
-id=determination
-name=Determination - @CODENAME@
+id=aurora
+name=Aurora - @CODENAME@
 version=v@VERSION@
 versionCode=@VERSION_CODE@
-author=Determination contributors
-description=Determination @VERSION@ "@CODENAME@": Android convergence layer with an LXC glibc desktop guest. Requires the Determination custom kernel.
+author=Aurora contributors
+description=Aurora @VERSION@ "@CODENAME@": Android convergence layer with an LXC glibc desktop guest. Requires the Aurora custom kernel.

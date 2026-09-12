@@ -6,7 +6,7 @@ Last reviewed: 2026-09-10
 
 ## PC installation workbench
 
-Run `./determination-installer` on a Linux PC. The terminal interview owns discovery,
+Run `./aurora-installer` on a Linux PC. The terminal interview owns discovery,
 release selection, automatic port builds, installation, and boot recovery.
 The companion app has no system installer or boot writer.
 
@@ -16,13 +16,13 @@ verify downloads every artifact, validates archive contents, saves a complete
 boot backup on the PC, and repacks the release kernel around the device's own
 Magisk ramdisk. It does not install userspace or write boot.
 
-Install Determination repeats validation, stages userspace, installs the module,
+Install Aurora repeats validation, stages userspace, installs the module,
 runtime, rootfs, and companion, and writes boot last. A failed write or readback
 triggers a restore attempt from the verified backup. Reboot is a separate action.
 Existing guest slots are retained rather than replaced.
 
 Automatic port downloads a selected downstream source branch or uses a local
-source folder. It merges the running config with Determination requirements,
+source folder. It merges the running config with Aurora requirements,
 compiles the kernel, inserts the detected device profile into the shared module,
 and assembles a local schema 2 bundle pinned to the connected Android build.
 The interview offers to install that bundle when the build completes. New ports remain

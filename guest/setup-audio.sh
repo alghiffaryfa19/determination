@@ -12,20 +12,20 @@ if [ "$MODE" != "--configure-only" ]; then
 fi
 
 install -d /etc/pipewire/pipewire.conf.d /usr/local/bin
-if [ -f "$HERE/det-audio-session" ]; then
-    install -m 0755 "$HERE/det-audio-session" /usr/local/bin/det-audio-session
+if [ -f "$HERE/aurora-audio-session" ]; then
+    install -m 0755 "$HERE/aurora-audio-session" /usr/local/bin/aurora-audio-session
 fi
-[ -f "$HERE/90-determination-direct.conf" ] || {
-    echo "missing $HERE/90-determination-direct.conf" >&2
+[ -f "$HERE/90-aurora-direct.conf" ] || {
+    echo "missing $HERE/90-aurora-direct.conf" >&2
     exit 1
 }
-install -m 0644 "$HERE/90-determination-direct.conf" \
-    /etc/pipewire/pipewire.conf.d/90-determination-direct.conf
+install -m 0644 "$HERE/90-aurora-direct.conf" \
+    /etc/pipewire/pipewire.conf.d/90-aurora-direct.conf
 
-cat > /etc/profile.d/determination-audio.sh <<'EOF'
+cat > /etc/profile.d/aurora-audio.sh <<'EOF'
 # Clients may negotiate larger buffers; this requests a bounded 5.3 ms quantum.
 export PIPEWIRE_LATENCY=256/48000
 EOF
 
 echo "direct PipeWire configuration installed"
-echo "it remains dormant until det-audio-owner publishes audio-claimed"
+echo "it remains dormant until aurora-audio-owner publishes audio-claimed"

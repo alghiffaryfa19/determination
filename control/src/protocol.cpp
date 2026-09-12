@@ -1,4 +1,4 @@
-#include "determination/control/protocol.hpp"
+#include "aurora/control/protocol.hpp"
 
 #include <cerrno>
 #include <cstring>
@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace determination::control {
+namespace aurora::control {
 
 namespace {
 
@@ -200,4 +200,4 @@ std::string status_name(Status status)
     return "unknown";
 }
 
-} // namespace determination::control
+} // namespace aurora::control

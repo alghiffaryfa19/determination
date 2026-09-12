@@ -1,6 +1,6 @@
-#include "determination/control/policy.hpp"
+#include "aurora/control/policy.hpp"
 
-namespace determination::control {
+namespace aurora::control {
 
 bool endpoint_peer_allowed(Endpoint endpoint, uid_t uid)
 {
@@ -25,4 +25,4 @@ bool guest_report_allowed(Endpoint endpoint, uid_t uid)
     return endpoint == Endpoint::Guest && (uid == 0 || uid == 1000);
 }
 
-} // namespace determination::control
+} // namespace aurora::control

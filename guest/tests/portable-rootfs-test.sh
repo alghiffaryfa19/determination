@@ -12,9 +12,9 @@ ln -s "$WORK/resolver" "$WORK/root/etc/resolv.conf"
 grep -qx untouched "$WORK/resolver"
 grep -q '^nameserver ' "$WORK/root/etc/resolv.conf"
 [ "$(readlink "$WORK/root/etc/systemd/system/systemd-networkd.service")" = /dev/null ]
-grep -qx 'PasswordAuthentication no' "$WORK/root/etc/ssh/sshd_config.d/00-determination.conf"
-grep -q 'pacman-key --populate archlinuxarm' "$WORK/root/root/determination-firstboot"
-[ ! -e "$WORK/root/etc/determination-ready" ]
+grep -qx 'PasswordAuthentication no' "$WORK/root/etc/ssh/sshd_config.d/00-aurora.conf"
+grep -q 'pacman-key --populate archlinuxarm' "$WORK/root/root/aurora-firstboot"
+[ ! -e "$WORK/root/etc/aurora-ready" ]
 [ "$(stat -c %a "$WORK/root/tmp")" = 1777 ]
-sh -n "$WORK/root/root/determination-firstboot"
+sh -n "$WORK/root/root/aurora-firstboot"
 echo 'portable rootfs tests passed'

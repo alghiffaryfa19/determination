@@ -1,5 +1,5 @@
 #!/bin/sh
-# Repack boot.img with the Determination kernel, keeping the stock ramdisk.
+# Repack boot.img with the Aurora kernel, keeping the stock ramdisk.
 # Magisk then patches the *ramdisk* of the result on-device (or via the app's
 # "Select and Patch a File") --- kernel swap and ramdisk patch are independent
 # layers by design (spec §2), so we never touch the ramdisk here.
@@ -45,8 +45,8 @@ mv kernel-new kernel
 magiskboot repack boot.img
 cd - >/dev/null
 
-cp "$WORK/new-boot.img" determination-boot.img
-echo "Wrote boot/determination-boot.img"
+cp "$WORK/new-boot.img" aurora-boot.img
+echo "Wrote boot/aurora-boot.img"
 echo
 echo "Next:"
 echo "  1. Patch with Magisk app (Select and Patch a File) -> magisk_patched.img"

@@ -1,4 +1,4 @@
-# Determination - project context
+# Aurora - project context
 
 Android convergence layer for the reference OnePlus 7 (`guacamoleb`, SM8150 /
 Adreno 640). Android stays PID1; a Debian LXC guest on the same downstream
@@ -23,11 +23,11 @@ Magisk module + Zygisk - never a ROM, never touches /system.
 - **Never `adb root`**. Root = `adb shell "su -c '<cmds>'"`. If su returns
   permission denied, Shell toggle in Magisk Superuser tab is off.
 - Flash path: `usb-install/host-flash.sh check|flash|restore|verify` or Magisk
-  action zips. Dry-run: `touch /sdcard/Download/determination-dryrun`.
+  action zips. Dry-run: `touch /sdcard/Download/aurora-dryrun`.
 
 ## Build system
 
-- `kernel/build.sh`: merges `determination.config` onto running kernel config,
+- `kernel/build.sh`: merges `aurora.config` onto running kernel config,
   verifies all options, compiles. Toolchain in `toolchain/` (gitignored).
 - `boot/repack.sh`: swaps kernel into boot.img via magiskboot (from `toolchain/usr/bin`).
 - Zygisk: `cd zygisk && ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=jni/Android.mk NDK_APPLICATION_MK=jni/Application.mk`
@@ -38,7 +38,7 @@ Magisk module + Zygisk - never a ROM, never touches /system.
 
 - Probe/script outputs → `artifacts/`. Structured recon → `recon/report-*/`.
 - Commit as work lands; use the contributor's repository-configured identity.
-- `~/op7-port/` + pmOS = mainline kernel track. Don't mix with Determination.
+- `~/op7-port/` + pmOS = mainline kernel track. Don't mix with Aurora.
 
 ### Comment discipline
 
@@ -52,7 +52,7 @@ Magisk module + Zygisk - never a ROM, never touches /system.
 
 ## Graphics invariant — explicit user requirement
 
-Dethyprland/Hyprland and Sxmo must use vendor EGL/GLES through **libhybris**,
+AuroraHyprland/Hyprland and Sxmo must use vendor EGL/GLES through **libhybris**,
 Android gralloc allocations with complete native handles and sync fences, and
 libhybris/hwcomposer for internal presentation. Do not substitute Mesa/Zink,
 Turnip, raw KMS, or a nested KWin session to claim delivery. Native graphics
@@ -80,39 +80,39 @@ guest `/usr/lib/android/`.
 `/etc/profile.d/hybris.sh` sets defaults. Gate: `guest/gpu-smoke.sh`.
 
 **Input:** wlroots EVIOCGRAB handoff, libinput udev properties
-(`det-input-udevdb`), quirks for touchpanel, seatd needs /dev/tty0-2.
+(`aurora-input-udevdb`), quirks for touchpanel, seatd needs /dev/tty0-2.
 
 **Non-root session (2026-07-12):** the guest desktop runs as unprivileged
-`detuser` (uid 1000), NOT root. `desktop-on` does root-only prep (udev DB, seatd,
-create `/run/user/1000`, `chmod a+r /etc/phoc.ini`) then `runuser -u detuser`
+`aurora` (uid 1000), NOT root. `desktop-on` does root-only prep (udev DB, seatd,
+create `/run/user/1000`, `chmod a+r /etc/phoc.ini`) then `runuser -u aurora`
 launches phoc + phosh; runtime dir is `/run/user/1000`. Device access works
 because GPU/dri/binder/ashmem are world-rw and kgsl/ion are 1000-owned (uid
 1000 == Android AID_SYSTEM); the ONE gate is `/dev/input/*` (0660 root:1004) -
-handled by group `android_input` (gid 1004, matches AID_INPUT) that detuser
+handled by group `android_input` (gid 1004, matches AID_INPUT) that aurora
 joins. seatd socket is group `video`(44). Perms recon: `artifacts/node-perms-probe.txt`.
 `/etc/phoc.ini` MUST be world-readable or phoc segfaults on parse. Sudo is
-password-gated (`detuser ALL=(ALL) ALL`) - run `det passwd` once before sudo
+password-gated (`aurora ALL=(ALL) ALL`) - run `aurora passwd` once before sudo
 works. **nosuid gotcha:** Android's /data is `nosuid,nodev`, and the container
 rootfs is a bind of a /data subtree, so the container `/` inherits nosuid and
 sudo's setuid bit is ignored ("effective uid is not 0 … nosuid"). `guest-start`
 fixes it by `mount -o remount,bind,suid,dev,exec /` inside the container
-post-start (the host-side bind-remount of `$DET/guest` does NOT reach the
-pivoted container root on 4.14). `det guest` = detuser shell; `det guest-root`
+post-start (the host-side bind-remount of `$AURORA/guest` does NOT reach the
+pivoted container root on 4.14). `aurora guest` = aurora shell; `aurora guest-root`
 = root escape hatch. Known
 gap: phosh runs bare (no logind), so polkit-gated actions log "No session" -
-Logout/Reboot/Poweroff are fine (det-session-manager intercepts them).
+Logout/Reboot/Poweroff are fine (aurora-session-manager intercepts them).
 
-**pidfd shim:** `det-pidfd-shim.so` (LD_PRELOAD) - pidfd_open→ENOSYS forces
+**pidfd shim:** `aurora-pidfd-shim.so` (LD_PRELOAD) - pidfd_open→ENOSYS forces
 SIGCHLD fallback. Required because waitid(P_PIDFD) is EINVAL on 4.14.
 
-**Session manager:** `det-session-manager` owns org.gnome.SessionManager on the
+**Session manager:** `aurora-session-manager` owns org.gnome.SessionManager on the
 session bus. Routes Logout→exit (phone mode), Shutdown→poweroff, Reboot→reboot.
 Also plays gsd-power for wake: ActiveChanged(true)→AddUserActiveWatch→SetActive(false).
 
-**Control channel:** `toggle/det-hostagent` (inotifyd-driven) watches
-`/data/determination/run/control`. Guest writes commands via `/mnt/det-control`.
+**Control channel:** `toggle/aurora-hostagent` (inotifyd-driven) watches
+`/data/aurora/run/control`. Guest writes commands via `/mnt/aurora-control`.
 
-**Battery:** `bms` node is accurate (not `battery`). `det-battery` bind-mounts
+**Battery:** `bms` node is accurate (not `battery`). `aurora-battery` bind-mounts
 the corrected capacity over `battery/capacity`. The bind is re-asserted every
 poll pass, not once: the qpnp-smb5 charger re-enumerates its power_supply node
 on USB plug/unplug and silently drops the bind (else phosh falls back to the
@@ -190,12 +190,12 @@ before touching bootanim props.
 
 **Guest distro profiles (2026-08-09, buildable but not device-qualified):**
 Debian remains the only proven guest. The active rootfs is selected through
-`/data/determination/active-guest`; Debian keeps its compatible location at
-`/data/determination/guest`, while optional Arch Linux ARM and Alpine slots live
-under `/data/determination/guests/<id>/rootfs`. `toggle/guest-distro` owns
+`/data/aurora/active-guest`; Debian keeps its compatible location at
+`/data/aurora/guest`, while optional Arch Linux ARM and Alpine slots live
+under `/data/aurora/guests/<id>/rootfs`. `toggle/guest-distro` owns
 install/select/provision/rollback, and refuses switching while desktop mode is
-active. `guest/det-platform` abstracts package, service, user-session and libc
-differences; `det distro ...` and the companion Software screen expose it.
+active. `guest/aurora-platform` abstracts package, service, user-session and libc
+differences; `aurora distro ...` and the companion Software screen expose it.
 Portable rootfs builders live in `guest/build-portable-rootfs.sh`; Alpine is a
 native musl build (no `gcompat` shortcut), so glibc-specific libhybris hooks are
 skipped there. Guest helper binaries are static. Do not call Arch or Alpine
@@ -203,12 +203,12 @@ graphically supported until they pass hwcomposer, Phoc/input, repeated Android
 restore, audio and external-display qualification on the phone.
 
 **Multi-compositor internal sessions (2026-08-25):** `desktop-on` no longer
-hardcodes phoc+phosh. It resolves `$DET/etc/compositor` against
-`$DET/etc/sessions/<id>.session` via `toggle/session-select`
+hardcodes phoc+phosh. It resolves `$AURORA/etc/compositor` against
+`$AURORA/etc/sessions/<id>.session` via `toggle/session-select`
 (planned/incompatible refuse; fallback = phosh), commits the record to
-`$DET/run/session.active`, and branches on the manifest `backend=`:
-`libhybris-hwcomposer` → wlroots path via `guest/det-session-launch`;
-`gralloc-minigbm` → KWin through `det-plasma.service` (PAM/logind session,
+`$AURORA/run/session.active`, and branches on the manifest `backend=`:
+`libhybris-hwcomposer` → wlroots path via `guest/aurora-session-launch`;
+`gralloc-minigbm` → KWin through `aurora-plasma.service` (PAM/logind session,
 composer HAL stopped pre-launch, evgrab released + touchpanel notifier after
 the socket appears). `desktop-off` tears down from `session.active` including
 HAL restart + livedisplay/color-HAL bounce. Plasma Mobile/KWin 6.3.6 verified
@@ -216,7 +216,7 @@ interactive on-panel through this path (2026-08-25); qualification stays
 experimental — nightlight.so segfaults under the Aug-9 patched libkwin (ABI
 skew with system libKF6ConfigCore) and is disabled via guest
 `/root/.config/kwinrc`. Session manifests deploy via magisk module payload to
-`$DET/etc/sessions`. The companion Software screen now renders those manifests
+`$AURORA/etc/sessions`. The companion Software screen now renders those manifests
 (the old hardcoded COMPOSITORS list is gone); APK rebuild needs the Android
 SDK restored on the host (`~/android-sdk` currently missing).
 
@@ -240,10 +240,10 @@ lxc-attach `/bin/cp` to final path.
 
 ## On-device paths
 
-- Active guest rootfs pointer: `/data/determination/active-guest`
-- Proven Debian rootfs: `/data/determination/guest` (no `rootfs/` subdir)
-- Optional distro slots: `/data/determination/guests/<id>/rootfs`
-- Toggle scripts deploy to: `/data/determination/bin/`
-- Control channel: `/data/determination/run/control`
-- LXC tools: `/data/determination/lxc/bin`
-- Backups: `/sdcard/Download/boot_a-before-determination-*.img` + `artifacts/backups/`
+- Active guest rootfs pointer: `/data/aurora/active-guest`
+- Proven Debian rootfs: `/data/aurora/guest` (no `rootfs/` subdir)
+- Optional distro slots: `/data/aurora/guests/<id>/rootfs`
+- Toggle scripts deploy to: `/data/aurora/bin/`
+- Control channel: `/data/aurora/run/control`
+- LXC tools: `/data/aurora/lxc/bin`
+- Backups: `/sdcard/Download/boot_a-before-aurora-*.img` + `artifacts/backups/`

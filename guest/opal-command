@@ -1,2 +1,2 @@
 #!/bin/sh
-exec /usr/local/bin/det-opal "$@"
+exec /usr/local/bin/aurora-opal "$@"

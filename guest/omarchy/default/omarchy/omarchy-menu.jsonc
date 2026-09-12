@@ -25,7 +25,7 @@
   "terminal": {"icon":"","label":"Terminal","action":"omarchy-launch-terminal"},
   "files": {"icon":"","label":"Files","action":"omarchy-launch-file-manager"},
   "browser": {"icon":"󰖟","label":"Browser","action":"omarchy-launch-browser"},
-  "audio": {"icon":"","label":"Audio","action":"det-omarchy audio"},
+  "audio": {"icon":"","label":"Audio","action":"aurora-omarchy audio"},
   "learn": {"icon":"󰧑","label":"Learn"},
   "trigger": {"icon":"󱓞","label":"Trigger"},
   "style": {"icon":"","label":"Style"},
@@ -37,8 +37,8 @@
   "system": {"icon":"","label":"System","aliases":["power-menu"]},
 
   // System
-  // Determination: suspend, hibernate, reboot and shutdown are Android-owned
-  // and stay out of this menu. Logout returns to Android via det-control.
+  // Aurora: suspend, hibernate, reboot and shutdown are Android-owned
+  // and stay out of this menu. Logout returns to Android via aurora-control.
   "system.screensaver": {"icon":"󱄄","label":"Screensaver","action":"omarchy-launch-screensaver force"},
   "system.lock": {"icon":"","label":"Lock","action":"omarchy-system-lock"},
   "system.logout": {"icon":"󰍃","label":"Return to Android","action":"omarchy-system-logout"},

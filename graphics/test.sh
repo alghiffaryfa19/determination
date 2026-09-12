@@ -2,8 +2,8 @@
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
-OUT=${TMPDIR:-/tmp}/det-presenter-protocol-test
-POOL_OUT=${TMPDIR:-/tmp}/det-gralloc-pool-protocol-test
+OUT=${TMPDIR:-/tmp}/aurora-presenter-protocol-test
+POOL_OUT=${TMPDIR:-/tmp}/aurora-gralloc-pool-protocol-test
 ${CC:-cc} -std=c11 -Wall -Wextra -Wpedantic -Werror \
     -I"$ROOT" "$ROOT/presenter-session.c" \
     "$ROOT/tests/presenter-protocol-test.c" -o "$OUT"
