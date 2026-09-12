@@ -1,5 +1,5 @@
 #!/bin/sh
-# Stage a complete app-consumable installer release plus update metadata.
+# Stage a complete PC installer release with versioned update metadata.
 # Upload every file in dist/online-release/ to the release URL passed here.
 
 set -eu
@@ -111,7 +111,7 @@ PUBLISHED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     done
     printf '    {"type":"boot","name":"%s","url":"%s/%s","sha256":"%s","size":%s,"devices":%s,"androidBuilds":%s,"support":"qualified","description":"Device kernel; installer preserves the current Magisk ramdisk"},\n' \
         "$BOOT_NAME" "$BASE_URL" "$BOOT_NAME" "$BOOT_SHA" "$BOOT_SIZE" "$DEVICE_JSON" "$ANDROID_BUILD_JSON"
-    printf '    {"type":"companion","name":"%s","url":"%s/%s","sha256":"%s","size":%s,"abis":["arm64-v8a","armeabi-v7a"],"support":"qualified","description":"Determination companion and installer"}\n' \
+    printf '    {"type":"companion","name":"%s","url":"%s/%s","sha256":"%s","size":%s,"abis":["arm64-v8a","armeabi-v7a"],"support":"qualified","description":"Determination companion controller"}\n' \
         "$APK_NAME" "$BASE_URL" "$APK_NAME" "$APK_SHA" "$APK_SIZE"
     printf '  ]\n}\n'
 } > "$OUT/determination-update.json"

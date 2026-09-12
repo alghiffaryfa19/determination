@@ -1,3 +1,6 @@
+NOTE: Personal account labels were normalized to the project's neutral guest
+account name. Numeric IDs, permissions, and probe results are unchanged.
+
 ===== DEVICE NODES (numeric owner:group, deref) =====
 crw-rw-rw- 1 1000 1000 503,   0 2026-07-12 13:15 /dev/kgsl-3d0
 crw-rw-rw- 1 0 0 10,  59 1970-01-15 13:04 /dev/ashmem
@@ -30,8 +33,8 @@ graphics -> input -> gpu_service -> system -> audio -> inet -> media -> 36
 
 ===== INSIDE GUEST =====
 lxc-attach: guest: confile.c: set_config_unsupported_key: 153 Invalid argument - Unsupported config key "lxc.seccomp"
---- melissa ---
-NO melissa user
+--- detuser ---
+NO detuser user
 --- guest sees nodes (numeric) ---
 crw-rw-rw- 1 1000 1000 503,   0 2026-07-12 13:15 /dev/kgsl-3d0
 crw-rw-rw- 1 0 0 10,  59 1970-01-15 13:04 /dev/ashmem
@@ -54,13 +57,13 @@ systemd-journal:x:999:
 systemd-network:x:998:
 crontab:x:997:
 messagebus:x:996:
-input:x:995:melissa
+input:x:995:detuser
 sgx:x:994:
 clock:x:993:
 kvm:x:992:
-render:x:991:melissa
+render:x:991:detuser
 netdev:x:101:
-melissa:x:1000:
+detuser:x:1000:
 _ssh:x:102:
 geoclue:x:103:
 scanner:x:104:
@@ -71,19 +74,19 @@ feedbackd:x:107:
 lpadmin:x:108:
 avahi:x:109:
 lxc-attach: guest: confile.c: set_config_unsupported_key: 153 Invalid argument - Unsupported config key "lxc.seccomp"
---- passwd melissa ---
-melissa:x:1000:1000::/home/melissa:/bin/bash
---- id melissa ---
-uid=1000(melissa) gid=1000(melissa) groups=1000(melissa),44(video),995(input),991(render)
+--- passwd detuser ---
+detuser:x:1000:1000::/home/detuser:/bin/bash
+--- id detuser ---
+uid=1000(detuser) gid=1000(detuser) groups=1000(detuser),44(video),995(input),991(render)
 --- video/render/input/seat gids ---
-video:x:44:melissa
-render:x:991:melissa
-input:x:995:melissa
+video:x:44:detuser
+render:x:991:detuser
+input:x:995:detuser
 --- is gid 1004 taken? gid 1003? ---
-video:x:44:melissa
+video:x:44:detuser
 lxc-attach: guest: confile.c: set_config_unsupported_key: 153 Invalid argument - Unsupported config key "lxc.seccomp"
-melissa now: uid=1000(melissa) gid=1000(melissa) groups=1000(melissa),44(video),995(input),991(render),1004(android_input),1003(android_graphics)
-=== open() tests AS melissa (uid 1000) ===
+detuser now: uid=1000(detuser) gid=1000(detuser) groups=1000(detuser),44(video),995(input),991(render),1004(android_input),1003(android_graphics)
+=== open() tests AS detuser (uid 1000) ===
   OK  read-open /dev/input/event0
   OK  read-open /dev/dri/renderD128
   OK  read-open /dev/dri/card0

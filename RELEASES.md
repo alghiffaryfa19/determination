@@ -5,7 +5,7 @@ name belongs to the `major.minor` train, so patch releases keep it:
 
 - `0.5.0 "Aqua"`, `0.5.1 "Aqua"`, ...
 - `0.6.0 "Seth"`, `0.6.1 "Seth"`, ...
-- `1.0.0 "Kris"`, `1.0.1 "Kris"`, ...
+- `1.0.0 "Resolve"`, `1.0.1 "Resolve"`, ...
 
 Git tags stay machine-friendly (`v0.5.0`). Human-facing titles use
 `Determination 0.5 "Aqua"`. New names are assigned only when a release train
@@ -18,7 +18,7 @@ calendar bumps.
 |---|---|---|---|
 | 0.5.x | Aqua | in development | First packaged guacamoleb release of the proven internal convergence stack |
 | 0.6.x | Seth | planned | Scope to be fixed after Aqua ships |
-| 1.0.x | Kris | reserved | First stable release; its support contract must be written before release work starts |
+| 1.0.x | Resolve | reserved | First stable release; its support contract must be written before release work starts |
 
 Active development builds use SemVer prereleases. Aqua therefore begins at
 `0.5.0-alpha.1`; the unsuffixed `0.5.0` is reserved for the finished Aqua

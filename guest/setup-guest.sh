@@ -40,28 +40,28 @@ ln -sf /system/product "$G/product" 2>/dev/null || true
 ln -sf /system/system_ext "$G/system_ext" 2>/dev/null || true
 
 # Android device-node groups (recon 2026-07-12, artifacts/node-perms-probe.txt):
-# the session runs as the unprivileged user melissa, NOT root. Almost every
+# the session runs as the unprivileged user detuser, NOT root. Almost every
 # node it touches is already reachable --- GPU/dri/binder/ashmem are world-rw and
-# kgsl/ion are owned by uid/gid 1000 (== melissa == Android AID_SYSTEM). The
+# kgsl/ion are owned by uid/gid 1000 (== detuser == Android AID_SYSTEM). The
 # ONLY gate is /dev/input/* (0660 root:1004, AID_INPUT): Debian's input group is
 # gid 995 and does NOT match, so we create a group at Android's numeric gid and
-# add melissa. seatd's socket is group video(44), which melissa already gets.
+# add detuser. seatd's socket is group video(44), which detuser already gets.
 CH "getent group android_input   >/dev/null || groupadd -g 1004 android_input"
 CH "getent group android_graphics >/dev/null || groupadd -g 1003 android_graphics"
 CH "getent group android_audio    >/dev/null || groupadd -g 1005 android_audio"
 
-# Guest user matching the phone owner. uid 1000 is load-bearing (owner of
-# kgsl/ion); keep it pinned. usermod makes group membership idempotent whether
-# or not the account already exists.
-CH "id melissa >/dev/null 2>&1 || useradd -m -u 1000 -s /bin/bash melissa"
-CH "usermod -aG video,input,render,audio,android_input,android_graphics,android_audio melissa"
+# The project guest account uses uid 1000 because Android owns GPU/audio nodes
+# with that numeric uid. Rename an existing uid-1000 account during upgrades so
+# older and third-party rootfs images converge on the same neutral identity.
+CH 'uid1000_user=$(getent passwd 1000 | cut -d: -f1 || true); if [ -n "$uid1000_user" ] && [ "$uid1000_user" != detuser ]; then uid1000_group=$(id -gn "$uid1000_user"); usermod -l detuser -d /home/detuser -m "$uid1000_user"; if [ "$uid1000_group" != detuser ] && ! getent group detuser >/dev/null 2>&1; then groupmod -n detuser "$uid1000_group"; fi; elif ! id detuser >/dev/null 2>&1; then useradd -m -u 1000 -s /bin/bash detuser; fi'
+CH "usermod -aG video,input,render,audio,android_input,android_graphics,android_audio detuser"
 
 # Password-gated sudo (proper sudo, not NOPASSWD-ALL). No password is baked into
 # the image --- set one on-device with \`det passwd\` before sudo will work. Guest
 # provisioning does not need it: setup-*.sh run as root via lxc-attach, not sudo.
 mkdir -p "$G/etc/sudoers.d"
-echo 'melissa ALL=(ALL) ALL' > "$G/etc/sudoers.d/melissa"
-chmod 440 "$G/etc/sudoers.d/melissa"
+echo 'detuser ALL=(ALL) ALL' > "$G/etc/sudoers.d/detuser"
+chmod 440 "$G/etc/sudoers.d/detuser"
 
 # Hostname + hosts
 echo determination > "$G/etc/hostname"

@@ -1,6 +1,6 @@
 # Determination - project context
 
-Android convergence layer for melissa's OnePlus 7 (`guacamoleb`, SM8150 /
+Android convergence layer for the reference OnePlus 7 (`guacamoleb`, SM8150 /
 Adreno 640). Android stays PID1; a Debian LXC guest on the same downstream
 kernel takes the display via libhybris→hwcomposer. Ships as custom boot.img +
 Magisk module + Zygisk - never a ROM, never touches /system.
@@ -37,7 +37,7 @@ Magisk module + Zygisk - never a ROM, never touches /system.
 ## Conventions
 
 - Probe/script outputs → `artifacts/`. Structured recon → `recon/report-*/`.
-- Commit as work lands; author `melissa <theonest262@gmail.com>`.
+- Commit as work lands; use the contributor's repository-configured identity.
 - `~/op7-port/` + pmOS = mainline kernel track. Don't mix with Determination.
 
 ### Comment discipline
@@ -83,21 +83,21 @@ guest `/usr/lib/android/`.
 (`det-input-udevdb`), quirks for touchpanel, seatd needs /dev/tty0-2.
 
 **Non-root session (2026-07-12):** the guest desktop runs as unprivileged
-`melissa` (uid 1000), NOT root. `desktop-on` does root-only prep (udev DB, seatd,
-create `/run/user/1000`, `chmod a+r /etc/phoc.ini`) then `runuser -u melissa`
+`detuser` (uid 1000), NOT root. `desktop-on` does root-only prep (udev DB, seatd,
+create `/run/user/1000`, `chmod a+r /etc/phoc.ini`) then `runuser -u detuser`
 launches phoc + phosh; runtime dir is `/run/user/1000`. Device access works
 because GPU/dri/binder/ashmem are world-rw and kgsl/ion are 1000-owned (uid
 1000 == Android AID_SYSTEM); the ONE gate is `/dev/input/*` (0660 root:1004) -
-handled by group `android_input` (gid 1004, matches AID_INPUT) that melissa
+handled by group `android_input` (gid 1004, matches AID_INPUT) that detuser
 joins. seatd socket is group `video`(44). Perms recon: `artifacts/node-perms-probe.txt`.
 `/etc/phoc.ini` MUST be world-readable or phoc segfaults on parse. Sudo is
-password-gated (`melissa ALL=(ALL) ALL`) - run `det passwd` once before sudo
+password-gated (`detuser ALL=(ALL) ALL`) - run `det passwd` once before sudo
 works. **nosuid gotcha:** Android's /data is `nosuid,nodev`, and the container
 rootfs is a bind of a /data subtree, so the container `/` inherits nosuid and
 sudo's setuid bit is ignored ("effective uid is not 0 … nosuid"). `guest-start`
 fixes it by `mount -o remount,bind,suid,dev,exec /` inside the container
 post-start (the host-side bind-remount of `$DET/guest` does NOT reach the
-pivoted container root on 4.14). `det guest` = melissa shell; `det guest-root`
+pivoted container root on 4.14). `det guest` = detuser shell; `det guest-root`
 = root escape hatch. Known
 gap: phosh runs bare (no logind), so polkit-gated actions log "No session" -
 Logout/Reboot/Poweroff are fine (det-session-manager intercepts them).
