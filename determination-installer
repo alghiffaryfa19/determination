@@ -1,5 +1,5 @@
 #!/bin/sh
-# Start the linear PC installation interview from a source checkout.
+# Compatibility launcher for the former project name.
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
-exec python3 "$ROOT/installer/app.py" "$@"
+exec "$ROOT/aurora-installer" "$@"

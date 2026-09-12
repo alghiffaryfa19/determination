@@ -677,7 +677,7 @@ fi
         return str(bundle / 'determination-update.json')
 
     def install(self, device, source, distro, hostname, experimental=True, prepare_only=False,
-                display_name='Determination User'):
+                display_name='Aurora User'):
         if not re.fullmatch(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?', hostname):
             raise Failure('Hostname must contain lowercase letters, digits, and internal hyphens.')
         display_name = display_name_value(display_name)

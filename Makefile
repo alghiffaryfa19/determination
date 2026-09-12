@@ -26,7 +26,7 @@ companion:
 	~/android-sdk/gradle-8.7/bin/gradle --no-daemon -p companion assembleDebug
 
 installer:
-	./determination-installer
+	./aurora-installer
 
 installer-test:
 	python3 -m unittest discover -s installer/tests -v

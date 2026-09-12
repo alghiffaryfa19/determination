@@ -1,8 +1,8 @@
-# Determination PC workbench
+# Aurora PC installer
 
-Determination Installer is a linear terminal workbench for Linux PCs. It owns
+Aurora Installer is a linear terminal workbench for Linux PCs. It owns
 system installation and porting; the Android companion owns desktop control.
-Start `./determination-installer` from the repository or run `make installer`.
+Start `./aurora-installer` from the repository or run `make installer`.
 No Python packages are required beyond the standard library. The interaction is
 an interview: one question, one validated answer, then the next operation.
 Device probes and commands stay in the operation log while the terminal shows
@@ -33,7 +33,7 @@ against phone free space before userspace installation.
 
 ## Use the interview
 
-`determination-installer init` lists authorized devices, selects a lone authorized phone,
+`aurora-installer init` lists authorized devices, selects a lone authorized phone,
 and inspects the exact Android fingerprint, active slot, boot size, battery,
 kernel config, display size, ABI, and graphics services. It also records device-tree
 identity, CPU and memory details, kernel command line, boot configuration, loaded
@@ -45,9 +45,10 @@ Boot partitions are resolved from the device's actual by-name links. Multiple ph
 never resolved by choosing the first device. The next question asks whether to
 install, build a port, or recover.
 
-`determination-installer install` accepts a schema 2 HTTPS manifest or a local manifest with its
-artifacts beside it. Select Debian, Arch, or Alpine, enter the Linux display name,
-and enter a hostname. The display name is stored in the uid-1000 account's GECOS
+`aurora-installer install` accepts a schema 2 HTTPS manifest or a local manifest with its
+artifacts beside it. It selects a compatible Debian, Arch, or Alpine guest from
+the bundle, then asks for the Linux display name and hostname. The display name
+is stored in the uid-1000 account's GECOS
 field while the stable service and login identity remains `detuser`. Each
 artifact must have a matching SHA-256 and length. Device and exact-build filters
 apply before boot preparation, and ambiguous matches fail. Experimental releases
@@ -59,13 +60,13 @@ provide a default HTTPS release manifest without baking a repository owner into
 the installer. If it is unset, the interview asks for a manifest explicitly.
 
 When asked, **prepare and verify** downloads, validates, backs up, and repacks without
-installing userspace or writing a partition. **Install Determination** repeats
+installing userspace or writing a partition. **Install Aurora** repeats
 those checks, installs the module and static runtime, installs a missing guest
 slot, sets the display name and hostname, installs the companion APK, then writes boot last.
 Existing guest slots are retained. This is not an in-place distro upgrade.
 A reboot is never automatic.
 
-`determination-installer port` does the reusable porting work. Maintained profiles
+`aurora-installer port` does the reusable porting work. Maintained profiles
 match the device aliases, Android SDK, ROM identity property, and kernel family
 before selecting a known source checkout or repository, branch, image target,
 and build settings. A spoofed public fingerprint alone never selects a source.
@@ -94,7 +95,7 @@ vendor kernel modules, or establish module ABI compatibility. Use matching ROM
 source, config, and compiler; devices requiring new HAL integration or module
 replacement still need that work before installation.
 
-`determination-installer recovery` saves and restores boot backups, checks installation after reboot,
+`aurora-installer recovery` saves and restores boot backups, checks installation after reboot,
 and reboots the selected device. The operation log is saved in the workspace. ADB restore requires
 Android to boot and provide root. For bootloops, use the device's supported
 bootloader recovery procedure with the PC-held image and recorded slot.
@@ -132,7 +133,7 @@ of saved settings.
 ## Workspace and tests
 
 The default workspace is `~/.local/share/determination`; override it with
-`./determination-installer --workspace /path/to/workspace`. It stores settings,
+`./aurora-installer --workspace /path/to/workspace`. It stores settings,
 content-addressed downloads, source checkouts, incremental kernel output, local
 port bundles, operation logs, transaction metadata, and versioned boot backups.
 Logs and backup metadata include the device serial and Android fingerprint.

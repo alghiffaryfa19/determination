@@ -136,8 +136,8 @@ class Interview:
 
     def banner(self):
         print()
-        print(self.palette.title('  DETERMINATION'))
-        print(self.palette.accent('  PC porting and installation workbench'))
+        print(self.palette.title('  AURORA'))
+        print(self.palette.accent('  Android convergence installer'))
         print(self.palette.faint('  A linear interview for building, installing, and recovering the phone.'))
         if not self.verbose:
             print(self.palette.faint('  Set DETERMINATION_VERBOSE=1 for full commands and probe output.'))
@@ -401,10 +401,10 @@ class Interview:
         distro = self.automatic_distro(manifest, distro_default)
         display_name = self.ask(
             'Your name in Linux',
-            self.settings.get('display_name', 'Determination User'),
+            self.settings.get('display_name', 'Aurora User'),
             display_name_value,
         )
-        hostname = self.ask('Guest hostname', self.settings.get('hostname', 'determination'), hostname_value)
+        hostname = self.ask('Guest hostname', self.settings.get('hostname', 'aurora'), hostname_value)
         self.remember(manifest=manifest, distro=distro, display_name=display_name, hostname=hostname)
         experimental = True
         prepare_only = self.yes_no('Prepare and verify only; do not install or flash', False)
@@ -482,7 +482,7 @@ class Interview:
             {
                 'backup': 'save and verify the current boot image on this PC',
                 'restore': 'write a previously saved boot image back to this phone',
-                'verify': 'check an installed Aurora/Determination system',
+                'verify': 'check an installed Aurora system',
                 'reboot': 'restart the selected phone',
             },
         )
@@ -528,7 +528,7 @@ class Interview:
 
 
 def main():
-    parser = argparse.ArgumentParser(prog='determination-installer', description='Determination linear PC porting and installation interview')
+    parser = argparse.ArgumentParser(prog='aurora-installer', description='Aurora PC porting and installation interview')
     parser.add_argument('command', nargs='?', choices=('init', 'install', 'port', 'recovery'), default='init')
     parser.add_argument('--workspace', default=str(Path.home() / '.local/share/determination'))
     parser.add_argument('--adb', default='adb')

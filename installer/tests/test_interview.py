@@ -71,17 +71,17 @@ class InterviewTests(unittest.TestCase):
     def test_complete_install_interview_passes_validated_values(self):
         self.interview.device = device()
         manifest = DEFAULT_MANIFEST or 'https://example.org/determination-update.json'
-        answers = [manifest, 'Determination User', 'workstation', 'yes']
+        answers = [manifest, 'Aurora User', 'workstation', 'yes']
         with patch('builtins.input', side_effect=answers), contextlib.redirect_stdout(io.StringIO()), \
              patch.object(self.engine, 'install', return_value={'status': 'prepared'}) as install:
             self.interview.install()
         install.assert_called_once_with(
             device(), manifest, 'debian', 'workstation', True, True,
-            display_name='Determination User',
+            display_name='Aurora User',
         )
         saved = json.loads(self.interview.settings_path.read_text())
         self.assertEqual(saved['hostname'], 'workstation')
-        self.assertEqual(saved['display_name'], 'Determination User')
+        self.assertEqual(saved['display_name'], 'Aurora User')
         self.assertNotIn('experimental', saved)
 
     def test_one_authorized_device_is_selected_without_a_prompt(self):

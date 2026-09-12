@@ -1,0 +1,5 @@
+#!/bin/sh
+# Start the Aurora installation interview from a source checkout.
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+exec python3 "$ROOT/installer/app.py" "$@"
