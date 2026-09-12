@@ -12,7 +12,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app import Interview, compiler_value, jobs_value
 from core import DEFAULT_MANIFEST, Engine, Failure, display_name_value
-from test_core import device
+from test_core import bundle, device
 
 
 class InterviewTests(unittest.TestCase):
@@ -71,7 +71,7 @@ class InterviewTests(unittest.TestCase):
     def test_complete_install_interview_passes_validated_values(self):
         self.interview.device = device()
         manifest = DEFAULT_MANIFEST or 'https://example.org/determination-update.json'
-        answers = [manifest, 'debian', 'Determination User', 'workstation', 'yes']
+        answers = [manifest, 'Determination User', 'workstation', 'yes']
         with patch('builtins.input', side_effect=answers), contextlib.redirect_stdout(io.StringIO()), \
              patch.object(self.engine, 'install', return_value={'status': 'prepared'}) as install:
             self.interview.install()
@@ -83,6 +83,49 @@ class InterviewTests(unittest.TestCase):
         self.assertEqual(saved['hostname'], 'workstation')
         self.assertEqual(saved['display_name'], 'Determination User')
         self.assertNotIn('experimental', saved)
+
+    def test_one_authorized_device_is_selected_without_a_prompt(self):
+        rows = [{'serial': 'only-phone', 'state': 'device', 'details': 'model:test'}]
+        with patch.object(self.engine, 'devices', return_value=rows), \
+             patch('builtins.input') as read, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.interview.serial(), 'only-phone')
+        read.assert_not_called()
+
+    def test_exact_rom_profile_autodetects_local_kernel_source(self):
+        source = Path(self.directory.name) / 'repo/kernel/src'
+        (source / 'scripts/kconfig').mkdir(parents=True)
+        (source / 'Makefile').write_text('VERSION = 4\nPATCHLEVEL = 14\n')
+        (source / 'scripts/kconfig/merge_config.sh').write_text('')
+        self.interview.repo = Path(self.directory.name) / 'repo'
+        self.interview.device = dict(
+            device(), devices=['OnePlus7'], kernel='4.14.357-test',
+            properties={'ro.build.version.sdk': '36', 'ro.crdroid.version': '16.0',
+                        'ro.boot.project_codename': 'guacamoleb', 'ro.board.platform': 'msmnile'},
+        )
+        profile = self.interview.port_profile()
+        self.assertEqual(profile['target'], 'Image.gz-dtb')
+        with patch.object(self.engine, 'run', side_effect=[
+            ('https://github.com/crdroidandroid/android_kernel_oneplus_sm8150.git', 0),
+            ('16.0', 0),
+        ]):
+            self.assertEqual(self.interview.automatic_kernel_source(profile), str(source.resolve()))
+
+    def test_spoofed_fingerprint_does_not_select_port_profile(self):
+        self.interview.device = dict(
+            device(), devices=['OnePlus7'], kernel='4.14.357-test',
+            fingerprint='OnePlus/OnePlus7/OnePlus7:12/spoofed',
+            properties={'ro.build.version.sdk': '35', 'ro.crdroid.version': '15.0',
+                        'ro.boot.project_codename': 'guacamoleb', 'ro.board.platform': 'msmnile'},
+        )
+        self.assertIsNone(self.interview.port_profile())
+
+    def test_single_manifest_distro_is_selected_without_a_prompt(self):
+        bundle(self.directory.name)
+        path = Path(self.directory.name) / 'manifest.json'
+        self.interview.device = device()
+        with patch('builtins.input') as read, contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.interview.automatic_distro(str(path)), 'debian')
+        read.assert_not_called()
 
     def test_multiple_devices_require_an_explicit_serial(self):
         rows = [{'serial': serial, 'state': 'device', 'details': ''} for serial in ('phone1', 'phone2')]

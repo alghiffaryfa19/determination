@@ -5,6 +5,9 @@ system installation and porting; the Android companion owns desktop control.
 Start `./determination-installer` from the repository or run `make installer`.
 No Python packages are required beyond the standard library. The interaction is
 an interview: one question, one validated answer, then the next operation.
+Device probes and commands stay in the operation log while the terminal shows
+short progress steps. Set `DETERMINATION_VERBOSE=1` when the raw diagnostic
+stream is needed.
 
 The interaction follows the prompt/default/validation model documented by
 [pmbootstrap's CLI helpers](https://docs.postmarketos.org/pmbootstrap/main/api/pmb.helpers.html#pmb.helpers.cli.ask).
@@ -30,7 +33,7 @@ against phone free space before userspace installation.
 
 ## Use the interview
 
-`determination-installer init` lists authorized devices, asks for the ADB serial,
+`determination-installer init` lists authorized devices, selects a lone authorized phone,
 and inspects the exact Android fingerprint, active slot, boot size, battery,
 kernel config, display size, ABI, and graphics services. It also records device-tree
 identity, CPU and memory details, kernel command line, boot configuration, loaded
@@ -62,18 +65,23 @@ slot, sets the display name and hostname, installs the companion APK, then write
 Existing guest slots are retained. This is not an in-place distro upgrade.
 A reboot is never automatic.
 
-`determination-installer port` does the reusable porting work. It asks for a
-downstream repository or local git checkout and an explicit branch or tag for a
-repository download. No phone name supplies a source, branch, kernel fragment,
-or hardware profile. If the running configuration cannot be read, the interview
-asks for its local file. Compiler overrides remain available. The build uses
+`determination-installer port` does the reusable porting work. Maintained profiles
+match the device aliases, Android SDK, ROM identity property, and kernel family
+before selecting a known source checkout or repository, branch, image target,
+and build settings. A spoofed public fingerprint alone never selects a source.
+Unknown or ambiguous devices fall back to explicit source questions. Environment
+overrides (`DETERMINATION_KERNEL_SOURCE`, `DETERMINATION_KERNEL_REF`,
+`DETERMINATION_KERNEL_TARGET`, `DETERMINATION_BUILD_JOBS`, and
+`DETERMINATION_KERNEL_MAKE_ARGS`) remain available for port developers. If the
+running configuration cannot be read, a maintained profile may supply its checked
+recon artifact; otherwise the interview asks for a local file. The build uses
 the running config, merges Determination's common fragment, disables framebuffer
 console ownership, resolves Kconfig defaults, checks mandatory container options,
-and compiles the uncompressed arm64 Image. Incremental
+and compiles the profile's actual boot kernel target. Incremental
 build output is retained for retries.
 
-The uncompressed arm64 Image is repacked with the original boot metadata,
-ramdisk, and appended DTB. The shared module gains a profile generated from actual
+The resulting kernel image is repacked with the original boot metadata and
+ramdisk. The shared module gains a profile generated from actual
 display dimensions and unambiguous wireless, backlight, and DRM observations;
 unknown values are omitted. The complete inspection accompanies the bundle.
 shared runtime, rootfs, and companion artifacts are reused from the base release.

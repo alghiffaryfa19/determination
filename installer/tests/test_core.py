@@ -259,16 +259,16 @@ class CoreTests(unittest.TestCase):
             args = [str(arg) for arg in args]
             if args[-1] == 'HEAD':
                 return 'a' * 40, 0
-            if args[-1] == 'Image':
+            if args[-1] == 'Image.gz-dtb':
                 output = next(arg[2:] for arg in args if arg.startswith('O='))
-                kernel = Path(output) / 'arch/arm64/boot/Image'
+                kernel = Path(output) / 'arch/arm64/boot/Image.gz-dtb'
                 kernel.parent.mkdir(parents=True)
                 kernel.write_bytes(b'compiled-kernel-fixture')
             return '', 0
         with patch.object(self.engine, 'assert_device'), patch.object(self.engine, 'run', side_effect=build) as runner, \
              patch.object(self.engine, 'backup', return_value=self.files['boot']), \
              patch.object(self.engine, 'repack', return_value=self.files['boot']):
-            path = self.engine.port(device(), source, 'Image', 2, str(self.root / 'manifest.json'), 'debian')
+            path = self.engine.port(device(), source, 'Image.gz-dtb', 2, str(self.root / 'manifest.json'), 'debian')
         manifest = validate_manifest(json.loads(Path(path).read_text()))
         selected = select_artifacts(manifest, device(), 'debian', True)
         with zipfile.ZipFile(Path(path).parent / selected['module']['name']) as archive:
@@ -278,7 +278,7 @@ class CoreTests(unittest.TestCase):
         for artifact in selected.values():
             self.assertEqual(digest(Path(path).parent / artifact['name']), artifact['sha256'])
         self.assertTrue(any(call.args[0][-1] == 'olddefconfig' for call in runner.call_args_list))
-        self.assertTrue(any(call.args[0][-1] == 'Image' for call in runner.call_args_list))
+        self.assertTrue(any(call.args[0][-1] == 'Image.gz-dtb' for call in runner.call_args_list))
 
 
 if __name__ == '__main__':

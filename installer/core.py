@@ -246,8 +246,8 @@ class Engine:
 
     def phase(self, name):
         self.checkpoint()
-        self.log(name)
         self.emit({'phase': name})
+        self.log(name)
 
     @contextlib.contextmanager
     def transaction(self):
@@ -285,8 +285,10 @@ class Engine:
         if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._/-]{0,159}', ref) or '..' in ref:
             raise Failure('Select a valid kernel branch or tag.')
         target = self.workspace / 'sources' / name
-        if target.exists():
-            raise Failure(f'Source already exists: {target}. Select that folder or use another name.')
+        suffix = 2
+        while target.exists():
+            target = self.workspace / 'sources' / f'{name}-{suffix}'
+            suffix += 1
         target.parent.mkdir(parents=True, exist_ok=True)
         self.phase('Downloading the downstream kernel source')
         try:
@@ -401,8 +403,9 @@ class Engine:
             raise Failure('Unrecognized boot slot suffix.')
         device = {
             'serial': serial, 'device': checked_word(props.get('ro.product.device'), 'device'),
-            'devices': list(filter(None, {props.get(key, '') for key in
-                        ('ro.product.device', 'ro.product.system.device', 'ro.product.vendor.device')})),
+            'devices': list(filter(None, {props.get(key, '') for key in (
+                        'ro.product.device', 'ro.product.system.device', 'ro.product.vendor.device',
+                        'ro.build.product', 'ro.crdroid.device', 'ro.boot.project_codename')})),
             'abis': props.get('ro.product.cpu.abilist', props.get('ro.product.cpu.abi', '')).split(','),
             'fingerprint': props.get('ro.build.fingerprint', ''), 'slot': slot,
             'model': props.get('ro.product.model', ''), 'kernel': self.shell('uname -r'),
@@ -626,9 +629,9 @@ fi
             raise Failure('Kernel configuration cannot satisfy the container contract: ' + ', '.join(missing or ['FRAMEBUFFER_CONSOLE must be disabled']))
         self.phase('Building the ported downstream kernel')
         self.run([*make, f'-j{jobs}', target], timeout=14400)
-        kernel = output / 'arch/arm64/boot/Image'
+        kernel = output / 'arch/arm64/boot' / target
         if not kernel.is_file():
-            raise Failure('The build did not produce the uncompressed arm64 Image.')
+            raise Failure(f'The build did not produce the requested arm64 kernel: {target}.')
         backup = self.backup(device)
         boot = self.repack(backup, kernel=kernel)
         self.phase('Assembling the device installation bundle')

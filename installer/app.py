@@ -14,6 +14,25 @@ import time
 from core import DEFAULT_MANIFEST, Engine, Failure, display_name_value, https_url, save_json
 
 
+PORT_PROFILES = (
+    {
+        'id': 'guacamoleb-crdroid-16',
+        'label': 'OnePlus 7 / crDroid Android 16',
+        'devices': ('OnePlus7', 'guacamoleb'),
+        'properties': {
+            'ro.build.version.sdk': '36',
+            'ro.crdroid.version': '16.0',
+            'ro.boot.project_codename': 'guacamoleb',
+            'ro.board.platform': 'msmnile',
+        },
+        'kernel_prefix': '4.14.',
+        'source_url': 'https://github.com/crdroidandroid/android_kernel_oneplus_sm8150.git',
+        'source_ref': '16.0',
+        'target': 'Image.gz-dtb',
+    },
+)
+
+
 def clean_answer(text):
     text = text.strip()
     if len(text) >= 2 and text[0] == text[-1] and text[0] in "'\"":
@@ -79,6 +98,8 @@ class Interview:
         self.palette = Palette()
         self.device = None
         self.repo = Path(__file__).resolve().parents[1]
+        self.verbose = os.environ.get('DETERMINATION_VERBOSE') == '1'
+        self.current_phase = ''
         self.engine.emit = self.event
         self.settings_path = self.engine.workspace / 'settings.json'
         try:
@@ -90,6 +111,8 @@ class Interview:
 
     def event(self, event):
         if 'phase' in event:
+            self.current_phase = event['phase']
+            print(f'  {self.current_phase}...', flush=True)
             return
         if 'download' in event:
             received = event['received']
@@ -99,6 +122,13 @@ class Interview:
                 print('', flush=True)
         if 'log' in event:
             text = event['log']
+            if text == self.current_phase:
+                return
+            if not self.verbose:
+                if text.startswith(('Using verified cache:', 'Verified recovery backup:',
+                                    'Built installable port:', 'Extracted host magiskboot:')):
+                    print(f'  {text}', flush=True)
+                return
             if text.startswith('$ '):
                 print(f'\n{self.palette.faint(text)}', flush=True)
             elif text and not text.startswith('=='):
@@ -109,6 +139,8 @@ class Interview:
         print(self.palette.title('  DETERMINATION'))
         print(self.palette.accent('  PC porting and installation workbench'))
         print(self.palette.faint('  A linear interview for building, installing, and recovering the phone.'))
+        if not self.verbose:
+            print(self.palette.faint('  Set DETERMINATION_VERBOSE=1 for full commands and probe output.'))
         print()
 
     def ask(self, label, default=None, validate=None):
@@ -180,6 +212,77 @@ class Interview:
         ))
         return next((str(path.resolve()) for path in candidates if path.is_file()), None)
 
+    def port_profile(self):
+        devices = {value.lower() for value in self.device.get('devices', ())}
+        properties = self.device.get('properties', {})
+        matches = []
+        for profile in PORT_PROFILES:
+            if not devices.intersection(value.lower() for value in profile['devices']):
+                continue
+            if any(properties.get(key) != value for key, value in profile['properties'].items()):
+                continue
+            if not self.device.get('kernel', '').startswith(profile['kernel_prefix']):
+                continue
+            matches.append(profile)
+        if len(matches) > 1:
+            raise Failure('More than one kernel source profile matches this phone.')
+        return matches[0] if matches else None
+
+    @staticmethod
+    def valid_kernel_source(path):
+        path = Path(path).expanduser()
+        return (path / 'Makefile').is_file() and (path / 'scripts/kconfig/merge_config.sh').is_file()
+
+    def kernel_source_matches(self, path, profile):
+        if not self.valid_kernel_source(path):
+            return False
+        try:
+            remote, _ = self.engine.run(['git', '-C', path, 'remote', 'get-url', 'origin'])
+            branch, _ = self.engine.run(['git', '-C', path, 'branch', '--show-current'])
+        except Failure:
+            return False
+        normalize = lambda value: value.strip().removesuffix('/').removesuffix('.git')
+        return normalize(remote) == normalize(profile['source_url']) and branch.strip() == profile['source_ref']
+
+    def automatic_kernel_source(self, profile):
+        override = os.environ.get('DETERMINATION_KERNEL_SOURCE')
+        if override:
+            if override.startswith('https://'):
+                return https_url(override)
+            if not self.valid_kernel_source(override):
+                raise Failure('DETERMINATION_KERNEL_SOURCE is not a usable kernel source tree.')
+            return str(Path(override).expanduser().resolve())
+        candidates = (
+            self.repo / 'kernel/src',
+            self.engine.workspace / 'sources' / profile['id'],
+            self.engine.workspace / 'sources' / self.device['device'],
+        )
+        for path in candidates:
+            if self.kernel_source_matches(path, profile):
+                return str(path.resolve())
+        return profile['source_url']
+
+    def automatic_distro(self, manifest, preferred=None):
+        preferred = os.environ.get('DETERMINATION_DISTRO') or preferred or self.settings.get('distro') or 'debian'
+        if preferred not in ('debian', 'arch', 'alpine'):
+            raise Failure('DETERMINATION_DISTRO must be debian, arch, or alpine.')
+        available = []
+        if manifest and not manifest.startswith('https://'):
+            data = self.engine.load_manifest(manifest)
+            for item in data['artifacts']:
+                if item['type'] != 'rootfs':
+                    continue
+                if item.get('devices') and not set(item['devices']) & set(self.device['devices']):
+                    continue
+                if item.get('abis') and not set(item['abis']) & set(self.device['abis']):
+                    continue
+                available.append(item['distro'])
+        available = list(dict.fromkeys(available))
+        selected = preferred if not available or preferred in available else ('debian' if 'debian' in available else available[0])
+        reason = 'only compatible desktop in the bundle' if len(available) == 1 else 'saved/default desktop choice'
+        print(f'  Linux desktop: {selected} ({reason})', flush=True)
+        return selected
+
     def manifest(self, default=None, purpose='Install bundle'):
         def valid(text):
             text = clean_answer(text)
@@ -203,7 +306,11 @@ class Interview:
             print(self.palette.faint(
                 '    No bundle was found automatically. Build or download a complete bundle first.'
             ), flush=True)
-        return self.ask('Bundle file or URL', suggested, valid)
+        if suggested:
+            selected = valid(suggested)
+            print(f'    Detected automatically: {selected}', flush=True)
+            return selected
+        return self.ask('Bundle file or URL', None, valid)
 
     def kernel_source(self):
         def valid(text):
@@ -229,14 +336,19 @@ class Interview:
 
     def host_tools(self):
         if not shutil.which(self.engine.adb):
-            self.engine.adb = self.path('ADB executable', must_exist=True)
+            local_adb = Path.home() / 'platform-tools/adb'
+            self.engine.adb = str(local_adb) if local_adb.is_file() else self.path('ADB executable', must_exist=True)
         if not shutil.which(self.engine.magiskboot):
-            print('  A host magiskboot executable is required to preserve your boot image.')
-            if self.yes_no('Extract magiskboot from an official Magisk APK on this PC', True):
-                apk = self.path('Magisk APK', must_exist=True)
-                self.engine.magiskboot = self.engine.extract_magiskboot(apk)
+            local_magiskboot = self.repo / 'toolchain/usr/bin/magiskboot'
+            if local_magiskboot.is_file() and os.access(local_magiskboot, os.X_OK):
+                self.engine.magiskboot = str(local_magiskboot)
             else:
-                self.engine.magiskboot = self.path('Magiskboot executable', must_exist=True)
+                print('  A host magiskboot executable is required to preserve your boot image.')
+                if self.yes_no('Extract magiskboot from an official Magisk APK on this PC', True):
+                    apk = self.path('Magisk APK', must_exist=True)
+                    self.engine.magiskboot = self.engine.extract_magiskboot(apk)
+                else:
+                    self.engine.magiskboot = self.path('Magiskboot executable', must_exist=True)
         self.engine.adb = shutil.which(self.engine.adb) or self.engine.adb
         self.engine.magiskboot = shutil.which(self.engine.magiskboot) or self.engine.magiskboot
 
@@ -251,16 +363,25 @@ class Interview:
         authorized = [item['serial'] for item in devices if item['state'] == 'device']
         if not authorized:
             raise Failure('Authorize USB debugging on the phone, then run init again.')
-        serial = self.ask('ADB serial', authorized[0] if len(authorized) == 1 else None,
-                          lambda text: choice(text, authorized))
+        if len(authorized) == 1:
+            serial = authorized[0]
+            print(f'  Selected automatically: {serial}', flush=True)
+        else:
+            serial = self.ask('ADB serial', None, lambda text: choice(text, authorized))
         self.engine.serial = serial
         return serial
 
     def inspect(self):
         self.serial()
         self.device = self.engine.inspect(self.engine.serial)
+        properties = self.device['properties']
         print(f'\n  {self.palette.good("Device accepted")}: {self.device["model"]} ({self.device["device"]})', flush=True)
-        print(f'  Android: {self.device["fingerprint"]}', flush=True)
+        rom = properties.get('ro.crdroid.build.version')
+        release = properties.get('ro.build.version.release')
+        sdk = properties.get('ro.build.version.sdk')
+        os_name = f'crDroid {rom} / ' if rom else ''
+        print(f'  OS:      {os_name}Android {release} (SDK {sdk})', flush=True)
+        print(f'  Build:   {self.device["fingerprint"]}', flush=True)
         print(f'  Kernel:  {self.device["kernel"]}', flush=True)
         print(f'  Slot:    {self.device["slot"] or "single"}', flush=True)
         print(f'  Battery: {self.device["battery"]}%', flush=True)
@@ -277,16 +398,7 @@ class Interview:
     def install(self, manifest_default=None, distro_default=None):
         self.common()
         manifest = self.manifest(manifest_default)
-        distro = self.one_of(
-            'Linux desktop base',
-            ('debian', 'arch', 'alpine'),
-            distro_default or self.settings.get('distro', 'debian'),
-            {
-                'debian': 'proven desktop; choose this unless you are testing another base',
-                'arch': 'experimental Arch Linux ARM guest',
-                'alpine': 'experimental Alpine musl guest',
-            },
-        )
+        distro = self.automatic_distro(manifest, distro_default)
         display_name = self.ask(
             'Your name in Linux',
             self.settings.get('display_name', 'Determination User'),
@@ -317,35 +429,44 @@ class Interview:
 
     def port(self):
         self.common()
+        profile = self.port_profile()
         if not self.device.get('config'):
-            print('  Android could not expose its running kernel settings.', flush=True)
-            config = self.path('Matching running kernel configuration', must_exist=True)
-            self.device['config'] = Path(config).read_text()
-        source = self.kernel_source()
+            known_config = self.repo / 'artifacts/kernel-config-full.txt' if profile else None
+            if known_config and known_config.is_file():
+                self.device['config'] = known_config.read_text()
+                print(f'  Kernel configuration: detected {known_config}', flush=True)
+            else:
+                print('  Android could not expose its running kernel settings.', flush=True)
+                config = self.path('Matching running kernel configuration', must_exist=True)
+                self.device['config'] = Path(config).read_text()
+        if profile:
+            print(f'\n  Port profile: {profile["label"]} (exact device, SDK, ROM, and kernel match)', flush=True)
+            source = self.automatic_kernel_source(profile)
+            ref = os.environ.get('DETERMINATION_KERNEL_REF', profile['source_ref'])
+            target = os.environ.get('DETERMINATION_KERNEL_TARGET', profile['target'])
+            print(f'  Kernel source: {source}', flush=True)
+            print(f'  Kernel branch: {ref}', flush=True)
+            print(f'  Kernel target: {target}', flush=True)
+        else:
+            print('\n  No exact maintained port profile matched this phone; source details are required.', flush=True)
+            source = self.kernel_source()
+            ref = os.environ.get('DETERMINATION_KERNEL_REF', '')
+            target = os.environ.get('DETERMINATION_KERNEL_TARGET', 'Image')
         if source.startswith('https://'):
-            print('  Use the branch or tag for the Android build shown above.', flush=True)
-            ref = self.ask('Kernel branch or tag', self.settings.get('kernel_ref'))
             if not ref:
-                raise Failure('Enter the matching kernel branch or tag; it cannot be guessed safely.')
+                print('  Use the branch or tag for the Android build shown above.', flush=True)
+                ref = self.ask('Kernel branch or tag', self.settings.get('kernel_ref'))
+            if not ref:
+                raise Failure('Enter the matching kernel branch or tag.')
             self.remember(kernel_source=source, kernel_ref=ref)
-            source = self.engine.fetch_source(source, ref, self.device['device'])
+            source = self.engine.fetch_source(source, ref, profile['id'] if profile else self.device['device'])
         else:
             self.remember(kernel_source=source)
-        target = 'Image'
-        print('  Building the uncompressed kernel; repacking preserves the original boot image format.', flush=True)
-        jobs = self.ask('Build jobs (press Enter to use the safe default)', str(min(os.cpu_count() or 2, 16)), jobs_value)
-        overrides = self.ask('Advanced compiler settings (press Enter to use ROM defaults)', '', compiler_value)
+        jobs = jobs_value(os.environ.get('DETERMINATION_BUILD_JOBS', str(min(os.cpu_count() or 2, 16))))
+        overrides = compiler_value(os.environ.get('DETERMINATION_KERNEL_MAKE_ARGS', ''))
+        print(f'  Build settings: {jobs} jobs; ROM toolchain defaults', flush=True)
         manifest = self.manifest(purpose='Base bundle for the Linux desktop and companion app')
-        distro = self.one_of(
-            'Linux desktop base for the generated bundle',
-            ('debian', 'arch', 'alpine'),
-            'debian',
-            {
-                'debian': 'proven desktop; recommended for the first installation',
-                'arch': 'experimental',
-                'alpine': 'experimental',
-            },
-        )
+        distro = self.automatic_distro(manifest, 'debian')
         result = self.engine.port(self.device, source, target, jobs, manifest, distro, overrides)
         print(f'\n{self.palette.good("Port built")}: {result}', flush=True)
         self.remember(manifest=result, distro=distro)
