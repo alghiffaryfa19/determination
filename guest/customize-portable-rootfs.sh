@@ -155,7 +155,7 @@ elif ! id melissa >/dev/null 2>&1; then
     esac
 fi
 
-for group in video input render audio android_graphics android_input android_audio; do
+for group in video input render audio seat android_graphics android_input android_audio; do
     getent group "$group" >/dev/null 2>&1 || continue
     case "$(det-platform id)" in
         alpine) addgroup melissa "$group" 2>/dev/null || true ;;
@@ -175,6 +175,10 @@ grep -q determination /etc/hosts 2>/dev/null || \
 case "$(det-platform init)" in
     systemd)
         systemctl mask getty@tty1.service console-getty.service >/dev/null 2>&1 || true
+        # Fresh-boot desktop launch needs the bus, seat and login management
+        # before runuser/PAM works: without these the compositor supervisor
+        # hangs in epoll and the input seat attempt fails the backend.
+        systemctl enable dbus-broker.service seatd.service >/dev/null 2>&1 || true
         ;;
     openrc)
         rc-update add dbus default >/dev/null 2>&1 || true

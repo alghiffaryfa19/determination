@@ -17,14 +17,28 @@ export GDK_BACKEND=wayland
 case "${1:-start}" in
     start)
         if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
-            for instance in "$XDG_RUNTIME_DIR"/hypr/*; do
-                [ -S "$instance/.socket.sock" ] || continue
-                [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || {
-                    echo 'det-omarchy: multiple Hyprland instances; set HYPRLAND_INSTANCE_SIGNATURE' >&2
-                    exit 2
-                }
-                HYPRLAND_INSTANCE_SIGNATURE=${instance##*/}
+            # The shell must talk to Hyprland over its socket; launching
+            # without a signature leaves a crippled bar (no workspaces).
+            # The compositor may still be starting, so wait for the socket
+            # instead of degrading. The supervisor relaunches on failure.
+            tries=0
+            while [ "$tries" -lt 30 ]; do
+                for instance in "$XDG_RUNTIME_DIR"/hypr/*; do
+                    [ -S "$instance/.socket.sock" ] || continue
+                    [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || {
+                        echo 'det-omarchy: multiple Hyprland instances; set HYPRLAND_INSTANCE_SIGNATURE' >&2
+                        exit 2
+                    }
+                    HYPRLAND_INSTANCE_SIGNATURE=${instance##*/}
+                done
+                [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && break
+                tries=$((tries + 1))
+                sleep 1
             done
+            if [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+                echo 'det-omarchy: no Hyprland socket after 30s' >&2
+                exit 2
+            fi
             export HYPRLAND_INSTANCE_SIGNATURE
         fi
         mkdir -p "$HOME/.config/omarchy" "$HOME/.local/bin"
