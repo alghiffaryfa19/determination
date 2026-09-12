@@ -31,11 +31,42 @@ class InterviewTests(unittest.TestCase):
             self.assertTrue(self.interview.yes_no('Continue'))
         self.assertEqual(read.call_count, 2)
 
+    def test_numbered_and_forgiving_choices(self):
+        with patch('builtins.input', return_value='2'), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.interview.one_of('Action', ('install', 'port', 'recovery'), 'install'), 'port')
+        with patch('builtins.input', return_value=':PORT'), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.interview.one_of('Action', ('install', 'port', 'recovery'), 'install'), 'port')
+
     def test_local_manifest_with_spaces(self):
         path = Path(self.directory.name) / 'local manifest.json'
         path.write_text('{}')
         with patch('builtins.input', return_value=str(path)):
             self.assertEqual(self.interview.manifest(), str(path))
+
+    def test_manifest_accepts_the_bundle_directory(self):
+        bundle = Path(self.directory.name) / 'friendly bundle'
+        bundle.mkdir()
+        manifest = bundle / 'determination-update.json'
+        manifest.write_text('{}')
+        with patch('builtins.input', return_value=str(bundle)), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.interview.manifest(), str(manifest.resolve()))
+
+    def test_manifest_discovers_repo_bundle(self):
+        repo = Path(self.directory.name) / 'repo'
+        manifest = repo / 'dist/online-release/determination-update.json'
+        manifest.parent.mkdir(parents=True)
+        manifest.write_text('{}')
+        self.interview.repo = repo
+        with patch('builtins.input', return_value=''), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.interview.manifest(), str(manifest.resolve()))
+
+    def test_kernel_source_accepts_folder_and_https_repo(self):
+        source = Path(self.directory.name) / 'kernel source'
+        source.mkdir()
+        with patch('builtins.input', return_value=str(source)), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.interview.kernel_source(), str(source.resolve()))
+        with patch('builtins.input', return_value='https://example.org/kernel.git'), contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(self.interview.kernel_source(), 'https://example.org/kernel.git')
 
     def test_complete_install_interview_passes_validated_values(self):
         self.interview.device = device()

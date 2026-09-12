@@ -14,7 +14,15 @@ import time
 from core import DEFAULT_MANIFEST, Engine, Failure, display_name_value, https_url, save_json
 
 
+def clean_answer(text):
+    text = text.strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "'\"":
+        text = text[1:-1].strip()
+    return text
+
+
 def choice(text, values):
+    text = clean_answer(text).lower().lstrip(':').strip()
     if text not in values:
         raise Failure('Use one of: ' + ', '.join(values) + '.')
     return text
@@ -123,14 +131,30 @@ class Interview:
                 print(self.palette.bad(f'  {error}'), flush=True)
 
     def yes_no(self, label, default=False):
-        value = self.ask(label + ' (yes/no)', 'yes' if default else 'no',
-                         lambda text: choice(text.lower(), ('yes', 'no')))
+        aliases = {'y': 'yes', 'n': 'no', '1': 'yes', '2': 'no'}
+        def valid(text):
+            text = clean_answer(text).lower()
+            return choice(aliases.get(text, text), ('yes', 'no'))
+        value = self.ask(label + ' (yes/no)', 'yes' if default else 'no', valid)
         return value == 'yes'
 
-    def one_of(self, label, values, default):
-        allowed = ', '.join(values)
-        return self.ask(f'{label} ({allowed})', default,
-                        lambda text: choice(text, values))
+    def one_of(self, label, values, default, descriptions=None):
+        descriptions = descriptions or {}
+        print(f'\n  {label}:', flush=True)
+        for number, value in enumerate(values, 1):
+            detail = descriptions.get(value)
+            suffix = f' — {detail}' if detail else ''
+            marker = ' (recommended)' if value == default else ''
+            print(f'    {number}. {value}{marker}{suffix}', flush=True)
+
+        def valid(text):
+            text = clean_answer(text).lower().lstrip(':').strip()
+            if text.isdigit() and 1 <= int(text) <= len(values):
+                return values[int(text) - 1]
+            return choice(text, values)
+
+        default_number = values.index(default) + 1
+        return self.ask(f'Choose 1-{len(values)} or type a name', default_number, valid)
 
     def path(self, label, default=None, directory=False, must_exist=False):
         def valid(text):
@@ -144,15 +168,60 @@ class Interview:
             return str(path)
         return self.ask(label, default, valid)
 
-    def manifest(self, default=None):
+    def local_manifest(self):
+        candidates = [
+            self.repo / 'dist/online-release/determination-update.json',
+            self.engine.workspace / 'determination-update.json',
+        ]
+        candidates.extend(sorted(
+            self.engine.workspace.glob('ports/*/bundle-*/determination-update.json'),
+            key=lambda path: path.stat().st_mtime if path.exists() else 0,
+            reverse=True,
+        ))
+        return next((str(path.resolve()) for path in candidates if path.is_file()), None)
+
+    def manifest(self, default=None, purpose='Install bundle'):
         def valid(text):
+            text = clean_answer(text)
             if text.startswith(('https:', 'http:')):
                 return https_url(text)
             path = Path(text).expanduser()
+            if path.is_dir():
+                path = path / 'determination-update.json'
             if not text or not path.is_file():
-                raise Failure('Enter an HTTPS manifest URL or an existing manifest file.')
+                raise Failure(
+                    'That bundle was not found. Enter its determination-update.json file, '
+                    'the folder containing that file, or an HTTPS URL.'
+                )
             return str(path.resolve())
-        return self.ask('Release manifest', default or self.settings.get('manifest', DEFAULT_MANIFEST), valid)
+
+        suggested = default or self.settings.get('manifest') or DEFAULT_MANIFEST or self.local_manifest()
+        print(f'\n  {purpose}:', flush=True)
+        print('    This is the determination-update.json file that lists every install file', flush=True)
+        print('    and its checksum. You may paste the JSON file, its folder, or an HTTPS URL.', flush=True)
+        if not suggested:
+            print(self.palette.faint(
+                '    No bundle was found automatically. Build or download a complete bundle first.'
+            ), flush=True)
+        return self.ask('Bundle file or URL', suggested, valid)
+
+    def kernel_source(self):
+        def valid(text):
+            text = clean_answer(text)
+            if text.startswith(('https:', 'http:')):
+                return https_url(text)
+            path = Path(text).expanduser()
+            if not path.is_dir():
+                raise Failure('Enter an existing kernel source folder or an HTTPS Git repository URL.')
+            return str(path.resolve())
+
+        saved = self.settings.get('kernel_source')
+        if saved and not (saved.startswith('https://') or Path(saved).expanduser().is_dir()):
+            saved = None
+        print('\n  Android needs the kernel source matching the ROM currently on this phone.', flush=True)
+        print('    Local example: /home/you/src/android_kernel_oneplus_sm8150', flush=True)
+        print('    Git example:   https://github.com/vendor/android_kernel_oneplus_sm8150', flush=True)
+        return self.ask('Kernel source folder or HTTPS Git URL', saved, valid)
 
     def remember(self, **values):
         self.settings.update(values)
@@ -196,7 +265,10 @@ class Interview:
         print(f'  Slot:    {self.device["slot"] or "single"}', flush=True)
         print(f'  Battery: {self.device["battery"]}%', flush=True)
         missing = ', '.join(self.device['missing']) or 'none'
-        print(f'  Kernel options missing before port: {missing}', flush=True)
+        if missing == 'none':
+            print('  Kernel readiness: this kernel already has every required option.', flush=True)
+        else:
+            print(f'  Kernel readiness: the new build must enable {missing}', flush=True)
 
     def common(self):
         if self.device is None:
@@ -205,7 +277,16 @@ class Interview:
     def install(self, manifest_default=None, distro_default=None):
         self.common()
         manifest = self.manifest(manifest_default)
-        distro = self.one_of('Linux distribution', ('debian', 'arch', 'alpine'), distro_default or self.settings.get('distro', 'debian'))
+        distro = self.one_of(
+            'Linux desktop base',
+            ('debian', 'arch', 'alpine'),
+            distro_default or self.settings.get('distro', 'debian'),
+            {
+                'debian': 'proven desktop; choose this unless you are testing another base',
+                'arch': 'experimental Arch Linux ARM guest',
+                'alpine': 'experimental Alpine musl guest',
+            },
+        )
         display_name = self.ask(
             'Your name in Linux',
             self.settings.get('display_name', 'Determination User'),
@@ -237,19 +318,34 @@ class Interview:
     def port(self):
         self.common()
         if not self.device.get('config'):
+            print('  Android could not expose its running kernel settings.', flush=True)
             config = self.path('Matching running kernel configuration', must_exist=True)
             self.device['config'] = Path(config).read_text()
-        source = self.ask('Matching ROM kernel source (local path or HTTPS repository)')
+        source = self.kernel_source()
         if source.startswith('https://'):
-            ref = self.ask('Kernel branch or tag')
+            print('  Use the branch or tag for the Android build shown above.', flush=True)
+            ref = self.ask('Kernel branch or tag', self.settings.get('kernel_ref'))
+            if not ref:
+                raise Failure('Enter the matching kernel branch or tag; it cannot be guessed safely.')
+            self.remember(kernel_source=source, kernel_ref=ref)
             source = self.engine.fetch_source(source, ref, self.device['device'])
-        source = self.path('Kernel source directory', source, directory=True, must_exist=True)
+        else:
+            self.remember(kernel_source=source)
         target = 'Image'
         print('  Building the uncompressed kernel; repacking preserves the original boot image format.', flush=True)
-        jobs = self.ask('Parallel build jobs', str(min(os.cpu_count() or 2, 16)), jobs_value)
-        overrides = self.ask('Compiler make overrides', '', compiler_value)
-        manifest = self.manifest()
-        distro = self.one_of('Linux distribution for the generated bundle', ('debian', 'arch', 'alpine'), 'debian')
+        jobs = self.ask('Build jobs (press Enter to use the safe default)', str(min(os.cpu_count() or 2, 16)), jobs_value)
+        overrides = self.ask('Advanced compiler settings (press Enter to use ROM defaults)', '', compiler_value)
+        manifest = self.manifest(purpose='Base bundle for the Linux desktop and companion app')
+        distro = self.one_of(
+            'Linux desktop base for the generated bundle',
+            ('debian', 'arch', 'alpine'),
+            'debian',
+            {
+                'debian': 'proven desktop; recommended for the first installation',
+                'arch': 'experimental',
+                'alpine': 'experimental',
+            },
+        )
         result = self.engine.port(self.device, source, target, jobs, manifest, distro, overrides)
         print(f'\n{self.palette.good("Port built")}: {result}', flush=True)
         self.remember(manifest=result, distro=distro)
@@ -258,7 +354,17 @@ class Interview:
 
     def recovery(self):
         self.common()
-        action = self.one_of('Recovery action', ('backup', 'restore', 'verify', 'reboot'), 'backup')
+        action = self.one_of(
+            'Repair or recovery task',
+            ('backup', 'restore', 'verify', 'reboot'),
+            'backup',
+            {
+                'backup': 'save and verify the current boot image on this PC',
+                'restore': 'write a previously saved boot image back to this phone',
+                'verify': 'check an installed Aurora/Determination system',
+                'reboot': 'restart the selected phone',
+            },
+        )
         if action == 'backup':
             path = self.engine.backup(self.device)
             print(f'\n{self.palette.good("Backup verified")}: {path}', flush=True)
@@ -279,7 +385,16 @@ class Interview:
         self.host_tools()
         if command == 'init':
             self.inspect()
-            action = self.one_of('What should Determination do', ('install', 'port', 'recovery'), 'install')
+            action = self.one_of(
+                'What do you want to do',
+                ('install', 'port', 'recovery'),
+                'install',
+                {
+                    'install': 'install a ready-made bundle on this phone',
+                    'port': 'build a matching kernel and bundle for this phone',
+                    'recovery': 'back up, restore, verify, or reboot',
+                },
+            )
         else:
             action = command
             self.inspect()
