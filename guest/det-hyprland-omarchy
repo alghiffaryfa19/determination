@@ -2,6 +2,10 @@
 set -eu
 /usr/local/bin/det-omarchy check
 export DET_HYPRLAND_CONFIG=/etc/determination/hyprland-omarchy.conf
+# Crashed runs leave stale instance dirs (with dead sockets) behind; they
+# confuse the shell's instance detection, so sweep them before each launch.
+# The supervisor relaunches after we exit, keeping exactly one live instance.
+rm -rf "${XDG_RUNTIME_DIR:-/run/user/1000}"/hypr/*
 # Keep this shell's helpers and processes scoped to its compositor lifetime.
 trap '/usr/local/bin/det-omarchy stop >/dev/null 2>&1 || true' EXIT
 trap '[ -z "${child:-}" ] || kill -TERM "$child" 2>/dev/null || true' HUP INT TERM

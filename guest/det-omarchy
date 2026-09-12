@@ -25,6 +25,17 @@ case "${1:-start}" in
             while [ "$tries" -lt 30 ]; do
                 for instance in "$XDG_RUNTIME_DIR"/hypr/*; do
                     [ -S "$instance/.socket.sock" ] || continue
+                    # Dead runs leave their sockets behind. Only a live
+                    # Hyprland accepts connections; ignore the rest.
+                    if command -v python3 >/dev/null 2>&1; then
+                        python3 -c 'import socket,sys
+s = socket.socket(socket.AF_UNIX)
+s.settimeout(2)
+try:
+    s.connect(sys.argv[1])
+except OSError:
+    sys.exit(1)' "$instance/.socket.sock" 2>/dev/null || continue
+                    fi
                     [ -z "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] || {
                         echo 'det-omarchy: multiple Hyprland instances; set HYPRLAND_INSTANCE_SIGNATURE' >&2
                         exit 2
