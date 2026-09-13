@@ -1,0 +1,968 @@
+Reading package lists...
+Building dependency tree...
+Reading state information...
+qt6-base-dev is already the newest version (6.8.2+dfsg-9+deb13u2).
+qt6-declarative-dev is already the newest version (6.8.2+dfsg-7).
+qt6-wayland-dev is already the newest version (6.8.2-4).
+qt6-base-private-dev is already the newest version (6.8.2+dfsg-9+deb13u2).
+qt6-declarative-private-dev is already the newest version (6.8.2+dfsg-7).
+qml6-module-qtquick-controls is already the newest version (6.8.2+dfsg-7).
+qml6-module-qtquick-layouts is already the newest version (6.8.2+dfsg-7).
+qml6-module-qtquick-templates is already the newest version (6.8.2+dfsg-7).
+qml6-module-qtquick-window is already the newest version (6.8.2+dfsg-7).
+qml6-module-qtqml-workerscript is already the newest version (6.8.2+dfsg-7).
+qml6-module-qt-labs-platform is already the newest version (6.8.2+dfsg-7).
+The following NEW packages will be installed:
+  qt6-wayland-private-dev
+0 upgraded, 1 newly installed, 0 to remove and 8 not upgraded.
+Need to get 189 kB of archives.
+After this operation, 2257 kB of additional disk space will be used.
+Get:1 https://deb.debian.org/debian trixie/main arm64 qt6-wayland-private-dev arm64 6.8.2-4 [189 kB]
+Fetched 189 kB in 0s (506 kB/s)
+Selecting previously unselected package qt6-wayland-private-dev:arm64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 180744 files and directories currently installed.)
+Preparing to unpack .../qt6-wayland-private-dev_6.8.2-4_arm64.deb ...
+Unpacking qt6-wayland-private-dev:arm64 (6.8.2-4) ...
+Setting up qt6-wayland-private-dev:arm64 (6.8.2-4) ...
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquick2plugin' is a dependency of 'hyprland-dialog', but
+  the link target it defines (Qt6::qtquick2plugin) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qmlplugin' is a dependency of 'hyprland-dialog', but the
+  link target it defines (Qt6::qmlplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'modelsplugin' is a dependency of 'hyprland-dialog', but the
+  link target it defines (Qt6::modelsplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'workerscriptplugin' is a dependency of 'hyprland-dialog',
+  but the link target it defines (Qt6::workerscriptplugin) does not exist in
+  the current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2plugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2plugin) does not exist in the current scope.  The
+  plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2fusionstyleplugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2fusionstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2materialstyleplugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2materialstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2imaginestyleplugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2imaginestyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2universalstyleplugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2universalstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2basicstyleplugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2basicstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquicktemplates2plugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquicktemplates2plugin) does not exist in the current scope.  The
+  plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2implplugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2implplugin) does not exist in the current scope.  The
+  plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2fusionstyleimplplugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2fusionstyleimplplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'quickwindowplugin' is a dependency of 'hyprland-dialog',
+  but the link target it defines (Qt6::quickwindow) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2materialstyleimplplugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2materialstyleimplplugin) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2imaginestyleimplplugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2imaginestyleimplplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2universalstyleimplplugin' is a dependency
+  of 'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2universalstyleimplplugin) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2basicstyleimplplugin' is a dependency of
+  'hyprland-dialog', but the link target it defines
+  (Qt6::qtquickcontrols2basicstyleimplplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qmlshapesplugin' is a dependency of 'hyprland-dialog', but
+  the link target it defines (Qt6::qmlshapesplugin) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qquicklayoutsplugin' is a dependency of 'hyprland-dialog',
+  but the link target it defines (Qt6::qquicklayoutsplugin) does not exist in
+  the current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/dialog/CMakeLists.txt:DEFERRED
+
+
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquick2plugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquick2plugin) does not exist in the current scope.  The plugin will
+  not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qmlplugin' is a dependency of 'hyprland-update-screen', but
+  the link target it defines (Qt6::qmlplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'modelsplugin' is a dependency of 'hyprland-update-screen',
+  but the link target it defines (Qt6::modelsplugin) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'workerscriptplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::workerscriptplugin) does not exist in the current scope.  The plugin
+  will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2plugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2plugin) does not exist in the current scope.  The
+  plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2fusionstyleplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2fusionstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2materialstyleplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2materialstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2imaginestyleplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2imaginestyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2universalstyleplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2universalstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2basicstyleplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2basicstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquicktemplates2plugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquicktemplates2plugin) does not exist in the current scope.  The
+  plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2implplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2implplugin) does not exist in the current scope.  The
+  plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2fusionstyleimplplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2fusionstyleimplplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'quickwindowplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines (Qt6::quickwindow)
+  does not exist in the current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2materialstyleimplplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2materialstyleimplplugin) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2imaginestyleimplplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2imaginestyleimplplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2universalstyleimplplugin' is a dependency
+  of 'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2universalstyleimplplugin) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2basicstyleimplplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qtquickcontrols2basicstyleimplplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qmlshapesplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qmlshapesplugin) does not exist in the current scope.  The plugin
+  will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qquicklayoutsplugin' is a dependency of
+  'hyprland-update-screen', but the link target it defines
+  (Qt6::qquicklayoutsplugin) does not exist in the current scope.  The plugin
+  will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/update-screen/CMakeLists.txt:DEFERRED
+
+
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquick2plugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquick2plugin) does not exist in the current scope.  The plugin will
+  not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qmlplugin' is a dependency of 'hyprland-donate-screen', but
+  the link target it defines (Qt6::qmlplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'modelsplugin' is a dependency of 'hyprland-donate-screen',
+  but the link target it defines (Qt6::modelsplugin) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'workerscriptplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::workerscriptplugin) does not exist in the current scope.  The plugin
+  will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2plugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2plugin) does not exist in the current scope.  The
+  plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2fusionstyleplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2fusionstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2materialstyleplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2materialstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2imaginestyleplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2imaginestyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2universalstyleplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2universalstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2basicstyleplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2basicstyleplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquicktemplates2plugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquicktemplates2plugin) does not exist in the current scope.  The
+  plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2implplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2implplugin) does not exist in the current scope.  The
+  plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2fusionstyleimplplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2fusionstyleimplplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'quickwindowplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines (Qt6::quickwindow)
+  does not exist in the current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2materialstyleimplplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2materialstyleimplplugin) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2imaginestyleimplplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2imaginestyleimplplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2universalstyleimplplugin' is a dependency
+  of 'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2universalstyleimplplugin) does not exist in the
+  current scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qtquickcontrols2basicstyleimplplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qtquickcontrols2basicstyleimplplugin) does not exist in the current
+  scope.  The plugin will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qmlshapesplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qmlshapesplugin) does not exist in the current scope.  The plugin
+  will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+CMake Warning at /usr/lib/aarch64-linux-gnu/cmake/Qt6Qml/Qt6QmlMacros.cmake:4216 (message):
+  The qml plugin 'qquicklayoutsplugin' is a dependency of
+  'hyprland-donate-screen', but the link target it defines
+  (Qt6::qquicklayoutsplugin) does not exist in the current scope.  The plugin
+  will not be linked.
+Call Stack (most recent call first):
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (qt6_import_qml_plugins)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:745 (cmake_language)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:823 (_qt_internal_finalize_executable)
+  /usr/lib/aarch64-linux-gnu/cmake/Qt6Core/Qt6CoreMacros.cmake:792:EVAL:1 (qt6_finalize_target)
+  utils/donate-screen/CMakeLists.txt:DEFERRED
+
+
+-- Configuring done (0.8s)
+-- Generating done (0.2s)
+-- Build files have been written to: /root/build/dethyprland/hyprland-qtutils/build-det
+[1/67] Copying hyprland-dialog qml sources into build dir
+[2/67] Copying hyprland-dialog qml resources into build dir
+[3/67] Copying hyprland-update-screen qml sources into build dir
+[4/67] Copying hyprland-update-screen qml resources into build dir
+[5/67] Copying hyprland-donate-screen qml sources into build dir
+[6/67] Running qmlimportscanner for hyprland-dialog
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[7/67] Copying hyprland-donate-screen qml resources into build dir
+[8/67] Running qmlimportscanner for hyprland-update-screen
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[9/67] Running qmlimportscanner for hyprland-donate-screen
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[10/67] Automatic MOC and UIC for target hyprland-dialog
+[11/67] Automatic MOC and UIC for target hyprland-donate-screen
+[12/67] Running AUTOMOC file extraction for target hyprland-dialog
+[13/67] Running AUTOMOC file extraction for target hyprland-donate-screen
+[14/67] Running rcc for resource qmake_org_hyprland_dialog
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[15/67] Running moc --collect-json for target hyprland-dialog
+[16/67] Running moc --collect-json for target hyprland-donate-screen
+[17/67] Generating .rcc/qmlcache/hyprland-dialog_qmlcache_loader.cpp
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[18/67] Running rcc for resource hyprland-dialog_raw_qml_0
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[19/67] Running rcc for resource qmake_org_hyprland_donate-screen
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[20/67] Generating .rcc/qmlcache/hyprland-donate-screen_qmlcache_loader.cpp
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[21/67] Running rcc for resource hyprland-donate-screen_raw_qml_0
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[22/67] Automatic QML type registration for target hyprland-donate-screen
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+Warning: /root/build/dethyprland/hyprland-qtutils/build-det/utils/donate-screen/hyprland-donate-screen_qmltyperegistrations.cpp:: org.hyprland.donate-screen is an invalid QML module URI. You cannot import this.
+[23/67] Running rcc for resource assets
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[24/67] Automatic QML type registration for target hyprland-dialog
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[25/67] Generating .rcc/qmlcache/hyprland-donate-screen_main_qml.cpp, .rcc/qmlcache/hyprland-donate-screen_main_qml.cpp.aotstats
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[26/67] Generating .rcc/qmlcache/hyprland-dialog_main_qml.cpp, .rcc/qmlcache/hyprland-dialog_main_qml.cpp.aotstats
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[27/67] Automatic MOC and UIC for target hyprland-update-screen
+[28/67] Running AUTOMOC file extraction for target hyprland-update-screen
+[29/67] Running moc --collect-json for target hyprland-update-screen
+[30/67] Automatic QML type registration for target hyprland-update-screen
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+Warning: /root/build/dethyprland/hyprland-qtutils/build-det/utils/update-screen/hyprland-update-screen_qmltyperegistrations.cpp:: org.hyprland.update-screen is an invalid QML module URI. You cannot import this.
+[31/67] Running rcc for resource qmake_org_hyprland_update-screen
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[32/67] Generating .rcc/qmlcache/hyprland-update-screen_qmlcache_loader.cpp
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[33/67] Generating .rcc/qmlcache/hyprland-update-screen_main_qml.cpp, .rcc/qmlcache/hyprland-update-screen_main_qml.cpp.aotstats
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[34/67] Generating .rcc/qmlcache/hyprland-update-screen_dialogMain_qml.cpp, .rcc/qmlcache/hyprland-update-screen_dialogMain_qml.cpp.aotstats
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[35/67] Running rcc for resource hyprland-update-screen_raw_qml_0
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[36/67] Running rcc for resource assets
+Detected locale "C" with character encoding "ANSI_X3.4-1968", which is not UTF-8.
+Qt depends on a UTF-8 locale, and has switched to "C.UTF-8" instead.
+If this causes problems, reconfigure your locale. See the locale(1) manual
+for more information.
+[37/67] Building CXX object utils/donate-screen/CMakeFiles/hyprland-donate-screen.dir/hyprland-donate-screen_autogen/mocs_compilation.cpp.o
+[38/67] Building CXX object utils/dialog/CMakeFiles/hyprland-dialog.dir/hyprland-dialog_autogen/mocs_compilation.cpp.o
+[39/67] Building CXX object utils/donate-screen/CMakeFiles/hyprland-donate-screen.dir/main.cpp.o
+[40/67] Building CXX object utils/dialog/CMakeFiles/hyprland-dialog.dir/.qt/rcc/qrc_qmake_org_hyprland_dialog.cpp.o
+[41/67] Building CXX object utils/dialog/CMakeFiles/hyprland-dialog.dir/main.cpp.o
+[42/67] Building CXX object utils/dialog/CMakeFiles/hyprland-dialog.dir/hyprland-dialog_qmltyperegistrations.cpp.o
+[43/67] Building CXX object utils/dialog/CMakeFiles/hyprland-dialog.dir/.qt/rcc/qrc_hyprland-dialog_raw_qml_0.cpp.o
+[44/67] Building CXX object utils/dialog/CMakeFiles/hyprland-dialog.dir/.rcc/qmlcache/hyprland-dialog_qmlcache_loader.cpp.o
+[45/67] Building CXX object utils/dialog/CMakeFiles/hyprland-dialog.dir/.rcc/qmlcache/hyprland-dialog_main_qml.cpp.o
+[46/67] Building CXX object utils/dialog/CMakeFiles/hyprland-dialog.dir/Dialog.cpp.o
+[47/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/hyprland-update-screen_autogen/mocs_compilation.cpp.o
+[48/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/Dialog.cpp.o
+[49/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/.qt/rcc/qrc_qmake_org_hyprland_update-screen.cpp.o
+[50/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/UpdateScreen.cpp.o
+[51/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/main.cpp.o
+[52/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/hyprland-update-screen_qmltyperegistrations.cpp.o
+[53/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/.qt/rcc/qrc_hyprland-update-screen_raw_qml_0.cpp.o
+[54/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/.qt/rcc/qrc_assets.cpp.o
+[55/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/.rcc/qmlcache/hyprland-update-screen_qmlcache_loader.cpp.o
+[56/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/.rcc/qmlcache/hyprland-update-screen_main_qml.cpp.o
+[57/67] Building CXX object utils/donate-screen/CMakeFiles/hyprland-donate-screen.dir/.qt/rcc/qrc_qmake_org_hyprland_donate-screen.cpp.o
+[58/67] Building CXX object utils/update-screen/CMakeFiles/hyprland-update-screen.dir/.rcc/qmlcache/hyprland-update-screen_dialogMain_qml.cpp.o
+[59/67] Building CXX object utils/donate-screen/CMakeFiles/hyprland-donate-screen.dir/DonateScreen.cpp.o
+[60/67] Building CXX object utils/donate-screen/CMakeFiles/hyprland-donate-screen.dir/.qt/rcc/qrc_hyprland-donate-screen_raw_qml_0.cpp.o
+[61/67] Building CXX object utils/donate-screen/CMakeFiles/hyprland-donate-screen.dir/.qt/rcc/qrc_assets.cpp.o
+[62/67] Linking CXX executable utils/dialog/hyprland-dialog
+[63/67] Linking CXX executable utils/update-screen/hyprland-update-screen
+[64/67] Building CXX object utils/donate-screen/CMakeFiles/hyprland-donate-screen.dir/hyprland-donate-screen_qmltyperegistrations.cpp.o
+[65/67] Building CXX object utils/donate-screen/CMakeFiles/hyprland-donate-screen.dir/.rcc/qmlcache/hyprland-donate-screen_main_qml.cpp.o
+[66/67] Building CXX object utils/donate-screen/CMakeFiles/hyprland-donate-screen.dir/.rcc/qmlcache/hyprland-donate-screen_qmlcache_loader.cpp.o
+[67/67] Linking CXX executable utils/donate-screen/hyprland-donate-screen
+-- Install configuration: "Release"
+-- Installing: /opt/dethyprland/bin/hyprland-dialog
+-- Set non-toolchain portion of runtime path of "/opt/dethyprland/bin/hyprland-dialog" to "$ORIGIN:$ORIGIN/../lib"
+-- Installing: /opt/dethyprland/bin/hyprland-update-screen
+-- Set non-toolchain portion of runtime path of "/opt/dethyprland/bin/hyprland-update-screen" to "$ORIGIN:$ORIGIN/../lib"
+-- Installing: /opt/dethyprland/bin/hyprland-donate-screen
+-- Set non-toolchain portion of runtime path of "/opt/dethyprland/bin/hyprland-donate-screen" to "$ORIGIN:$ORIGIN/../lib"

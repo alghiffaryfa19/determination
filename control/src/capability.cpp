@@ -1,14 +1,14 @@
-#include "aurora/control/capability.hpp"
+#include "determination/control/capability.hpp"
 
-#include "aurora/control/observability.hpp"
-#include "aurora/control/system.hpp"
+#include "determination/control/observability.hpp"
+#include "determination/control/system.hpp"
 
 #include <algorithm>
 #include <sstream>
 #include <ctime>
 #include <iterator>
 
-namespace aurora::control {
+namespace determination::control {
 namespace {
 
 struct SeedNode {
@@ -27,7 +27,7 @@ constexpr SeedNode kSeeds[] = {
     {"renderer.native-turnip", "", "buildable", "vendor-hybris"},
     {"session.phosh", "", "detected", "none"},
     {"session.plasma-mobile", "", "buildable", "phosh"},
-    {"audio.speaker.direct", "bin/aurora-audio-owner", "installed", "android-audio"},
+    {"audio.speaker.direct", "bin/det-audio-owner", "installed", "android-audio"},
     {"audio.dp.direct", "", "buildable", "speaker-only"},
     {"input.touch.internal", "bin/evgrab", "installed", "none"},
     {"input.keyboard.external", "bin/external-input", "installed", "osk"},
@@ -147,4 +147,4 @@ std::string capabilities_graph_json(const std::vector<CapabilityNode> &nodes)
     return output.str();
 }
 
-} // namespace aurora::control
+} // namespace determination::control

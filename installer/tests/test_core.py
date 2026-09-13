@@ -185,7 +185,8 @@ class CoreTests(unittest.TestCase):
         with self.engine.transaction():
             with self.assertRaises(Failure), self.engine.transaction():
                 pass
-        self.assertFalse((self.engine.workspace / 'operation.lock').exists())
+        with self.engine.transaction():
+            pass
 
     def test_profile_uses_detected_dimensions_and_vendor_graphics(self):
         profile = self.engine.device_profile(device()).read_text()
@@ -303,6 +304,7 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(digest(Path(path).parent / artifact['name']), artifact['sha256'])
         self.assertTrue(any(call.args[0][-1] == 'olddefconfig' for call in runner.call_args_list))
         self.assertTrue(any(call.args[0][-1] == 'Image.gz-dtb' for call in runner.call_args_list))
+        self.assertTrue(any('CROSS_COMPILE=aarch64-linux-gnu-' in call.args[0] for call in runner.call_args_list))
 
     def test_local_base_bundle_is_generated_from_verified_build_outputs(self):
         repo = self.root / 'repo'

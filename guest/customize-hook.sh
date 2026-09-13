@@ -60,25 +60,25 @@ EOF
 echo 'precedence ::ffff:0:0/96  100' >> "$R/etc/gai.conf"
 
 # Android device-node groups (recon 2026-07-12, artifacts/node-perms-probe.txt):
-# the session runs as the unprivileged user aurora, NOT root. GPU/dri/binder/
-# ashmem are world-rw and kgsl/ion are owned by uid/gid 1000 (== aurora ==
+# the session runs as the unprivileged user detuser, NOT root. GPU/dri/binder/
+# ashmem are world-rw and kgsl/ion are owned by uid/gid 1000 (== detuser ==
 # Android AID_SYSTEM); the ONLY node that gates a non-root compositor is
 # /dev/input/* (0660 root:1004, AID_INPUT). Debian's input group (gid 995) does
 # not match, so make a group at Android's numeric gid. seatd's socket is group
-# video(44), which aurora already gets.
+# video(44), which detuser already gets.
 chroot "$R" sh -c 'getent group android_input   >/dev/null || groupadd -g 1004 android_input'
 chroot "$R" sh -c 'getent group android_graphics >/dev/null || groupadd -g 1003 android_graphics'
 chroot "$R" sh -c 'getent group android_audio    >/dev/null || groupadd -g 1005 android_audio'
 
 # The project guest account uses load-bearing uid 1000. Rename any existing
 # uid-1000 account so upgrades and imported rootfs images converge cleanly.
-chroot "$R" sh -c 'uid1000_user=$(getent passwd 1000 | cut -d: -f1 || true); if [ -n "$uid1000_user" ] && [ "$uid1000_user" != aurora ]; then uid1000_group=$(id -gn "$uid1000_user"); usermod -l aurora -d /home/aurora -m "$uid1000_user"; if [ "$uid1000_group" != aurora ] && ! getent group aurora >/dev/null 2>&1; then groupmod -n aurora "$uid1000_group"; fi; elif ! id aurora >/dev/null 2>&1; then useradd -m -u 1000 -s /bin/bash aurora; fi'
-chroot "$R" usermod -aG video,input,render,audio,android_input,android_graphics,android_audio aurora
+chroot "$R" sh -c 'uid1000_user=$(getent passwd 1000 | cut -d: -f1 || true); if [ -n "$uid1000_user" ] && [ "$uid1000_user" != detuser ]; then uid1000_group=$(id -gn "$uid1000_user"); usermod -l detuser -d /home/detuser -m "$uid1000_user"; if [ "$uid1000_group" != detuser ] && ! getent group detuser >/dev/null 2>&1; then groupmod -n detuser "$uid1000_group"; fi; elif ! id detuser >/dev/null 2>&1; then useradd -m -u 1000 -s /bin/bash detuser; fi'
+chroot "$R" usermod -aG video,input,render,audio,android_input,android_graphics,android_audio detuser
 
 # Password-gated sudo (proper sudo, not NOPASSWD-ALL). No password is baked into
-# the image --- set one on-device with `aurora passwd` before sudo will work.
-echo 'aurora ALL=(ALL) ALL' > "$R/etc/sudoers.d/aurora"
-chmod 440 "$R/etc/sudoers.d/aurora"
+# the image --- set one on-device with `det passwd` before sudo will work.
+echo 'detuser ALL=(ALL) ALL' > "$R/etc/sudoers.d/detuser"
+chmod 440 "$R/etc/sudoers.d/detuser"
 
 # The libhybris packages themselves install on first boot of the guest (needs
 # the device's vendor blobs visible to configure linker namespaces sanely):
@@ -93,26 +93,26 @@ chmod +x "$R/root/firstboot.sh"
 
 # Direct audio is dormant until the host ownership journal publishes its claim.
 install -d "$R/usr/local/bin"
-install -m 0755 "$HERE/aurora-audio-session" "$R/usr/local/bin/aurora-audio-session"
-install -m 0755 "$HERE/aurora-input-actions" "$R/usr/local/bin/aurora-input-actions"
-install -m 0755 "$HERE/aurora-media-action" "$R/usr/local/bin/aurora-media-action"
-install -m 0755 "$HERE/aurora-connectivity" "$R/usr/local/bin/aurora-connectivity"
-install -m 0755 "$HERE/aurora-connectivity-menu" "$R/usr/local/bin/aurora-connectivity-menu"
-install -m 0755 "$HERE/aurora-phosh-session" "$R/usr/local/bin/aurora-phosh-session"
-install -m 0755 "$HERE/aurora-compat-check" "$R/usr/local/bin/aurora-compat-check"
-install -m 0755 "$HERE/aurora-firefox-content-defaults" \
-    "$R/usr/local/bin/aurora-firefox-content-defaults"
-install -m 0755 "$HERE/aurora-opal" "$R/usr/local/bin/aurora-opal"
-install -m 0755 "$HERE/aurora-opal-bridge" "$R/usr/local/bin/aurora-opal-bridge"
+install -m 0755 "$HERE/det-audio-session" "$R/usr/local/bin/det-audio-session"
+install -m 0755 "$HERE/det-input-actions" "$R/usr/local/bin/det-input-actions"
+install -m 0755 "$HERE/det-media-action" "$R/usr/local/bin/det-media-action"
+install -m 0755 "$HERE/det-connectivity" "$R/usr/local/bin/det-connectivity"
+install -m 0755 "$HERE/det-connectivity-menu" "$R/usr/local/bin/det-connectivity-menu"
+install -m 0755 "$HERE/det-phosh-session" "$R/usr/local/bin/det-phosh-session"
+install -m 0755 "$HERE/det-compat-check" "$R/usr/local/bin/det-compat-check"
+install -m 0755 "$HERE/det-firefox-content-defaults" \
+    "$R/usr/local/bin/det-firefox-content-defaults"
+install -m 0755 "$HERE/det-opal" "$R/usr/local/bin/det-opal"
+install -m 0755 "$HERE/det-opal-bridge" "$R/usr/local/bin/det-opal-bridge"
 install -m 0755 "$HERE/opal-command" "$R/usr/local/bin/opal"
-install -d "$R/usr/local/share/aurora-opal"
-cp -a "$HERE/opal/." "$R/usr/local/share/aurora-opal/"
-install -m 0755 "$HERE/aurora-input-udevdb" "$R/usr/local/sbin/aurora-input-udevdb"
+install -d "$R/usr/local/share/det-opal"
+cp -a "$HERE/opal/." "$R/usr/local/share/det-opal/"
+install -m 0755 "$HERE/det-input-udevdb" "$R/usr/local/sbin/det-input-udevdb"
 install -m 0755 "$HERE/setup-compatibility.sh" "$R/usr/local/sbin/setup-compatibility.sh"
-install -D -m 0644 "$HERE/aurora-phosh.service" \
-    "$R/usr/local/lib/aurora/aurora-phosh.service"
-install -D -m 0644 "$HERE/aurora-phosh.service" \
-    "$R/etc/systemd/system/aurora-phosh.service"
+install -D -m 0644 "$HERE/det-phosh.service" \
+    "$R/usr/local/lib/determination/det-phosh.service"
+install -D -m 0644 "$HERE/det-phosh.service" \
+    "$R/etc/systemd/system/det-phosh.service"
 install -d "$R/etc/xdg/xdg-desktop-portal" "$R/etc/environment.d"
 cat > "$R/etc/xdg/xdg-desktop-portal/phosh-portals.conf" <<'EOF'
 [preferred]
@@ -121,7 +121,7 @@ org.freedesktop.impl.portal.FileChooser=phosh;gtk;
 org.freedesktop.impl.portal.Screenshot=phosh;
 org.freedesktop.impl.portal.ScreenCast=phosh;
 EOF
-cat > "$R/etc/environment.d/90-aurora-session.conf" <<'EOF'
+cat > "$R/etc/environment.d/90-determination-session.conf" <<'EOF'
 XDG_CURRENT_DESKTOP=Phosh:GNOME
 XDG_SESSION_DESKTOP=phosh
 DESKTOP_SESSION=phosh
@@ -130,18 +130,18 @@ QT_QPA_PLATFORM=wayland
 MOZ_ENABLE_WAYLAND=1
 GTK_USE_PORTAL=1
 EOF
-install -D -m 0644 "$HERE/aurora-connectivity.desktop" \
-    "$R/usr/share/applications/aurora-connectivity.desktop"
-install -D -m 0644 "$HERE/aurora-input-proxy.desktop" \
-    "$R/usr/share/applications/aurora-input-proxy.desktop"
+install -D -m 0644 "$HERE/determination-connectivity.desktop" \
+    "$R/usr/share/applications/determination-connectivity.desktop"
+install -D -m 0644 "$HERE/determination-input-proxy.desktop" \
+    "$R/usr/share/applications/determination-input-proxy.desktop"
 install -m 0755 "$HERE/setup-audio.sh" "$R/root/setup-audio.sh"
-install -m 0644 "$HERE/90-aurora-direct.conf" \
-    "$R/root/90-aurora-direct.conf"
+install -m 0644 "$HERE/90-determination-direct.conf" \
+    "$R/root/90-determination-direct.conf"
 chroot "$R" /root/setup-audio.sh --configure-only
 
 # The internal display is physically a phone even though Firefox is the Debian
 # desktop build. Let sites select their mobile UI and force Firefox touch/APZ
 # paths on. The prefs remain user-overridable through about:config.
 install -d "$R/usr/lib/firefox-esr/browser/defaults/preferences"
-install -m 0644 "$HERE/aurora-firefox.js" \
-    "$R/usr/lib/firefox-esr/browser/defaults/preferences/aurora.js"
+install -m 0644 "$HERE/determination-firefox.js" \
+    "$R/usr/lib/firefox-esr/browser/defaults/preferences/determination.js"

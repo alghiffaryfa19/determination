@@ -1,10 +1,10 @@
 #!/bin/sh
-# Aurora wake-path smoke test --- run INSIDE the guest, in DESKTOP MODE,
+# Determination wake-path smoke test --- run INSIDE the guest, in DESKTOP MODE,
 # while phosh is up. Exercises the full blank/unblank round trip over DBus
 # (org.gnome.ScreenSaver.SetActive true -> false), i.e. exactly the path the
 # power button takes: phosh -> wlr-output-power -> phoc hwcomposer
 # set_power_mode OFF/ON. No button press needed --- this isolates the
-# compositor re-enable from the input-side wake (aurora-session-manager's
+# compositor re-enable from the input-side wake (det-session-manager's
 # active watch), so a failure here is a phoc/hwcomposer bug, not a watcher
 # bug. PANEL GOES BLACK for ~BLANK_SECS seconds mid-run: expected.
 #

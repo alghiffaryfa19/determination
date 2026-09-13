@@ -34,16 +34,16 @@ class DiscoveryTests(unittest.TestCase):
             'wireless': {'output': 'wifi2'}, 'drm': {'output': '/dev/dri/card2\n/dev/dri/renderD130'},
             'backlights': {'output': '/sys/class/backlight/my-panel|4095'}}}
         profile = profile_values(data)
-        self.assertEqual(profile['AURORA_PANEL_HEIGHT'], '3200')
-        self.assertEqual(profile['AURORA_WIFI_IFACE'], 'wifi2')
-        self.assertEqual(profile['AURORA_DRM_CARD'], '/dev/dri/card2')
-        self.assertEqual(profile['AURORA_BACKLIGHT_PATH'], '/sys/class/backlight/my-panel/brightness')
-        self.assertNotIn('AURORA_BATTERY_GAUGE', profile)
-        self.assertNotIn('AURORA_INPUT_QUIRK', profile)
+        self.assertEqual(profile['DET_PANEL_HEIGHT'], '3200')
+        self.assertEqual(profile['DET_WIFI_IFACE'], 'wifi2')
+        self.assertEqual(profile['DET_DRM_CARD'], '/dev/dri/card2')
+        self.assertEqual(profile['DET_BACKLIGHT_PATH'], '/sys/class/backlight/my-panel/brightness')
+        self.assertNotIn('DET_BATTERY_GAUGE', profile)
+        self.assertNotIn('DET_INPUT_QUIRK', profile)
 
     def test_ambiguous_hardware_is_not_selected(self):
         profile = profile_values({'device': 'phone', 'probes': {
             'wireless': {'output': 'wifi0\nwifi1'},
             'drm': {'output': '/dev/dri/card0\n/dev/dri/card1'}}})
-        self.assertNotIn('AURORA_WIFI_IFACE', profile)
-        self.assertNotIn('AURORA_DRM_CARD', profile)
+        self.assertNotIn('DET_WIFI_IFACE', profile)
+        self.assertNotIn('DET_DRM_CARD', profile)

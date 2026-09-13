@@ -47,20 +47,20 @@ def partitions(text):
 
 
 def profile_values(device):
-    values = {'AURORA_PROFILE_ID': device['device'], 'AURORA_GRAPHICS_RENDERER': 'libhybris', 'AURORA_GBM_PROVIDER': 'minigbm'}
+    values = {'DET_PROFILE_ID': device['device'], 'DET_GRAPHICS_RENDERER': 'libhybris', 'DET_GBM_PROVIDER': 'minigbm'}
     probes = device.get('probes', {})
     def output(name):
         return probes.get(name, {}).get('output', '')
     match = re.search(r'Physical size:\s*(\d+)x(\d+)', device.get('display', ''))
     if match:
-        values.update(AURORA_PANEL_WIDTH=match[1], AURORA_PANEL_HEIGHT=match[2])
+        values.update(DET_PANEL_WIDTH=match[1], DET_PANEL_HEIGHT=match[2])
     wireless = set(re.findall(r'^[A-Za-z0-9_.-]+$', output('wireless'), re.M))
     if len(wireless) == 1:
-        values['AURORA_WIFI_IFACE'] = wireless.pop()
+        values['DET_WIFI_IFACE'] = wireless.pop()
     backlights = re.findall(r'^(/sys/class/backlight/[A-Za-z0-9_.-]+)\|([0-9]+)$', output('backlights'), re.M)
     if len(backlights) == 1:
-        values['AURORA_BACKLIGHT_PATH'] = backlights[0][0] + '/brightness'
-    for key, pattern in (('AURORA_DRM_CARD', r'/dev/dri/card[0-9]+'), ('AURORA_DRM_RENDER_NODE', r'/dev/dri/renderD[0-9]+')):
+        values['DET_BACKLIGHT_PATH'] = backlights[0][0] + '/brightness'
+    for key, pattern in (('DET_DRM_CARD', r'/dev/dri/card[0-9]+'), ('DET_DRM_RENDER_NODE', r'/dev/dri/renderD[0-9]+')):
         nodes = set(re.findall('^' + pattern + '$', output('drm'), re.M))
         if len(nodes) == 1:
             values[key] = nodes.pop()

@@ -3,7 +3,7 @@
  * frame or changing the active mode by default.
  *
  * This is intentionally a source-level diagnostic rather than a build.sh
- * target.  The two declarations below are the existing Aurora
+ * target.  The two declarations below are the existing Determination
  * extensions implemented by hwc2_compat_extra.cpp and exported by
  * libhwc2_compat_layer.so.
  */

@@ -1,4 +1,4 @@
-Aurora libhybris + Android gralloc + minigbm benchmark
+Determination libhybris + Android gralloc + minigbm benchmark
 Device: OnePlus 7 guacamoleb, Adreno 640 vendor EGL
 Mode: phone mode, SurfaceFlinger left running, EGL null platform
 Geometry: 1080x2340 RGBA8888

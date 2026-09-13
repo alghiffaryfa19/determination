@@ -1,6 +1,6 @@
 #!/system/bin/sh
 set -eu
-ROOT=${AURORA_SESSION_SELECT_ROOT:-${AURORA:-/data/aurora}}
+ROOT=${DET_SESSION_SELECT_ROOT:-${DET:-/data/determination}}
 id=${1:-}
 fail() { echo "session-set: $*" >&2; exit 2; }
 [ "$#" -eq 1 ] || fail 'usage: session-set <id>'

@@ -1,7 +1,7 @@
-## SPDX-FileCopyrightText: 2026 Aurora contributors
+## SPDX-FileCopyrightText: 2026 Determination contributors
 ## SPDX-License-Identifier: LGPL-3.0-only
 ##
-## Aurora patch for Quickshell 0.3.0. It modifies LGPL-3.0-only source;
+## Determination patch for Quickshell 0.3.0. It modifies LGPL-3.0-only source;
 ## retain Quickshell's LICENSE, LICENSE-GPL, and per-file notices.
 
 --- a/src/core/iconimageprovider.cpp
@@ -20,7 +20,7 @@
  
  QPixmap
  IconImageProvider::requestPixmap(const QString& id, QSize* size, const QSize& requestedSize) {
-+	if (qEnvironmentVariableIntValue("AURORA_OPAL_GLES") == 1
++	if (qEnvironmentVariableIntValue("DET_OPAL_GLES") == 1
 +	    && QThread::currentThread() != QCoreApplication::instance()->thread()) {
 +		QPixmap result;
 +		QMetaObject::invokeMethod(QCoreApplication::instance(), [&] {
@@ -50,7 +50,7 @@
 -
  	delete coreApplication;
  
-+	if (qEnvironmentVariableIntValue("AURORA_OPAL_GLES") == 1) {
++	if (qEnvironmentVariableIntValue("DET_OPAL_GLES") == 1) {
 +		// Android vendor EGL exposes GLES configs, not desktop OpenGL configs.
 +		QCoreApplication::setAttribute(Qt::AA_UseOpenGLES);
 +		auto format = QSurfaceFormat::defaultFormat();

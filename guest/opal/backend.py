@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from wallpaper_service import DEFAULTS as WALLPAPER_DEFAULTS, local_image, generate, valid_preference, image_library, browse_images
 HOME = pathlib.Path.home()
-STORE = HOME / '.local/state/aurora-opal/preferences.json'
+STORE = HOME / '.local/state/det-opal/preferences.json'
 lock = threading.Lock()
 prefs_lock = threading.Lock()
 def emit(data):
@@ -174,7 +174,7 @@ def commands():
             elif action=='bluetooth': run('bluetoothctl','power','off' if c.get('enabled') else 'on')
             elif action=='media' and c.get('verb') in ('play-pause','next','previous'):
                 if command_available('playerctl'): run('playerctl',c['verb'])
-                else: run('aurora-media-action',c['verb'])
+                else: run('det-media-action',c['verb'])
             elif action=='profile' and c.get('value') in ('power-saver','balanced','performance'): run('powerprofilesctl','set',c['value'])
             elif action=='screenshot':
                 time.sleep(.5)
@@ -188,9 +188,9 @@ def commands():
             elif action=='power' and c.get('verb')=='suspend':
                 emit({'event':'message','text':'Suspend is unavailable while Android owns the power lifecycle'})
             elif action=='power' and c.get('verb') in ('reboot','poweroff'):
-                spawn(['aurora-signal',c['verb']])
+                spawn(['det-signal',c['verb']])
             elif action=='power' and c.get('verb')=='logout':
-                pathlib.Path('/mnt/aurora-control/exit').touch()
+                pathlib.Path('/mnt/det-control/exit').touch()
             elif action=='calculate': emit({'event':'calculation','query':c.get('text',''),'result':calculate(c.get('text',''))})
             elif action=='clipboard':
                 if shutil.which('wl-copy'): subprocess.run(['wl-copy'],input=str(c.get('text','')).encode('utf-8'),timeout=2)

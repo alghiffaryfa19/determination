@@ -14,7 +14,7 @@
 
 QPixmap
 IconImageProvider::requestPixmap(const QString& id, QSize* size, const QSize& requestedSize) {
-	if (qEnvironmentVariableIntValue("AURORA_OPAL_GLES") == 1
+	if (qEnvironmentVariableIntValue("DET_OPAL_GLES") == 1
 	    && QThread::currentThread() != QCoreApplication::instance()->thread()) {
 		QPixmap result;
 		QMetaObject::invokeMethod(QCoreApplication::instance(), [&] {

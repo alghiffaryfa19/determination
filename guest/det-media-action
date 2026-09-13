@@ -1,0 +1,20 @@
+#!/bin/sh
+# Send a transport command to every MPRIS player on the user session bus.
+
+set -eu
+case "${1:-}" in
+    play-pause) method=PlayPause ;;
+    next) method=Next ;;
+    previous) method=Previous ;;
+    *) echo "usage: det-media-action play-pause|next|previous" >&2; exit 2 ;;
+esac
+
+found=0
+busctl --user --no-pager --list 2>/dev/null |
+    awk '$1 ~ /^org\.mpris\.MediaPlayer2\./ {print $1}' |
+    while IFS= read -r player; do
+        found=1
+        busctl --user call "$player" /org/mpris/MediaPlayer2 \
+            org.mpris.MediaPlayer2.Player "$method" >/dev/null 2>&1 || true
+    done
+exit "$found"

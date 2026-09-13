@@ -1,0 +1,5 @@
+library "libadreno_app_profiles.so" not found
+vendor=Android renderer=Adreno (TM) 640
+native_handle fds=2 ints=22 stride=64
+PASS: Dethyprland native-buffer foundation, 120 vendor-render/fence/readback cycles
+NOT QUALIFIED: Aquamarine output, Hyprland renderer integration, HWC and input remain

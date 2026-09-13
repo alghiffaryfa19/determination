@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import fcntl
 import gzip
 import hashlib
 import json
@@ -276,16 +277,17 @@ class Engine:
     @contextlib.contextmanager
     def transaction(self):
         lock = self.workspace / 'operation.lock'
+        descriptor = os.open(lock, os.O_CREAT | os.O_RDWR, 0o600)
         try:
-            descriptor = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-        except FileExistsError as exc:
-            raise Failure(f'Workspace is busy. If its process has exited, remove {lock}.') from exc
-        try:
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError as exc:
+                raise Failure(f'Workspace is busy: {self.workspace}') from exc
+            os.ftruncate(descriptor, 0)
             os.write(descriptor, str(os.getpid()).encode())
-            os.close(descriptor)
             yield
         finally:
-            lock.unlink(missing_ok=True)
+            os.close(descriptor)
 
     @contextlib.contextmanager
     def critical(self):
@@ -742,17 +744,42 @@ class Engine:
             candidate.mkdir()
             self.run([self.magiskboot, 'unpack', Path(release_boot).resolve()], cwd=candidate)
             kernel = candidate / 'kernel'
-        if not kernel or not Path(kernel).is_file():
-            raise Failure('The build produced no kernel image.')
-        shutil.copyfile(kernel, current / 'kernel')
+            if (candidate / 'kernel_dtb').is_file():
+                shutil.copyfile(candidate / 'kernel_dtb', current / 'kernel_dtb')
+            elif (current / 'kernel_dtb').is_file():
+                (current / 'kernel_dtb').unlink()
+            if not kernel or not Path(kernel).is_file():
+                raise Failure('The release boot image produced no kernel image.')
+            shutil.copyfile(kernel, current / 'kernel')
+        else:
+            if not kernel or not Path(kernel).is_file():
+                raise Failure('The build produced no kernel image.')
+            has_kernel_dtb = (current / 'kernel_dtb').is_file()
+            kernel_path = Path(kernel).resolve()
+            if has_kernel_dtb:
+                if not kernel_path.name.endswith('-dtb'):
+                    raise Failure('Original kernel has an appended DTB; use the matching legacy kernel format.')
+                self.run([self.magiskboot, 'split', kernel_path], cwd=current)
+            else:
+                if kernel_path.name.endswith('-dtb'):
+                    raise Failure('Original kernel does not use an appended DTB; do not repack with an appended DTB kernel.')
+                if kernel_path.read_bytes()[:2] == b'\x1f\x8b':
+                    with gzip.open(kernel_path, 'rb') as gz_in, (current / 'kernel').open('wb') as out:
+                        shutil.copyfileobj(gz_in, out)
+                else:
+                    shutil.copyfile(kernel_path, current / 'kernel')
+        expected_kernel_hash = digest(current / 'kernel')
+        expected_kernel_dtb_hash = digest(current / 'kernel_dtb') if (current / 'kernel_dtb').is_file() else None
         output = directory / 'aurora-boot.img'
         self.run([self.magiskboot, 'repack', Path(backup).resolve(), output], cwd=current)
         validate_archive(output, 'boot')
         verify = directory / 'verify'
         verify.mkdir()
         self.run([self.magiskboot, 'unpack', output], cwd=verify)
-        if digest(verify / 'ramdisk.cpio') != ramdisk_hash or digest(verify / 'kernel') != digest(current / 'kernel'):
+        if digest(verify / 'ramdisk.cpio') != ramdisk_hash or digest(verify / 'kernel') != expected_kernel_hash:
             raise Failure('Repacked kernel or Magisk ramdisk verification failed.')
+        if expected_kernel_dtb_hash and digest(verify / 'kernel_dtb') != expected_kernel_dtb_hash:
+            raise Failure('Repacked kernel DTB verification failed.')
         return output
 
     def stage(self, path, remote):
@@ -831,16 +858,26 @@ fi
         shutil.copyfile(base, config)
         fragments = [str(overlay)]
         env = dict(os.environ, KCONFIG_CONFIG=str(config))
+        toolchain_bin = REPO / 'toolchain/usr/bin'
+        if toolchain_bin.is_dir():
+            env['PATH'] = f"{toolchain_bin}:{env.get('PATH', '')}"
         self.phase('Applying Aurora kernel requirements to the running device configuration')
         self.run(['sh', source / 'scripts/kconfig/merge_config.sh', '-m', '-O', output, config, *fragments], cwd=source, env=env)
-        make = ['make', '-C', source, f'O={output}', 'ARCH=arm64', 'LLVM=1', 'LLVM_IAS=1', *arguments]
-        self.run([*make, 'olddefconfig'], timeout=300)
+        toolchain = []
+        if not any(arg.startswith('CROSS_COMPILE=') for arg in arguments):
+            toolchain.append('CROSS_COMPILE=aarch64-linux-gnu-')
+        if not any(arg.startswith('LLVM=') for arg in arguments):
+            toolchain.append('LLVM=1')
+        if not any(arg.startswith('LLVM_IAS=') for arg in arguments):
+            toolchain.append('LLVM_IAS=1')
+        make = ['make', '-C', source, f'O={output}', 'ARCH=arm64', *toolchain, *arguments]
+        self.run([*make, 'olddefconfig'], timeout=300, env=env)
         configured = config.read_text().splitlines()
         missing = [key for key in REQUIRED if f'CONFIG_{key}=y' not in configured]
         if missing or 'CONFIG_FRAMEBUFFER_CONSOLE=y' in configured:
             raise Failure('Kernel configuration cannot satisfy the container contract: ' + ', '.join(missing or ['FRAMEBUFFER_CONSOLE must be disabled']))
         self.phase('Building the ported downstream kernel')
-        self.run([*make, f'-j{jobs}', target], timeout=14400)
+        self.run([*make, f'-j{jobs}', target], timeout=14400, env=env)
         kernel = output / 'arch/arm64/boot' / target
         if not kernel.is_file():
             raise Failure(f'The build did not produce the requested arm64 kernel: {target}.')

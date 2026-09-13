@@ -2,9 +2,9 @@
 # Reclaim stale command-provider workers while Android's panel is handed to the guest.
 
 set -u
-AURORA=${AURORA:-/data/aurora}
-PROC_ROOT=${AURORA_PROC_ROOT:-/proc}
-STATE=$AURORA/run/desktop-memory.state
+DET=${DET:-/data/determination}
+PROC_ROOT=${DET_PROC_ROOT:-/proc}
+STATE=$DET/run/desktop-memory.state
 MODE=${1:-status}
 GENERATION=${2:-}
 
@@ -45,7 +45,7 @@ is_worker() {
 worker_pids() {
     # Android already indexes the only executable that can host this provider.
     # Scanning every /proc cmdline is expensive enough to defeat the reclaim.
-    candidates=${AURORA_MEMORY_PIDS:-$(pidof app_process 2>/dev/null)}
+    candidates=${DET_MEMORY_PIDS:-$(pidof app_process 2>/dev/null)}
     for pid in $candidates; do
         case "$pid" in *[!0-9]*|'') continue ;; esac
         is_worker "$pid" && printf '%s\n' "$pid"
@@ -72,7 +72,7 @@ write_state() {
         echo "term_sent=$term_sent"
         echo "kill_sent=$kill_sent"
         echo "matching_after=$after_count"
-        echo "dry_run=${AURORA_MEMORY_DRY_RUN:-0}"
+        echo "dry_run=${DET_MEMORY_DRY_RUN:-0}"
     } > "$tmp" || return 1
     mv -f "$tmp" "$STATE"
 }
@@ -90,7 +90,7 @@ case "$MODE" in
     *) usage ;;
 esac
 
-mkdir -p "$AURORA/run"
+mkdir -p "$DET/run"
 before=$(worker_pids)
 before_count=$(count_pids "$before")
 term_sent=0
@@ -99,7 +99,7 @@ kill_sent=0
 if [ "$MODE" = reclaim ]; then
     for pid in $before; do
         is_worker "$pid" || continue
-        if [ "${AURORA_MEMORY_DRY_RUN:-0}" = 1 ]; then
+        if [ "${DET_MEMORY_DRY_RUN:-0}" = 1 ]; then
             continue
         fi
         kill -TERM "$pid" 2>/dev/null && term_sent=$((term_sent + 1))

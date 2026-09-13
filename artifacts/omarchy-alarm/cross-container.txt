@@ -1,4 +1,4 @@
-STEP 1/2: FROM localhost/aurora/quickshell-cross:trixie
+STEP 1/2: FROM localhost/determination/quickshell-cross:trixie
 STEP 2/2: RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends     meson gperf m4 python3-jinja2 python3-pyelftools gettext     && rm -rf /var/lib/apt/lists/*
 Get:1 http://deb.debian.org/debian trixie InRelease [140 kB]
 Get:2 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
@@ -131,7 +131,7 @@ Setting up python3-pkg-resources (78.1.1-0.1) ...
 Setting up python3-setuptools (78.1.1-0.1) ...
 Setting up meson (1.7.0-1) ...
 Processing triggers for libc-bin (2.41-12+deb13u3) ...
-COMMIT aurora/alarm-cross:trixie
+COMMIT determination/alarm-cross:trixie
 --> 58cb1d823600
-Successfully tagged localhost/aurora/alarm-cross:trixie
+Successfully tagged localhost/determination/alarm-cross:trixie
 58cb1d823600b3167252796fa0588eaec165ff4752518b7417c825966a3b0a6f

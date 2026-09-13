@@ -1,10 +1,10 @@
-# Aurora documentation
+# Determination documentation
 
 Status: current navigation
 Authority: repository documentation maintainers
 Last reviewed: 2026-07-30
 
-Aurora keeps Android as PID 1 while a Linux guest shares the downstream
+Determination keeps Android as PID 1 while a Linux guest shares the downstream
 kernel. Debian is the qualified baseline; Arch Linux ARM and Alpine are
 experimental build profiles. The project has one supported target: OnePlus 7
 `guacamoleb` on the tested crDroid 12.11 / Android 16 line.

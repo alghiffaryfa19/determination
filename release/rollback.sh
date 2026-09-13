@@ -2,12 +2,12 @@
 # Roll the active guest rootfs slot back to a previously installed distro.
 #
 # Plan-only by default: prints the exact ordered commands an operator (or
-# `aurora shell`) would run. --execute performs them over adb, gated behind an
+# `det shell`) would run. --execute performs them over adb, gated behind an
 # interactive confirmation and a hard refusal when no phone is attached.
 #
 # Slot layout per docs/design-spec.md:
-#   /data/aurora/active-guest          -> current slot id
-#   /data/aurora/guests/<id>/rootfs    -> installed slots
+#   /data/determination/active-guest          -> current slot id
+#   /data/determination/guests/<id>/rootfs    -> installed slots
 set -eu
 cd "$(CDPATH= cd -P "$(dirname "$0")/.." && pwd)"
 
@@ -28,7 +28,7 @@ if ! adb get-state >/dev/null 2>&1; then
 fi
 serial=$(adb devices | awk 'NR==2{print $1}')
 
-G=/data/aurora
+G=/data/determination
 remote_check=$(adb shell "su -c 'id=\$(cat $G/active-guest 2>/dev/null); \\
     echo \"current=\$id\"; \\
     [ -d \"$G/guests/$slot/rootfs\" ] && echo \"slot=ok\" || echo \"slot=missing\"; \\
@@ -80,4 +80,4 @@ adb shell "su -c '${stop_step}cp $G/active-guest $G/active-guest.bak 2>/dev/null
     $G/bin/guest-distro select $slot'" </dev/null
 
 echo "rollback applied: active-guest=$slot (previous saved as active-guest.bak)"
-echo "next: start the guest, e.g. aurora shell then $G/bin/guest-start"
+echo "next: start the guest, e.g. det shell then $G/bin/guest-start"

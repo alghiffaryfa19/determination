@@ -1,34 +1,34 @@
 # Project Universalisation
 
-Aurora currently has one proven device: OnePlus 7 `guacamoleb`. The
+Determination currently has one proven device: OnePlus 7 `guacamoleb`. The
 portable architecture is a hypothesis until a second device crosses a
 meaningfully different hardware or Android axis. This document tracks the work
 needed to make that hypothesis testable.
 
 ## Configuration contract
 
-Host-side scripts source `/data/aurora/bin/device-config`. It discovers
+Host-side scripts source `/data/determination/bin/device-config`. It discovers
 safe defaults at runtime and then applies the data-only overrides in
-`/data/aurora/etc/device.conf`.
+`/data/determination/etc/device.conf`.
 
 Currently generated and consumed, with incomplete paths called out below:
 
 | Key | Discovery/default | Consumers |
 |---|---|---|
-| `AURORA_BACKLIGHT_PATH` | known Android paths, then first backlight node | HWC and native toggle paths |
-| `AURORA_BACKLIGHT_LEVEL` | one third of `max_brightness` | HWC and native toggle paths |
-| `AURORA_WIFI_IFACE` | first `wlan*` or `wifi*` interface | guest network keeper/routing |
-| `AURORA_HWC_OUTPUT` | `HWCOMPOSER-1` | generated phoc configuration |
-| `AURORA_PANEL_WIDTH`, `AURORA_PANEL_HEIGHT` | Android physical display size | scale calculation and diagnostics |
-| `AURORA_OUTPUT_SCALE` | approximately 360 logical pixels wide | generated phoc configuration |
-| `AURORA_BATTERY_GAUGE` | unset | guest battery translator |
-| `AURORA_INPUT_QUIRK` | `none` | classified libinput workaround |
-| `AURORA_DRM_CARD` | `/dev/dri/card0` | reserved for generated native-display config |
-| `AURORA_DRM_RENDER_NODE` | first render node, then card | minigbm and graphics interop probes |
-| `AURORA_GRAPHICS_RENDERER` | `libhybris` | graphics policy; native Mesa requires an explicit diagnostic override |
-| `AURORA_GBM_PROVIDER` | `minigbm` | compositor-facing GBM policy; not the GPU renderer |
+| `DET_BACKLIGHT_PATH` | known Android paths, then first backlight node | HWC and native toggle paths |
+| `DET_BACKLIGHT_LEVEL` | one third of `max_brightness` | HWC and native toggle paths |
+| `DET_WIFI_IFACE` | first `wlan*` or `wifi*` interface | guest network keeper/routing |
+| `DET_HWC_OUTPUT` | `HWCOMPOSER-1` | generated phoc configuration |
+| `DET_PANEL_WIDTH`, `DET_PANEL_HEIGHT` | Android physical display size | scale calculation and diagnostics |
+| `DET_OUTPUT_SCALE` | approximately 360 logical pixels wide | generated phoc configuration |
+| `DET_BATTERY_GAUGE` | unset | guest battery translator |
+| `DET_INPUT_QUIRK` | `none` | classified libinput workaround |
+| `DET_DRM_CARD` | `/dev/dri/card0` | reserved for generated native-display config |
+| `DET_DRM_RENDER_NODE` | first render node, then card | minigbm and graphics interop probes |
+| `DET_GRAPHICS_RENDERER` | `libhybris` | graphics policy; native Mesa requires an explicit diagnostic override |
+| `DET_GBM_PROVIDER` | `minigbm` | compositor-facing GBM policy; not the GPU renderer |
 
-`AURORA_DRM_CARD` is emitted by recon but is not yet wired through every native
+`DET_DRM_CARD` is emitted by recon but is not yet wired through every native
 display consumer. It must not be advertised as complete portability.
 
 The graphics keys now enforce the product default and guard the old native-Mesa
@@ -50,8 +50,8 @@ Before every guest start, `generate-lxc-config` rebuilds the runtime LXC config
 from `config.base`. It selects binderfs or direct binder sources, canonicalises
 them inside the guest, and includes only device families present on the phone:
 KGSL, Mali, PowerVR, Vivante, ashmem/ION/dma-heaps, DRM, input, audio, and legacy
-graphics. Uncommon nodes can be supplied through `AURORA_EXTRA_DEVICES`. The exact
-result is recorded in `/data/aurora/lxc/device-manifest`.
+graphics. Uncommon nodes can be supplied through `DET_EXTRA_DEVICES`. The exact
+result is recorded in `/data/determination/lxc/device-manifest`.
 
 Known profiles live in `device-profiles/`. The Magisk installer selects a
 profile only on an exact `ro.product.device` match. Unknown phones retain

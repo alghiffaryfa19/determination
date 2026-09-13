@@ -1,0 +1,482 @@
+#include "determination/control/capability.hpp"
+#include "determination/control/journal.hpp"
+#include "determination/control/observability.hpp"
+#include "determination/control/protocol.hpp"
+#include "determination/control/policy.hpp"
+#include "determination/control/sessions.hpp"
+#include "determination/control/state.hpp"
+#include "determination/control/system.hpp"
+#include "determination/control/transition.hpp"
+
+#include <algorithm>
+#include <atomic>
+#include <cerrno>
+#include <csignal>
+#include <cstdlib>
+#include <cstring>
+#include <fcntl.h>
+#include <iostream>
+#include <poll.h>
+#include <sstream>
+#include <sys/file.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <sys/un.h>
+#include <unistd.h>
+
+using namespace determination::control;
+
+namespace {
+
+std::atomic<bool> running{true};
+constexpr std::uint32_t kClientDeadlineMs = 1'000;
+constexpr int kListenerBacklog = 16;
+
+void handle_signal(int)
+{
+    running.store(false);
+}
+
+struct Options {
+    std::string root = "/data/determination";
+    std::string socket;
+    std::string sessions_dir;
+    bool observe_only = true;
+};
+
+void usage(const char *program)
+{
+    std::cerr << "usage: " << program
+              << " [--root PATH] [--socket PATH] [--foreground] "
+                 "[--observe-only|--allow-transitions]\n";
+}
+
+bool parse_options(int argc, char **argv, Options *options)
+{
+    for (int index = 1; index < argc; ++index) {
+        const std::string argument = argv[index];
+        if ((argument == "--root" || argument == "--socket") && index + 1 < argc) {
+            const std::string value = argv[++index];
+            if (argument == "--root") options->root = value;
+            else options->socket = value;
+        } else if (argument == "--foreground" || argument == "--observe-only") {
+            options->observe_only = true;
+        } else if (argument == "--allow-transitions") {
+            options->observe_only = false;
+        } else if (argument == "--help") {
+            usage(argv[0]);
+            return false;
+        } else {
+            usage(argv[0]);
+            return false;
+        }
+    }
+    if (options->root.empty() || options->root.front() != '/') return false;
+    if (options->socket.empty()) options->socket = options->root + "/run/detd.sock";
+    if (options->sessions_dir.empty())
+        options->sessions_dir = options->root + "/etc/sessions";
+    return true;
+}
+
+std::string boot_profile_intent_path(const Options &options)
+{
+    return options.root + "/state/boot-profile.intent";
+}
+
+std::string boot_profile(const Options &options)
+{
+    const std::string intent = trim(
+        read_file(boot_profile_intent_path(options), 64));
+    if (intent == "phone" || intent == "linux-first") return intent;
+
+    const std::string state = read_file(
+        options.root + "/state/boot-profile", 4096);
+    const std::string desired = key_value(state, "desired");
+    return desired == "linux-first" ? desired : "phone";
+}
+
+bool boot_profile_allowed(const std::string &value)
+{
+    return value == "phone" || value == "linux-first";
+}
+
+std::string boot_profile_payload(const Options &options, const char *result)
+{
+    return "{\"schema\":1,\"profile\":\"" + boot_profile(options) +
+        "\",\"result\":\"" + result + "\"}";
+}
+
+Packet response_for(const Packet &request, const Options &options,
+                    TransitionController *controller, uid_t peer_uid,
+                    bool guest_endpoint)
+{
+    const Endpoint endpoint = guest_endpoint ? Endpoint::Guest : Endpoint::Admin;
+    const StateRecord state = controller->snapshot();
+    const ObservabilityOptions observability{options.root, options.observe_only};
+    Packet response;
+    response.header.operation = request.header.operation;
+    response.header.flags = kFlagResponse;
+    response.header.request_id = request.header.request_id;
+    response.header.generation = state.generation;
+    response.header.status = static_cast<std::int32_t>(Status::Ok);
+    const auto operation = static_cast<Operation>(request.header.operation);
+    switch (operation) {
+    case Operation::Hello:
+        response.payload = "{\"service\":\"detd\",\"protocol_major\":1,"
+                           "\"protocol_minor\":2,\"observe_only\":" +
+                           std::string(options.observe_only ? "true" : "false") + "}";
+        break;
+    case Operation::Ping:
+        response.payload = "{\"ok\":true}";
+        break;
+    case Operation::Status:
+    case Operation::ModeGet:
+        response.payload = status_payload(observability, state);
+        break;
+    case Operation::Doctor:
+        response.payload = doctor_payload(observability, state);
+        break;
+    case Operation::Capabilities: {
+        const std::string base =
+            capabilities_payload(observability, guest_endpoint);
+        CapabilityGraphOptions graph_options{options.root, guest_endpoint};
+        response.payload = base.substr(0, base.size() - 1U) +
+            ",\"graph\":" + capabilities_graph_json(
+                capability_graph(graph_options)) + "}";
+        break;
+    }
+    case Operation::HealthList:
+        response.payload = health_payload(observability, state);
+        break;
+    case Operation::SessionList: {
+        CapabilityGraphOptions graph_options{options.root, guest_endpoint};
+        response.payload = sessions_json(
+            load_sessions(options.sessions_dir), graph_options);
+        break;
+    }
+    case Operation::SessionValidate: {
+        const std::string id = request.payload;
+        if (id.empty() || id.find_first_not_of(
+                "abcdefghijklmnopqrstuvwxyz0123456789-") != std::string::npos) {
+            response.header.status = static_cast<std::int32_t>(Status::InvalidRequest);
+            response.payload = "{\"error\":\"invalid session id\"}";
+            break;
+        }
+        const auto files = load_sessions(options.sessions_dir);
+        const auto found = std::find_if(
+            files.begin(), files.end(),
+            [&](const SessionFile &file) { return file.manifest.id == id; });
+        if (found == files.end()) {
+            response.header.status = static_cast<std::int32_t>(Status::InvalidRequest);
+            response.payload = "{\"error\":\"unknown session\"}";
+            break;
+        }
+        CapabilityGraphOptions graph_options{options.root, guest_endpoint};
+        response.payload = sessions_json({*found}, graph_options);
+        break;
+    }
+    case Operation::OperationQuery: {
+        std::uint64_t id = 0;
+        if (!request.payload.empty()) {
+            char *end = nullptr;
+            id = std::strtoull(request.payload.c_str(), &end, 10);
+            if (!end || *end != '\0') {
+                response.header.status = static_cast<std::int32_t>(Status::InvalidRequest);
+                response.payload = "{\"error\":\"operation id must be numeric\"}";
+                break;
+            }
+        }
+        OperationJournal journal(options.root + "/state/operations.jsonl");
+        const auto entries =
+            journal.query(id, OperationJournal::kDefaultQueryLimit);
+        std::ostringstream output;
+        output << "{\"schema\":2,\"active\":" << state_json(state)
+               << ",\"operations\":[";
+        for (std::size_t index = 0; index < entries.size(); ++index) {
+            if (index != 0) output << ',';
+            output << journal_entry_json(entries[index]);
+        }
+        output << "]}";
+        response.payload = output.str();
+        break;
+    }
+    case Operation::OperationCancel: {
+        // Cancellation is a privileged safety action: root admin endpoint only.
+        if (endpoint != Endpoint::Admin || peer_uid != 0) {
+            response.header.status = static_cast<std::int32_t>(Status::PermissionDenied);
+            response.payload = "{\"error\":\"cancel requires root admin peer\"}";
+            break;
+        }
+        // Observe-only daemons reject naturally: nothing can be in flight.
+        std::uint64_t id = 0;
+        if (!request.payload.empty()) {
+            char *end = nullptr;
+            id = std::strtoull(request.payload.c_str(), &end, 10);
+            if (!end || *end != '\0' || id == 0) {
+                response.header.status = static_cast<std::int32_t>(Status::InvalidRequest);
+                response.payload = "{\"error\":\"operation id must be numeric\"}";
+                break;
+            }
+        }
+        const TransitionCancelResult cancelled = controller->cancel(id);
+        response.header.status = static_cast<std::int32_t>(cancelled.status);
+        response.header.generation = cancelled.state.generation;
+        response.payload = "{\"message\":\"" + json_escape(cancelled.message) +
+                           "\",\"state\":" + state_json(cancelled.state) + "}";
+        break;
+    }
+    case Operation::MetricsSnapshot:
+        response.payload = metrics_payload(observability, state);
+        break;
+    case Operation::ModeSet: {
+        const Mode target = parse_mode(request.payload);
+        if (!mode_request_allowed(endpoint, peer_uid, target)) {
+            response.header.status = static_cast<std::int32_t>(Status::PermissionDenied);
+            response.payload = "{\"error\":\"mutating operation requires root peer\"}";
+            break;
+        }
+        const TransitionRequestResult transition = controller->request(
+            target, request.header.request_id, request.header.deadline_ms);
+        response.header.status = static_cast<std::int32_t>(transition.status);
+        response.header.generation = transition.state.generation;
+        response.payload = "{\"message\":\"" + json_escape(transition.message) +
+                           "\",\"state\":" + state_json(transition.state) + "}";
+        break;
+    }
+    case Operation::ModeRecover: {
+        if (!recovery_request_allowed(endpoint, peer_uid)) {
+            response.header.status = static_cast<std::int32_t>(Status::PermissionDenied);
+            response.payload = "{\"error\":\"recovery requires root peer\"}";
+            break;
+        }
+        const TransitionRequestResult transition = controller->request(
+            Mode::Phone, request.header.request_id, request.header.deadline_ms);
+        response.header.status = static_cast<std::int32_t>(transition.status);
+        response.header.generation = transition.state.generation;
+        response.payload = "{\"message\":\"" + json_escape(transition.message) +
+                           "\",\"state\":" + state_json(transition.state) + "}";
+        break;
+    }
+    case Operation::BootProfileGet:
+        response.payload = boot_profile_payload(options, "committed");
+        break;
+    case Operation::BootProfileSet: {
+        if (endpoint != Endpoint::Admin || peer_uid != 0 ||
+            !boot_profile_allowed(request.payload)) {
+            response.header.status = static_cast<std::int32_t>(Status::PermissionDenied);
+            response.payload = "{\"error\":\"boot profile requires root admin peer\"}";
+            break;
+        }
+        std::string write_error;
+        if (!atomic_write_file(boot_profile_intent_path(options),
+                               request.payload + "\n",
+                               0640, &write_error)) {
+            response.header.status = static_cast<std::int32_t>(Status::InternalError);
+            response.payload = "{\"error\":\"" + json_escape(write_error) + "\"}";
+            break;
+        }
+        response.payload = boot_profile_payload(options, "committed");
+        break;
+    }
+    case Operation::BootProfileApply: {
+        if (endpoint != Endpoint::Admin || peer_uid != 0) {
+            response.header.status = static_cast<std::int32_t>(Status::PermissionDenied);
+            response.payload = "{\"error\":\"boot profile requires root admin peer\"}";
+            break;
+        }
+        const Mode target = boot_profile(options) == "linux-first"
+            ? Mode::Desktop : Mode::Phone;
+        const TransitionRequestResult transition = controller->request(
+            target, request.header.request_id, request.header.deadline_ms);
+        response.header.status = static_cast<std::int32_t>(transition.status);
+        response.header.generation = transition.state.generation;
+        const char *result = transition.status == Status::Ok
+            ? "committed"
+            : (transition.status == Status::Accepted ? "accepted" : "degraded");
+        response.payload = "{\"schema\":1,\"profile\":\"" +
+            boot_profile(options) + "\",\"result\":\"" + result +
+            "\",\"message\":\"" + json_escape(transition.message) +
+            "\",\"state\":" + state_json(transition.state) + "}";
+        break;
+    }
+    case Operation::GuestReport: {
+        if (!guest_report_allowed(endpoint, peer_uid)) {
+            response.header.status = static_cast<std::int32_t>(Status::PermissionDenied);
+            response.payload = "{\"error\":\"guest report requires guest endpoint\"}";
+            break;
+        }
+        if (request.payload.size() > 8192U || request.payload.size() < 2U ||
+            request.payload.front() != '{' || request.payload.back() != '}') {
+            response.header.status = static_cast<std::int32_t>(Status::InvalidRequest);
+            response.payload = "{\"error\":\"invalid guest report\"}";
+            break;
+        }
+        std::string write_error;
+        if (!atomic_write_file(options.root + "/run/guest-health.json",
+                               request.payload + "\n", 0640, &write_error)) {
+            response.header.status = static_cast<std::int32_t>(Status::InternalError);
+            response.payload = "{\"error\":\"" + json_escape(write_error) + "\"}";
+            break;
+        }
+        response.payload = "{\"ok\":true}";
+        break;
+    }
+    default:
+        response.header.status = static_cast<std::int32_t>(Status::InvalidRequest);
+        response.payload = "{\"error\":\"unknown operation\"}";
+        break;
+    }
+    return response;
+}
+
+int create_server(const std::string &path, gid_t group, std::string *error)
+{
+    sockaddr_un address{};
+    address.sun_family = AF_UNIX;
+    if (path.size() >= sizeof(address.sun_path)) {
+        *error = "socket path too long";
+        return -1;
+    }
+    std::memcpy(address.sun_path, path.c_str(), path.size() + 1U);
+    unlink(path.c_str());
+    const int server = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
+    if (server < 0) {
+        *error = std::strerror(errno);
+        return -1;
+    }
+    const mode_t previous = umask(0077);
+    const int bound = bind(server, reinterpret_cast<sockaddr *>(&address), sizeof(address));
+    umask(previous);
+    if (bound != 0 || chmod(path.c_str(), 0660) != 0 ||
+        listen(server, kListenerBacklog) != 0) {
+        *error = std::strerror(errno);
+        close(server);
+        unlink(path.c_str());
+        return -1;
+    }
+#ifdef __ANDROID__
+    if (getuid() == 0) chown(path.c_str(), 0, group);
+#else
+    (void)group;
+#endif
+    return server;
+}
+
+} // namespace
+
+int main(int argc, char **argv)
+{
+    Options options;
+    if (!parse_options(argc, argv, &options)) return 2;
+
+    std::string error;
+    if (!ensure_directory(options.root + "/run", 0750, &error) ||
+        !ensure_directory(options.root + "/run/control", 0770, &error) ||
+        !ensure_directory(options.root + "/state", 0750, &error)) {
+        std::cerr << "detd: create state directories: " << error << '\n';
+        return 1;
+    }
+    OperationJournal journal(options.root + "/state/operations.jsonl");
+
+    const std::string lock_path = options.root + "/run/detd.lock";
+    const int lock = open(lock_path.c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0640);
+    if (lock < 0 || flock(lock, LOCK_EX | LOCK_NB) != 0) {
+        std::cerr << "detd: another instance owns " << lock_path << '\n';
+        if (lock >= 0) close(lock);
+        return 1;
+    }
+
+    TransitionController controller(options.root, !options.observe_only,
+                                          &journal);
+    if (!controller.initialise(&error)) {
+        std::cerr << "detd: initialise state: " << error << '\n';
+        close(lock);
+        return 1;
+    }
+
+    chmod((options.root + "/run/control").c_str(), 0770);
+#ifdef __ANDROID__
+    if (getuid() == 0) chown((options.root + "/run/control").c_str(), 0, 1000);
+#endif
+
+    const int server = create_server(options.socket, 1000, &error);
+    if (server < 0) {
+        std::cerr << "detd: create socket: " << error << '\n';
+        close(lock);
+        return 1;
+    }
+    const std::string guest_socket = options.root + "/run/control/detd.sock";
+    const int guest_server = create_server(guest_socket, 1000, &error);
+    if (guest_server < 0) {
+        std::cerr << "detd: guest socket unavailable: " << error << '\n';
+    }
+
+    struct sigaction action{};
+    action.sa_handler = handle_signal;
+    sigemptyset(&action.sa_mask);
+    sigaction(SIGTERM, &action, nullptr);
+    sigaction(SIGINT, &action, nullptr);
+    signal(SIGPIPE, SIG_IGN);
+
+    std::cout << "detd: protocol 1.2 "
+              << (options.observe_only ? "observe-only" : "transitions-enabled")
+              << " on " << options.socket << '\n';
+    while (running.load()) {
+        pollfd listeners[2] = {
+            {.fd = server, .events = POLLIN, .revents = 0},
+            {.fd = guest_server, .events = POLLIN, .revents = 0},
+        };
+        const nfds_t listener_count = guest_server >= 0 ? 2U : 1U;
+        const int ready = poll(listeners, listener_count, -1);
+        if (ready < 0) {
+            if (errno == EINTR) continue;
+            std::cerr << "detd: poll: " << std::strerror(errno) << '\n';
+            break;
+        }
+        for (nfds_t listener = 0; listener < listener_count; ++listener) {
+        if ((listeners[listener].revents & POLLIN) == 0) continue;
+        const bool is_guest = listener == 1U;
+        const int client = accept4(listeners[listener].fd, nullptr, nullptr,
+                                   SOCK_CLOEXEC | SOCK_NONBLOCK);
+        if (client < 0) {
+            if (errno == EINTR) continue;
+            std::cerr << "detd: accept: " << std::strerror(errno) << '\n';
+            continue;
+        }
+        ucred peer{};
+        socklen_t peer_size = sizeof(peer);
+        if (getsockopt(client, SOL_SOCKET, SO_PEERCRED, &peer, &peer_size) != 0) {
+            close(client);
+            continue;
+        }
+        if (!endpoint_peer_allowed(is_guest ? Endpoint::Guest : Endpoint::Admin,
+                                   peer.uid)) {
+            close(client);
+            continue;
+        }
+        const ReceiveResult received = receive_packet(client, kClientDeadlineMs);
+        Packet response;
+        if (!received.ok) {
+            response.header.flags = kFlagResponse;
+            response.header.status = static_cast<std::int32_t>(received.status);
+            response.payload = "{\"error\":\"" + json_escape(received.error) + "\"}";
+        } else {
+            response = response_for(received.packet, options, &controller,
+                                    peer.uid, is_guest);
+        }
+        std::string send_error;
+        if (!send_packet(client, response, &send_error, kClientDeadlineMs)) {
+            std::cerr << "detd: response: " << send_error << '\n';
+        }
+        close(client);
+        }
+    }
+
+    close(server);
+    if (guest_server >= 0) close(guest_server);
+    unlink(options.socket.c_str());
+    unlink(guest_socket.c_str());
+    close(lock);
+    return 0;
+}

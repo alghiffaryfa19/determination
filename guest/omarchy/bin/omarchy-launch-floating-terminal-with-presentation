@@ -1,5 +1,5 @@
 #!/bin/sh
-# Aurora: launch a floating terminal with the Omarchy presentation
+# Determination: launch a floating terminal with the Omarchy presentation
 # wrapper (logo first, Done prompt after, unless aborted with ^C).
 #
 # The ARM guest runs Hyprland directly with no uwsm session wrapper and no

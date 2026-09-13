@@ -1,6 +1,6 @@
-#include "aurora/control/observability.hpp"
+#include "determination/control/observability.hpp"
 
-#include "aurora/control/system.hpp"
+#include "determination/control/system.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -9,7 +9,7 @@
 #include <sys/statvfs.h>
 #include <vector>
 
-namespace aurora::control {
+namespace determination::control {
 namespace {
 
 Mode observed_mode(const std::string &root)
@@ -96,7 +96,7 @@ bool audio_phase_stable(const std::string &phase)
 bool presenter_socket_ready()
 {
     return path_exists(
-        "/data/user_de/0/com.aurora.companion/files/presenter.sock");
+        "/data/user_de/0/com.determination.companion/files/presenter.sock");
 }
 
 std::string status_payload(const ObservabilityOptions &options,
@@ -104,7 +104,7 @@ std::string status_payload(const ObservabilityOptions &options,
 {
     const std::string sf = android_property("init.svc.surfaceflinger");
     const std::string profile = read_file(options.root + "/etc/device.conf");
-    std::string gauge = key_value(profile, "AURORA_BATTERY_GAUGE");
+    std::string gauge = key_value(profile, "DET_BATTERY_GAUGE");
     if (gauge.empty()) gauge = "battery";
     const std::string battery_root = "/sys/class/power_supply/" + gauge;
     const std::string voltage = trim(read_file(battery_root + "/voltage_now", 64));
@@ -137,9 +137,9 @@ std::string status_payload(const ObservabilityOptions &options,
            << ",\"direct_audio\":{\"phase\":\""
            << json_escape(direct_audio_phase) << "\",\"profile\":\""
            << json_escape(audio_profile) << "\",\"probe\":"
-           << (path_exists(options.root + "/bin/aurora-audio-probe") ? "true" : "false")
+           << (path_exists(options.root + "/bin/det-audio-probe") ? "true" : "false")
            << ",\"owner\":"
-           << (path_exists(options.root + "/bin/aurora-audio-owner") ? "true" : "false")
+           << (path_exists(options.root + "/bin/det-audio-owner") ? "true" : "false")
            << "}"
            << ",\"presenter\":{\"socket_ready\":"
            << (presenter_socket_ready() ? "true" : "false") << "}"
@@ -190,7 +190,7 @@ std::string doctor_payload(const ObservabilityOptions &options,
            << ",\"direct_audio_mode_consistent\":"
            << (audio_mode_consistent ? "true" : "false")
            << ",\"direct_audio_probe\":"
-           << (path_exists(options.root + "/bin/aurora-audio-probe") ? "true" : "false")
+           << (path_exists(options.root + "/bin/det-audio-probe") ? "true" : "false")
            << ",\"presenter_socket_ready\":"
            << (presenter_socket_ready() ? "true" : "false")
            << "},\"memory_pressure\":\""
@@ -240,10 +240,10 @@ std::string capabilities_payload(const ObservabilityOptions &options,
            ",\"structured_state\":true,\"authenticated_peer_credentials\":true,"
            "\"direct_audio\":{\"transport\":\"alsa\","
            "\"android_pcm_bridge\":false,\"automatic\":false,\"probe\":" +
-           std::string(path_exists(options.root + "/bin/aurora-audio-probe")
+           std::string(path_exists(options.root + "/bin/det-audio-probe")
                            ? "true" : "false") +
            ",\"owner\":" +
-           std::string(path_exists(options.root + "/bin/aurora-audio-owner")
+           std::string(path_exists(options.root + "/bin/det-audio-owner")
                            ? "true" : "false") +
            "},\"presenter_protocol\":1}";
 }
@@ -379,4 +379,4 @@ std::string health_payload(const ObservabilityOptions &options,
     return components_json(components, ranks[worst]);
 }
 
-} // namespace aurora::control
+} // namespace determination::control

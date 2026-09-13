@@ -9,15 +9,15 @@
 set -u
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
-LIBDIR=${AURORA_LIBHYBRIS_LIBDIR:-/usr/local/lib}
-ANDROID_LIBDIR=${AURORA_LIBHYBRIS_ANDROID_LIBDIR:-/usr/lib/android}
-EGL_LIB=${AURORA_LIBHYBRIS_EGL_LIB:-$LIBDIR/libEGL.so.1}
-GLES_LIB=${AURORA_LIBHYBRIS_GLES_LIB:-$LIBDIR/libGLESv2.so.2}
+LIBDIR=${DET_LIBHYBRIS_LIBDIR:-/usr/local/lib}
+ANDROID_LIBDIR=${DET_LIBHYBRIS_ANDROID_LIBDIR:-/usr/lib/android}
+EGL_LIB=${DET_LIBHYBRIS_EGL_LIB:-$LIBDIR/libEGL.so.1}
+GLES_LIB=${DET_LIBHYBRIS_GLES_LIB:-$LIBDIR/libGLESv2.so.2}
 EGL_BASENAME=$(basename "$EGL_LIB")
-HWC_WINDOW_LIB=${AURORA_LIBHYBRIS_HWC_WINDOW_LIB:-$LIBDIR/libhybris-hwcomposerwindow.so}
-WAYLAND_PLUGIN=${AURORA_LIBHYBRIS_WAYLAND_PLUGIN:-$LIBDIR/libhybris/eglplatform_wayland.so}
-MODE_HEADER=${AURORA_LIBHYBRIS_MODE_HEADER:-/usr/local/include/hybris/hwc2/hwc2_compatibility_layer.h}
-MODE_REQUIRED=${AURORA_LIBHYBRIS_REQUIRE_MODE_API:-${AURORA_HWC_MODE_API:-0}}
+HWC_WINDOW_LIB=${DET_LIBHYBRIS_HWC_WINDOW_LIB:-$LIBDIR/libhybris-hwcomposerwindow.so}
+WAYLAND_PLUGIN=${DET_LIBHYBRIS_WAYLAND_PLUGIN:-$LIBDIR/libhybris/eglplatform_wayland.so}
+MODE_HEADER=${DET_LIBHYBRIS_MODE_HEADER:-/usr/local/include/hybris/hwc2/hwc2_compatibility_layer.h}
+MODE_REQUIRED=${DET_LIBHYBRIS_REQUIRE_MODE_API:-${DET_HWC_MODE_API:-0}}
 CC_BIN=${CC:-cc}
 
 passes=0
@@ -30,14 +30,14 @@ Usage: libhybris-contract-test.sh
 
 Checks installed libhybris symbols, the Wayland/HWC EGL split, and a safe
 display-less Android native-handle round trip.  HWC mode enumeration is
-required when either AURORA_LIBHYBRIS_REQUIRE_MODE_API=1 or AURORA_HWC_MODE_API=1.
+required when either DET_LIBHYBRIS_REQUIRE_MODE_API=1 or DET_HWC_MODE_API=1.
 
 Useful overrides for staged guests:
-  AURORA_LIBHYBRIS_LIBDIR, AURORA_LIBHYBRIS_ANDROID_LIBDIR
-  AURORA_LIBHYBRIS_EGL_LIB, AURORA_LIBHYBRIS_GLES_LIB
-  AURORA_LIBHYBRIS_HWC_WINDOW_LIB, AURORA_LIBHYBRIS_WAYLAND_PLUGIN
-  AURORA_LIBHYBRIS_MODE_HEADER, AURORA_LIBHYBRIS_HWC2_LIB
-  AURORA_LIBHYBRIS_SKIP_NATIVE_HANDLE=1 (diagnostic-only escape hatch)
+  DET_LIBHYBRIS_LIBDIR, DET_LIBHYBRIS_ANDROID_LIBDIR
+  DET_LIBHYBRIS_EGL_LIB, DET_LIBHYBRIS_GLES_LIB
+  DET_LIBHYBRIS_HWC_WINDOW_LIB, DET_LIBHYBRIS_WAYLAND_PLUGIN
+  DET_LIBHYBRIS_MODE_HEADER, DET_LIBHYBRIS_HWC2_LIB
+  DET_LIBHYBRIS_SKIP_NATIVE_HANDLE=1 (diagnostic-only escape hatch)
 EOF
 }
 
@@ -127,7 +127,7 @@ check_header_symbol() {
 
 find_symbol_library() {
     symbol=$1
-    explicit=${AURORA_LIBHYBRIS_HWC2_LIB:-}
+    explicit=${DET_LIBHYBRIS_HWC2_LIB:-}
     if [ -n "$explicit" ]; then
         [ -r "$explicit" ] && symbol_present "$explicit" "$symbol"
         return $?
@@ -154,12 +154,12 @@ check_mode_symbol() {
         pass "$symbol in $(basename "$mode_library")"
     else
         fail "configured HWC mode symbol absent: $symbol"
-        printf '      searched %s and %s (set AURORA_LIBHYBRIS_HWC2_LIB to override)\n' \
+        printf '      searched %s and %s (set DET_LIBHYBRIS_HWC2_LIB to override)\n' \
             "$LIBDIR" "$ANDROID_LIBDIR" >&2
     fi
 }
 
-printf '== Aurora libhybris runtime contract ==\n'
+printf '== Determination libhybris runtime contract ==\n'
 printf 'libdir=%s\nandroid-libdir=%s\n\n' "$LIBDIR" "$ANDROID_LIBDIR"
 
 printf '%s\n' '-- installed libraries --'
@@ -221,7 +221,7 @@ case "$MODE_REQUIRED" in
         check_mode_symbol hwc2_compat_display_set_active_config
         ;;
     0|no|false|optional|'')
-        skip 'HWC mode enumeration API not configured (set AURORA_LIBHYBRIS_REQUIRE_MODE_API=1 to require it)'
+        skip 'HWC mode enumeration API not configured (set DET_LIBHYBRIS_REQUIRE_MODE_API=1 to require it)'
         ;;
     *)
         fail "invalid HWC mode API setting: $MODE_REQUIRED (use 0 or 1)"
@@ -229,8 +229,8 @@ case "$MODE_REQUIRED" in
 esac
 
 printf '%s\n' '-- display-less native-handle round trip --'
-if [ "${AURORA_LIBHYBRIS_SKIP_NATIVE_HANDLE:-0}" = 1 ]; then
-    skip 'native-handle probe disabled by AURORA_LIBHYBRIS_SKIP_NATIVE_HANDLE=1'
+if [ "${DET_LIBHYBRIS_SKIP_NATIVE_HANDLE:-0}" = 1 ]; then
+    skip 'native-handle probe disabled by DET_LIBHYBRIS_SKIP_NATIVE_HANDLE=1'
 else
     WORK=$(mktemp -d "${TMPDIR:-/tmp}/libhybris-contract.XXXXXX") || {
         fail 'cannot create a private temporary directory for the native-handle probe'

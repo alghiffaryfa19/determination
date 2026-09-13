@@ -4,7 +4,7 @@ ROOT=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$WORK/bin" "$WORK/links"
-export AURORA_OMARCHY_PATH="$ROOT/guest/omarchy"
+export DET_OMARCHY_PATH="$ROOT/guest/omarchy"
 export PATH="$WORK/bin:$PATH"
 export TEST_LOG="$WORK/actions"
 cat > "$WORK/bin/xdg-open" <<'MOCK'
@@ -17,9 +17,9 @@ cat > "$WORK/bin/pacman" <<'MOCK'
 MOCK
 chmod +x "$WORK/bin/xdg-open" "$WORK/bin/pacman"
 printf 'preserved\n' > "$WORK/links/omarchy-launch-terminal"
-"$AURORA_OMARCHY_PATH/bin/aurora-omarchy-compat" --install-links "$WORK/links"
+"$DET_OMARCHY_PATH/bin/det-omarchy-compat" --install-links "$WORK/links"
 # Mirror production precedence: bin/ first, compat links second.
-export PATH="$WORK/links:$AURORA_OMARCHY_PATH/bin:$PATH"
+export PATH="$WORK/links:$DET_OMARCHY_PATH/bin:$PATH"
 grep -qx preserved "$WORK/links/omarchy-launch-terminal"
 omarchy-launch-webapp 'https://example.org/path?a=1&b=2'
 grep -Fxq 'https://example.org/path?a=1&b=2' "$TEST_LOG"
@@ -33,24 +33,24 @@ omarchy-pkg-missing absent
 ! omarchy-update
 ! omarchy-brightness-display
 ! omarchy-brightness-display-ddc
-! "$AURORA_OMARCHY_PATH/bin/aurora-omarchy-compat"
+! "$DET_OMARCHY_PATH/bin/det-omarchy-compat"
 # uwsm-app shim passes the command through with or without the `--` separator.
 [ "$(uwsm-app -- echo shimmed)" = shimmed ]
 [ "$(uwsm-app echo shimmed)" = shimmed ]
 # The floating-terminal launcher must not depend on the absent uwsm stack.
-! grep -q uwsm "$AURORA_OMARCHY_PATH/bin/omarchy-launch-floating-terminal-with-presentation"
-grep -q 'org.omarchy.terminal' "$AURORA_OMARCHY_PATH/bin/omarchy-launch-floating-terminal-with-presentation"
+! grep -q uwsm "$DET_OMARCHY_PATH/bin/omarchy-launch-floating-terminal-with-presentation"
+grep -q 'org.omarchy.terminal' "$DET_OMARCHY_PATH/bin/omarchy-launch-floating-terminal-with-presentation"
 # Every upstream command name resolves: either a vendored file in bin/ or a
-# Aurora-owned name served by the compat shim.
+# Determination-owned name served by the compat shim.
 while IFS= read -r name; do
     case "$name" in
-        compat-commands|aurora-omarchy-compat) continue ;;
+        compat-commands|det-omarchy-compat) continue ;;
     esac
-    if [ ! -f "$AURORA_OMARCHY_PATH/bin/$name" ]; then
+    if [ ! -f "$DET_OMARCHY_PATH/bin/$name" ]; then
         [ -e "$WORK/links/$name" ] || { echo "unresolved: $name" >&2; exit 1; }
     fi
-done < "$AURORA_OMARCHY_PATH/bin/compat-commands"
-python3 - "$AURORA_OMARCHY_PATH" <<'PY'
+done < "$DET_OMARCHY_PATH/bin/compat-commands"
+python3 - "$DET_OMARCHY_PATH" <<'PY'
 import json, pathlib, re, sys
 root = pathlib.Path(sys.argv[1])
 raw = (root / 'default/omarchy/omarchy-menu.jsonc').read_text()

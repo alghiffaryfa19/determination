@@ -20,7 +20,7 @@
       "right": [
         { "id": "omarchy.tray" },
         { "id": "omarchy.audio" },
-        { "id": "aurora.battery" }
+        { "id": "determination.battery" }
       ]
     }
   },

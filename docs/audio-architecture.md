@@ -5,7 +5,7 @@ failure qualification remains.
 
 ## Product invariant
 
-Aurora audio is a Linux hardware stack:
+Determination audio is a Linux hardware stack:
 
 ```text
 Linux application
@@ -16,7 +16,7 @@ Linux application
 ```
 
 AudioFlinger, AAudio, `AudioTrack`, the Android audio Binder APIs, and the
-companion app never carry Aurora PCM. They are not fallbacks. During an
+companion app never carry Determination PCM. They are not fallbacks. During an
 exclusive internal-codec handoff Android's owners must be quiesced, but they do
 not become a transport or service dependency.
 
@@ -26,30 +26,30 @@ never proxy sample buffers.
 
 ## Current implementation
 
-`aurora-audio-probe` has Android/bionic and Debian/glibc builds with one stable
+`det-audio-probe` has Android/bionic and Debian/glibc builds with one stable
 JSON schema. It inventories `/dev/snd`, captures `/proc/asound`, identifies all
 open ALSA descriptors, and implements a read-only `--require-unowned` gate.
 The same binary on each side makes namespace and permission mismatches obvious.
 
-The Android binary is packaged as `/data/aurora/bin/aurora-audio-probe`.
-The guest binary is installed as `/usr/local/bin/aurora-audio-probe` on each guest
+The Android binary is packaged as `/data/determination/bin/det-audio-probe`.
+The guest binary is installed as `/usr/local/bin/det-audio-probe` on each guest
 start. Neither binary opens a PCM or mutates a mixer.
 
-`aurora-audio-session` is the unprivileged guest lifetime guard. It starts
+`det-audio-session` is the unprivileged guest lifetime guard. It starts
 PipeWire, pipewire-pulse, and WirePlumber only while the host's fsync'd
 `audio-claimed` marker is visible; marker withdrawal terminates the graph.
 Normal owner restore then requires a fresh zero-holder probe before it restarts
 Android's HAL. This prevents PipeWire and Android racing the same codec.
 
-`aurora-audio-owner` snapshots `audioserver` and `vendor.audio-hal`, converges both
+`det-audio-owner` snapshots `audioserver` and `vendor.audio-hal`, converges both
 to a stable stopped state, proves zero ALSA holders, and publishes the guest
 claim. The settling check is load-bearing on Android 16: `audioserver.rc`
 deliberately restarts `vendor.audio-hal` after audioserver stops for VTS.
 
-`aurora-audio-route` journals the pre-claim mixer state, applies the vendor speaker
+`det-audio-route` journals the pre-claim mixer state, applies the vendor speaker
 route (`MultiMedia1` to `QUAT_MI2S_RX`, TFA selector 2), and verifies Android's
 HAL asynchronously rebuilds the exact original route after ownership returns.
-PipeWire creates one static `aurora-speaker` sink for `hw:0,0`; desktop
+PipeWire creates one static `determination-speaker` sink for `hw:0,0`; desktop
 udev discovery does not describe this Qualcomm card correctly in the guest.
 
 On 2026-08-02 a one-second 440 Hz, -40 dBFS tone was heard first through direct
@@ -62,7 +62,7 @@ not the remaining routes or stress gates.
 
 Internal display mode needs an exclusive codec transaction. The current alpha
 uses the journalled native owner plus a bounded route wrapper; folding the
-transaction under `aurorad` remains the intended control-plane endpoint:
+transaction under `detd` remains the intended control-plane endpoint:
 
 1. Refuse the request during calls, alarms, recording, or an existing audio
    transition unless the policy explicitly permits interruption.
@@ -71,7 +71,7 @@ transaction under `aurorad` remains the intended control-plane endpoint:
    holders to an fsync'd journal.
 3. Quiesce the profile's Android audio owners in dependency order. This is
    arbitration only; no Android audio API is used.
-4. Run `aurora-audio-probe --require-unowned`. Any remaining holder aborts and
+4. Run `det-audio-probe --require-unowned`. Any remaining holder aborts and
    restores the journal.
 5. Apply the exact profile route and permissions, then expose the nodes to the
    guest. Unknown controls, cards, or topology hashes are a hard failure.
@@ -81,7 +81,7 @@ transaction under `aurorad` remains the intended control-plane endpoint:
    controls in reverse order, then restart only Android owners which were
    running in the snapshot.
 8. Verify Android can reopen the card. Keep the journal if verification fails
-   and surface recovery through `auroractl doctor`; never silently declare success.
+   and surface recovery through `detctl doctor`; never silently declare success.
 
 Daemon death recovery reads the journal phase. Pre-claim phases roll back;
 post-claim phases first terminate the bounded guest graph, then restore. The
@@ -113,7 +113,7 @@ Internal phone codec ownership is exclusive until the driver stack proves safe
 sharing. External convergence can stay concurrent by choosing independent
 hardware: DP/HDMI ALSA, USB Audio Class, or a Bluetooth backend managed directly
 from Linux. If a route is not independently ownable, capabilities report it as
-unavailable; Aurora does not smuggle it through Android.
+unavailable; Determination does not smuggle it through Android.
 
 ## Qualification gate
 

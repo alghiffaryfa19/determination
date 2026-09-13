@@ -7,7 +7,7 @@ Item {
     property var output:null
     Process {
         id:keyboard
-        command:["/usr/local/bin/aurora-osk","toggle"]
+        command:["/usr/local/bin/det-osk","toggle"]
         onExited:(code,status)=>{if(code!==0)Hub.toast="Keyboard unavailable; check Squeekboard is running.";}
     }
     implicitHeight:Hub.prefs.phoneButtons ? 64 : 48

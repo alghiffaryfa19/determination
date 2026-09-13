@@ -1,4 +1,4 @@
-Aurora Alpine rootfs qualification - 2026-08-11
+Determination Alpine rootfs qualification - 2026-08-11
 Note: Personal account labels were normalized to the project's neutral guest
 account name; the underlying qualification result is unchanged.
 Device: OnePlus 7 / guacamoleb
@@ -8,7 +8,7 @@ Kernel: 4.14.357-perf-g96adfa8256dc
 Source archive
 --------------
 Builder: guest/build-portable-rootfs.sh alpine
-Archive: aurora-rootfs-alpine-20260811.tar.gz
+Archive: determination-rootfs-alpine-20260811.tar.gz
 SHA-256: ff4eeb6ea361400115564a4b4ecca1d4058b7b48e44f65a10ca0fda4a09e6713
 Profile: Alpine 3.24.0, aarch64, musl, OpenRC, device-unverified
 Archive traversal and special-file checks: PASS
@@ -16,19 +16,19 @@ Android toybox tar listing compatibility: PASS after parser fix
 
 On-device base and provisioning gates
 -------------------------------------
-Install to /data/aurora/guests/alpine/rootfs: PASS
+Install to /data/determination/guests/alpine/rootfs: PASS
 Health-gated selection: PASS
 Cold boot with /sbin/init as PID 1: PASS
 Root remount with suid, dev, and exec: PASS
 Gateway, internet, and DNS: PASS
 OpenRC dbus, seatd, and sshd: PASS
-aurora uid 1000 and Android device groups: PASS
-Direct key-only ssh aurora@192.168.117.2: PASS
+detuser uid 1000 and Android device groups: PASS
+Direct key-only ssh detuser@192.168.117.2: PASS
 Stable SSH host identity across Debian and Alpine: PASS
 Phosh/OpenRC package provisioning: PASS
 Input udev database and touchpanel recognition: PASS
-Static Aurora guest helpers on musl: PASS
-aurora-pidfd-shim.so load under musl: PASS
+Static Determination guest helpers on musl: PASS
+det-pidfd-shim.so load under musl: PASS
 
 Native source builds
 --------------------
@@ -58,11 +58,11 @@ Not qualified
 -------------
 test_hwcomposer was not reached. Alpine has not taken panel ownership and has
 not passed Phoc, direct audio playback, external-display, or repeated visual
-restore gates. /etc/aurora-ready remains graphics=unqualified.
+restore gates. /etc/determination-ready remains graphics=unqualified.
 
 Restoration
 -----------
-Active guest restored to /data/aurora/guest (Debian): PASS
-Toolkit pointer restored to /data/aurora/versions/12: PASS
+Active guest restored to /data/determination/guest (Debian): PASS
+Toolkit pointer restored to /data/determination/versions/12: PASS
 Debian LXC cold start, internet, and SSH: PASS
 Android phone mode, SurfaceFlinger, and system_server: PASS

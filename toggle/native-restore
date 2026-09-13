@@ -5,14 +5,14 @@
 # Sequence proven 2026-07-13: gate flag off (kills suppressor/freezer loops)
 # then guest compositor teardown then composer HAL then SIGKILL frozen ss (NEVER
 # SIGCONT) then SF then bootanim keeper (one-shot exit dance races) then evgrab off.
-AURORA=/data/aurora
-LXC="$AURORA/lxc/bin/lxc-attach -P $AURORA -n guest --"
-GATE="$AURORA/run/native-gate"
+DET=/data/determination
+LXC="$DET/lxc/bin/lxc-attach -P $DET -n guest --"
+GATE="$DET/run/native-gate"
 
 echo "== native-restore $(date) =="
 rm -f "$GATE"
 echo detect > /sys/class/drm/card0-Virtual-1/status 2>/dev/null
-$LXC /bin/sh -c 'export PATH=/usr/sbin:/usr/bin:/sbin:/bin; systemctl stop aurora-plasma 2>/dev/null; pkill -TERM plasmashell; pkill -TERM foot; sleep 1; pkill -TERM kwin_wayland; sleep 1; pkill -KILL -f kwin_wayland; true' 2>/dev/null
+$LXC /bin/sh -c 'export PATH=/usr/sbin:/usr/bin:/sbin:/bin; systemctl stop det-plasma 2>/dev/null; pkill -TERM plasmashell; pkill -TERM foot; sleep 1; pkill -TERM kwin_wayland; sleep 1; pkill -KILL -f kwin_wayland; true' 2>/dev/null
 sleep 0.5
 if [ "$(getprop init.svc.vendor.hwcomposer-2-4)" != "running" ]; then
     start vendor.hwcomposer-2-4
@@ -58,6 +58,6 @@ if [ "$(getprop sys.boot_completed)" = "1" ]; then
         done
     ' </dev/null >/dev/null 2>&1 &
 fi
-[ -f "$AURORA/run/evgrab.pid" ] && kill "$(cat "$AURORA/run/evgrab.pid")" 2>/dev/null
-rm -f "$AURORA/run/evgrab.pid"
+[ -f "$DET/run/evgrab.pid" ] && kill "$(cat "$DET/run/evgrab.pid")" 2>/dev/null
+rm -f "$DET/run/evgrab.pid"
 echo "phone mode restored (sf=$(getprop init.svc.surfaceflinger) hwc=$(getprop init.svc.vendor.hwcomposer-2-4))"

@@ -2,7 +2,7 @@
 # Build KWin's virtual-EGL Android-gralloc output backend.
 #
 # KWin stays entirely in the Mesa/minigbm world. The separate
-# aurora-gralloc-pool process owns libhybris, complete Android native handles and
+# det-gralloc-pool process owns libhybris, complete Android native handles and
 # the Android presenter connection. Their only boundary is dma-buf metadata
 # plus acquire/release sync_file fences.
 set -eu
@@ -14,7 +14,7 @@ export PKG_CONFIG_PATH=/opt/minigbm/lib/pkgconfig:/usr/local/lib/pkgconfig:/usr/
 SOURCE=${1:-/usr/src/kwin-6.3.6}
 PATCH=${2:-/root/kwin-6.3.6-gralloc-pool.patch}
 HEADER=${3:-/root/gralloc-pool-protocol.h}
-BUILD=${4:-/var/tmp/aurora-kwin-build}
+BUILD=${4:-/var/tmp/determination-kwin-build}
 
 [ -f "$SOURCE/src/backends/virtual/virtual_egl_backend.cpp" ] || {
     echo "FATAL: KWin 6.3.6 source missing at $SOURCE" >&2
@@ -26,9 +26,9 @@ BUILD=${4:-/var/tmp/aurora-kwin-build}
 }
 
 install -D -m 0644 "$HEADER" \
-    /usr/local/include/aurora/gralloc-pool-protocol.h
+    /usr/local/include/determination/gralloc-pool-protocol.h
 
-if ! grep -q AURORA_GRALLOC_POOL \
+if ! grep -q DETERMINATION_GRALLOC_POOL \
         "$SOURCE/src/backends/virtual/virtual_egl_backend.cpp"; then
     patch -d "$SOURCE" -p1 < "$PATCH"
 fi

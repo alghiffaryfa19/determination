@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 
 /*
- * Aurora compatibility graphics gate.
+ * Determination compatibility graphics gate.
  *
  * Proves that one buffer allocated by Android gralloc through libhybris can:
  *   1. become a vendor-EGL render target; and
@@ -53,21 +53,21 @@
 #define EGL_NO_NATIVE_FENCE_FD_ANDROID -1
 #endif
 
-typedef EGLint(EGLAPIENTRYP aurora_dup_native_fence_fd_fn)(EGLDisplay display,
+typedef EGLint(EGLAPIENTRYP det_dup_native_fence_fd_fn)(EGLDisplay display,
                                                         EGLSyncKHR sync);
 
 /* Stable NDK/VNDK C ABI. Kept local so this glibc diagnostic doesn't include
- * bionic headers. Android owns the opaque object behind aurora_ahardware_buffer. */
-struct aurora_native_handle {
+ * bionic headers. Android owns the opaque object behind det_ahardware_buffer. */
+struct det_native_handle {
     int version;
     int num_fds;
     int num_ints;
     int data[];
 };
 
-struct aurora_ahardware_buffer;
+struct det_ahardware_buffer;
 
-struct aurora_ahardware_buffer_desc {
+struct det_ahardware_buffer_desc {
     uint32_t width;
     uint32_t height;
     uint32_t layers;
@@ -78,17 +78,17 @@ struct aurora_ahardware_buffer_desc {
     uint64_t rfu1;
 };
 
-typedef int (*aurora_ahb_create_from_handle_fn)(
-    const struct aurora_ahardware_buffer_desc *desc,
-    const struct aurora_native_handle *handle, int32_t method,
-    struct aurora_ahardware_buffer **out_buffer);
-typedef int (*aurora_ahb_send_fn)(const struct aurora_ahardware_buffer *buffer,
+typedef int (*det_ahb_create_from_handle_fn)(
+    const struct det_ahardware_buffer_desc *desc,
+    const struct det_native_handle *handle, int32_t method,
+    struct det_ahardware_buffer **out_buffer);
+typedef int (*det_ahb_send_fn)(const struct det_ahardware_buffer *buffer,
                                int socket_fd);
-typedef int (*aurora_ahb_recv_fn)(int socket_fd,
-                               struct aurora_ahardware_buffer **out_buffer);
-typedef void (*aurora_ahb_describe_fn)(const struct aurora_ahardware_buffer *buffer,
-                                    struct aurora_ahardware_buffer_desc *desc);
-typedef void (*aurora_ahb_release_fn)(struct aurora_ahardware_buffer *buffer);
+typedef int (*det_ahb_recv_fn)(int socket_fd,
+                               struct det_ahardware_buffer **out_buffer);
+typedef void (*det_ahb_describe_fn)(const struct det_ahardware_buffer *buffer,
+                                    struct det_ahardware_buffer_desc *desc);
+typedef void (*det_ahb_release_fn)(struct det_ahardware_buffer *buffer);
 
 /* Stable Android gralloc0 values also used by libhybris' public extension. */
 #define HYBRIS_USAGE_SW_READ_RARELY  0x00000002
@@ -97,26 +97,26 @@ typedef void (*aurora_ahb_release_fn)(struct aurora_ahardware_buffer *buffer);
 #define HYBRIS_USAGE_HW_COMPOSER     0x00000800
 #define HYBRIS_PIXEL_FORMAT_RGBA_8888 1
 
-typedef EGLBoolean(EGLAPIENTRYP aurora_create_native_buffer_fn)(
+typedef EGLBoolean(EGLAPIENTRYP det_create_native_buffer_fn)(
     EGLint width, EGLint height, EGLint usage, EGLint format,
     EGLint *stride, EGLClientBuffer *buffer);
-typedef EGLBoolean(EGLAPIENTRYP aurora_lock_native_buffer_fn)(
+typedef EGLBoolean(EGLAPIENTRYP det_lock_native_buffer_fn)(
     EGLClientBuffer buffer, EGLint usage, EGLint left, EGLint top,
     EGLint width, EGLint height, void **address);
-typedef EGLBoolean(EGLAPIENTRYP aurora_unlock_native_buffer_fn)(
+typedef EGLBoolean(EGLAPIENTRYP det_unlock_native_buffer_fn)(
     EGLClientBuffer buffer);
-typedef EGLBoolean(EGLAPIENTRYP aurora_release_native_buffer_fn)(
+typedef EGLBoolean(EGLAPIENTRYP det_release_native_buffer_fn)(
     EGLClientBuffer buffer);
-typedef void(EGLAPIENTRYP aurora_get_native_buffer_info_fn)(
+typedef void(EGLAPIENTRYP det_get_native_buffer_info_fn)(
     EGLClientBuffer buffer, int *num_ints, int *num_fds);
-typedef void(EGLAPIENTRYP aurora_serialize_native_buffer_fn)(
+typedef void(EGLAPIENTRYP det_serialize_native_buffer_fn)(
     EGLClientBuffer buffer, int *ints, int *fds);
-typedef EGLBoolean(EGLAPIENTRYP aurora_create_remote_buffer_fn)(
+typedef EGLBoolean(EGLAPIENTRYP det_create_remote_buffer_fn)(
     EGLint width, EGLint height, EGLint usage, EGLint format, EGLint stride,
     int num_ints, int *ints, int num_fds, int *fds,
     EGLClientBuffer *buffer);
 
-struct aurora_egl {
+struct det_egl {
     EGLDisplay display;
     EGLContext context;
     EGLSurface surface;
@@ -125,19 +125,19 @@ struct aurora_egl {
     PFNEGLCREATESYNCKHRPROC create_sync;
     PFNEGLDESTROYSYNCKHRPROC destroy_sync;
     PFNEGLCLIENTWAITSYNCKHRPROC client_wait_sync;
-    aurora_dup_native_fence_fd_fn dup_native_fence_fd;
+    det_dup_native_fence_fd_fn dup_native_fence_fd;
     PFNGLEGLIMAGETARGETTEXTURE2DOESPROC image_texture;
     PFNGLEGLIMAGETARGETRENDERBUFFERSTORAGEOESPROC image_renderbuffer;
-    aurora_create_native_buffer_fn create_buffer;
-    aurora_lock_native_buffer_fn lock_buffer;
-    aurora_unlock_native_buffer_fn unlock_buffer;
-    aurora_release_native_buffer_fn release_buffer;
-    aurora_get_native_buffer_info_fn get_buffer_info;
-    aurora_serialize_native_buffer_fn serialize_buffer;
-    aurora_create_remote_buffer_fn create_remote_buffer;
+    det_create_native_buffer_fn create_buffer;
+    det_lock_native_buffer_fn lock_buffer;
+    det_unlock_native_buffer_fn unlock_buffer;
+    det_release_native_buffer_fn release_buffer;
+    det_get_native_buffer_info_fn get_buffer_info;
+    det_serialize_native_buffer_fn serialize_buffer;
+    det_create_remote_buffer_fn create_remote_buffer;
 };
 
-struct aurora_render_target {
+struct det_render_target {
     EGLImageKHR image;
     GLuint framebuffer;
     GLuint object;
@@ -204,7 +204,7 @@ static void *required_proc(const char *name)
     return proc;
 }
 
-static int init_egl(struct aurora_egl *egl)
+static int init_egl(struct det_egl *egl)
 {
     static const EGLint config_attrs[] = {
         EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
@@ -258,25 +258,25 @@ static int init_egl(struct aurora_egl *egl)
     egl->destroy_sync = (PFNEGLDESTROYSYNCKHRPROC)required_proc("eglDestroySyncKHR");
     egl->client_wait_sync = (PFNEGLCLIENTWAITSYNCKHRPROC)
         required_proc("eglClientWaitSyncKHR");
-    egl->dup_native_fence_fd = (aurora_dup_native_fence_fd_fn)
+    egl->dup_native_fence_fd = (det_dup_native_fence_fd_fn)
         required_proc("eglDupNativeFenceFDANDROID");
     egl->image_texture = (PFNGLEGLIMAGETARGETTEXTURE2DOESPROC)
         eglGetProcAddress("glEGLImageTargetTexture2DOES");
     egl->image_renderbuffer = (PFNGLEGLIMAGETARGETRENDERBUFFERSTORAGEOESPROC)
         eglGetProcAddress("glEGLImageTargetRenderbufferStorageOES");
-    egl->create_buffer = (aurora_create_native_buffer_fn)
+    egl->create_buffer = (det_create_native_buffer_fn)
         required_proc("eglHybrisCreateNativeBuffer");
-    egl->lock_buffer = (aurora_lock_native_buffer_fn)
+    egl->lock_buffer = (det_lock_native_buffer_fn)
         required_proc("eglHybrisLockNativeBuffer");
-    egl->unlock_buffer = (aurora_unlock_native_buffer_fn)
+    egl->unlock_buffer = (det_unlock_native_buffer_fn)
         required_proc("eglHybrisUnlockNativeBuffer");
-    egl->release_buffer = (aurora_release_native_buffer_fn)
+    egl->release_buffer = (det_release_native_buffer_fn)
         required_proc("eglHybrisReleaseNativeBuffer");
-    egl->get_buffer_info = (aurora_get_native_buffer_info_fn)
+    egl->get_buffer_info = (det_get_native_buffer_info_fn)
         required_proc("eglHybrisGetNativeBufferInfo");
-    egl->serialize_buffer = (aurora_serialize_native_buffer_fn)
+    egl->serialize_buffer = (det_serialize_native_buffer_fn)
         required_proc("eglHybrisSerializeNativeBuffer");
-    egl->create_remote_buffer = (aurora_create_remote_buffer_fn)
+    egl->create_remote_buffer = (det_create_remote_buffer_fn)
         required_proc("eglHybrisCreateRemoteBuffer");
 
     if (!egl->create_image || !egl->destroy_image || !egl->create_sync ||
@@ -293,7 +293,7 @@ static int init_egl(struct aurora_egl *egl)
     return 0;
 }
 
-static int export_wait_import_fence(struct aurora_egl *egl)
+static int export_wait_import_fence(struct det_egl *egl)
 {
     static const EGLint create_attrs[] = { EGL_NONE };
     EGLSyncKHR producer = EGL_NO_SYNC_KHR;
@@ -372,17 +372,17 @@ static int roundtrip_ahardware_buffer(EGLint width, EGLint height,
                                       const int *ints, int num_fds,
                                       const int *fds)
 {
-    enum { AURORA_AHB_CREATE_FROM_HANDLE_METHOD_CLONE = 3 };
+    enum { DET_AHB_CREATE_FROM_HANDLE_METHOD_CLONE = 3 };
     void *library = NULL;
-    aurora_ahb_create_from_handle_fn create_from_handle;
-    aurora_ahb_send_fn send_handle;
-    aurora_ahb_recv_fn recv_handle;
-    aurora_ahb_describe_fn describe;
-    aurora_ahb_release_fn release;
-    struct aurora_native_handle *handle = NULL;
-    struct aurora_ahardware_buffer *producer = NULL;
-    struct aurora_ahardware_buffer *consumer = NULL;
-    struct aurora_ahardware_buffer_desc desc = {
+    det_ahb_create_from_handle_fn create_from_handle;
+    det_ahb_send_fn send_handle;
+    det_ahb_recv_fn recv_handle;
+    det_ahb_describe_fn describe;
+    det_ahb_release_fn release;
+    struct det_native_handle *handle = NULL;
+    struct det_ahardware_buffer *producer = NULL;
+    struct det_ahardware_buffer *consumer = NULL;
+    struct det_ahardware_buffer_desc desc = {
         .width = (uint32_t)width,
         .height = (uint32_t)height,
         .layers = 1,
@@ -390,7 +390,7 @@ static int roundtrip_ahardware_buffer(EGLint width, EGLint height,
         .usage = usage,
         .stride = (uint32_t)stride,
     };
-    struct aurora_ahardware_buffer_desc received = {0};
+    struct det_ahardware_buffer_desc received = {0};
     int sockets[2] = {-1, -1};
     int result = -1;
 
@@ -400,7 +400,7 @@ static int roundtrip_ahardware_buffer(EGLint width, EGLint height,
                 android_dlerror());
         goto out;
     }
-#define AURORA_AHB_SYMBOL(variable, name)                                      \
+#define DET_AHB_SYMBOL(variable, name)                                      \
     do {                                                                    \
         variable = (__typeof__(variable))android_dlsym(library, name);      \
         if (!(variable)) {                                                  \
@@ -408,12 +408,12 @@ static int roundtrip_ahardware_buffer(EGLint width, EGLint height,
             goto out;                                                       \
         }                                                                   \
     } while (0)
-    AURORA_AHB_SYMBOL(create_from_handle, "AHardwareBuffer_createFromHandle");
-    AURORA_AHB_SYMBOL(send_handle, "AHardwareBuffer_sendHandleToUnixSocket");
-    AURORA_AHB_SYMBOL(recv_handle, "AHardwareBuffer_recvHandleFromUnixSocket");
-    AURORA_AHB_SYMBOL(describe, "AHardwareBuffer_describe");
-    AURORA_AHB_SYMBOL(release, "AHardwareBuffer_release");
-#undef AURORA_AHB_SYMBOL
+    DET_AHB_SYMBOL(create_from_handle, "AHardwareBuffer_createFromHandle");
+    DET_AHB_SYMBOL(send_handle, "AHardwareBuffer_sendHandleToUnixSocket");
+    DET_AHB_SYMBOL(recv_handle, "AHardwareBuffer_recvHandleFromUnixSocket");
+    DET_AHB_SYMBOL(describe, "AHardwareBuffer_describe");
+    DET_AHB_SYMBOL(release, "AHardwareBuffer_release");
+#undef DET_AHB_SYMBOL
 
     handle = calloc(1, sizeof(*handle) +
                            (size_t)(num_fds + num_ints) * sizeof(int));
@@ -428,7 +428,7 @@ static int roundtrip_ahardware_buffer(EGLint width, EGLint height,
         handle->data[num_fds + i] = ints[i];
 
     if (create_from_handle(&desc, handle,
-                           AURORA_AHB_CREATE_FROM_HANDLE_METHOD_CLONE,
+                           DET_AHB_CREATE_FROM_HANDLE_METHOD_CLONE,
                            &producer) != 0 || !producer) {
         fprintf(stderr,
                 "HYBRIS-MINIGBM: FAIL native_handle -> AHardwareBuffer\n");
@@ -474,7 +474,7 @@ out:
     return result;
 }
 
-static void finish_egl(struct aurora_egl *egl)
+static void finish_egl(struct det_egl *egl)
 {
     if (egl->display == EGL_NO_DISPLAY)
         return;
@@ -486,7 +486,7 @@ static void finish_egl(struct aurora_egl *egl)
     eglTerminate(egl->display);
 }
 
-static int create_remote_buffer(struct aurora_egl *egl, EGLint width,
+static int create_remote_buffer(struct det_egl *egl, EGLint width,
                                 EGLint height, EGLint usage, EGLint format,
                                 EGLint stride, int num_ints, int *ints,
                                 int num_fds, const int *fds,
@@ -515,8 +515,8 @@ static int create_remote_buffer(struct aurora_egl *egl, EGLint width,
     return ok && *buffer ? 0 : -1;
 }
 
-static int create_render_target(struct aurora_egl *egl, EGLClientBuffer buffer,
-                                struct aurora_render_target *target)
+static int create_render_target(struct det_egl *egl, EGLClientBuffer buffer,
+                                struct det_render_target *target)
 {
     GLenum status = 0;
 
@@ -559,8 +559,8 @@ static int create_render_target(struct aurora_egl *egl, EGLClientBuffer buffer,
     return -1;
 }
 
-static void destroy_render_target(struct aurora_egl *egl,
-                                  struct aurora_render_target *target)
+static void destroy_render_target(struct det_egl *egl,
+                                  struct det_render_target *target)
 {
     if (target->renderbuffer && target->object)
         glDeleteRenderbuffers(1, &target->object);
@@ -573,7 +573,7 @@ static void destroy_render_target(struct aurora_egl *egl,
     memset(target, 0, sizeof(*target));
 }
 
-static int render_vendor_egl(struct aurora_egl *egl, EGLClientBuffer buffer)
+static int render_vendor_egl(struct det_egl *egl, EGLClientBuffer buffer)
 {
     EGLImageKHR image;
     GLuint object = 0;
@@ -756,7 +756,7 @@ static GLuint create_source_texture(void)
     return texture;
 }
 
-static int benchmark_render(struct aurora_egl *egl, EGLClientBuffer buffer,
+static int benchmark_render(struct det_egl *egl, EGLClientBuffer buffer,
                             int width, int height, int frames)
 {
     static const GLfloat vertices[] = {
@@ -771,7 +771,7 @@ static int benchmark_render(struct aurora_egl *egl, EGLClientBuffer buffer,
         {0.40f, 0.55f, 1.00f, 0.35f},
         {1.00f, 0.85f, 0.35f, 0.30f},
     };
-    struct aurora_render_target target = {0};
+    struct det_render_target target = {0};
     double *samples = calloc((size_t)frames, sizeof(*samples));
     GLuint program = 0;
     GLuint texture = 0;
@@ -843,7 +843,7 @@ out:
     return result;
 }
 
-static int verify_vendor_pixels(struct aurora_egl *egl, EGLClientBuffer buffer)
+static int verify_vendor_pixels(struct det_egl *egl, EGLClientBuffer buffer)
 {
     unsigned char *pixels = NULL;
     int result = -1;
@@ -900,7 +900,7 @@ static int choose_payload_fd(const int *fds, int count)
     return best;
 }
 
-static int benchmark_handle_import(struct aurora_egl *egl, EGLint width,
+static int benchmark_handle_import(struct det_egl *egl, EGLint width,
                                    EGLint height, EGLint usage, EGLint format,
                                    EGLint stride, int num_ints, int *ints,
                                    int num_fds, const int *fds)
@@ -981,7 +981,7 @@ out:
     return result;
 }
 
-static int run_benchmark(struct aurora_egl *egl, const char *node,
+static int run_benchmark(struct det_egl *egl, const char *node,
                          int width, int height, int frames, EGLint usage)
 {
     EGLClientBuffer buffer = NULL;
@@ -1041,14 +1041,14 @@ out:
     return result;
 }
 
-static int run_presenter(struct aurora_egl *egl, const char *socket_path,
+static int run_presenter(struct det_egl *egl, const char *socket_path,
                          int width, int height, int hold_seconds,
                          EGLint usage)
 {
     EGLClientBuffer buffer = NULL;
-    struct aurora_render_target target = {0};
-    struct aurora_presenter_client client;
-    struct aurora_presenter_packet completion;
+    struct det_render_target target = {0};
+    struct det_presenter_client client;
+    struct det_presenter_packet completion;
     int *ints = NULL;
     int *fds = NULL;
     int num_ints = 0;
@@ -1099,30 +1099,30 @@ static int run_presenter(struct aurora_egl *egl, const char *socket_path,
     if (glGetError() != GL_NO_ERROR)
         goto out;
 
-    if (aurora_presenter_connect(&client, socket_path) != 0) {
+    if (det_presenter_connect(&client, socket_path) != 0) {
         fprintf(stderr, "HYBRIS-MINIGBM: FAIL presenter connect %s: %s\n",
                 socket_path, strerror(errno));
         goto out;
     }
-    if (aurora_presenter_register_buffer(&client, 1, (uint32_t)width,
+    if (det_presenter_register_buffer(&client, 1, (uint32_t)width,
                                       (uint32_t)height,
                                       HYBRIS_PIXEL_FORMAT_RGBA_8888,
                                       (uint32_t)stride, (uint64_t)usage,
                                       num_ints, ints, num_fds, fds) != 0 ||
-        aurora_presenter_present(&client, 1, 1, 0, -1) != 0) {
+        det_presenter_present(&client, 1, 1, 0, -1) != 0) {
         fprintf(stderr, "HYBRIS-MINIGBM: FAIL presenter submit: %s\n",
                 strerror(errno));
-        aurora_presenter_disconnect(&client);
+        det_presenter_disconnect(&client);
         goto out;
     }
     struct pollfd ready = {.fd = client.fd, .events = POLLIN};
     if (poll(&ready, 1, 5000) <= 0 ||
-        aurora_presenter_receive_completion(&client, &completion,
+        det_presenter_receive_completion(&client, &completion,
                                          &present_fence,
                                          &release_fence) != 0 ||
         completion.status != 0 || completion.serial != 1) {
         fprintf(stderr, "HYBRIS-MINIGBM: FAIL presenter completion\n");
-        aurora_presenter_disconnect(&client);
+        det_presenter_disconnect(&client);
         goto out;
     }
     if (present_fence >= 0) close(present_fence);
@@ -1131,7 +1131,7 @@ static int run_presenter(struct aurora_egl *egl, const char *socket_path,
            width, height, hold_seconds);
     fflush(stdout);
     sleep((unsigned int)hold_seconds);
-    aurora_presenter_disconnect(&client);
+    det_presenter_disconnect(&client);
     result = 0;
 
 out:
@@ -1213,7 +1213,7 @@ int main(int argc, char **argv)
     const int presenter_width = presenter && argc > 4 ? atoi(argv[4]) : 1920;
     const int presenter_height = presenter && argc > 5 ? atoi(argv[5]) : 1080;
     const int presenter_hold = presenter && argc > 6 ? atoi(argv[6]) : 20;
-    struct aurora_egl egl;
+    struct det_egl egl;
     EGLClientBuffer buffer = NULL;
     EGLClientBuffer remote_buffer = NULL;
     EGLint stride = 0;
@@ -1277,7 +1277,7 @@ int main(int argc, char **argv)
         printf("native-handle: PASS full-handle gralloc round trip\n");
     } else {
         printf("native-handle: SKIP reconstruction in timed process "
-               "(covered by aurora hybrid-probe)\n");
+               "(covered by det hybrid-probe)\n");
     }
 
     /* The correctness gate renders through the reconstructed handle and reads

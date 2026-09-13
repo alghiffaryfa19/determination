@@ -3,110 +3,104 @@
     {
       "path": "artifacts/alpine-libhybris-qualification-20260811.txt",
       "retention": "tracked-evidence",
-      "sha256": "ff8a2c9f9c4973e8bf00d749c79c7ac486340c143de17c5f77e4ffd9e432a739",
-      "size": 4579
+      "sha256": "74794389cda994093a239044b4dcd3f09d2d692461d3c134905c07d01e4421f6",
+      "size": 4607
     },
     {
       "path": "artifacts/alpine-rootfs-qualification-20260811.txt",
       "retention": "tracked-evidence",
-      "sha256": "552801f40130fc32cea18283b7441735b29e8fbe7c963dee17b15f9ab20e8698",
-      "size": 2737
-    },
-    {
-      "path": "artifacts/arch-systemd257-qualification-20260911.txt",
-      "retention": "tracked-evidence",
-      "sha256": "1bc5a4803e691cf631041d2c1842570c809f0867ddef1050e380a64d0c96ef5d",
-      "size": 2335
-    },
-    {
-      "path": "artifacts/aurorahyprland-buffer-retest.txt",
-      "retention": "tracked-evidence",
-      "sha256": "f6b9f84f5b75bcdb9ecbebf7e1cd58ac1311d601f8afed66c16478d8ab5c68a8",
-      "size": 935
-    },
-    {
-      "path": "artifacts/aurorahyprland-buffer-smoke.txt",
-      "retention": "tracked-evidence",
-      "sha256": "d83b10991452c8ecb149c062866e4a75c80b8d25f6df693273265b9315810a3c",
-      "size": 297
-    },
-    {
-      "path": "artifacts/aurorahyprland-build-deps.txt",
-      "retention": "tracked-evidence",
-      "sha256": "3b11804868e896453e1f067365e7c712154c08f4fd3f78c556f519b9294c4e79",
-      "size": 12163
-    },
-    {
-      "path": "artifacts/aurorahyprland-build.txt",
-      "retention": "tracked-evidence",
-      "sha256": "3252d7b58a9afdc958bf09545ad331fb82891167c7fdd58730fafe9f97fca658",
-      "size": 44884
-    },
-    {
-      "path": "artifacts/aurorahyprland-hwc-crash.txt",
-      "retention": "tracked-evidence",
-      "sha256": "998a3ba0eaa75841fee76897b0718884eec9f20027da2d7d2c0c7b5052fcb62d",
-      "size": 7084
-    },
-    {
-      "path": "artifacts/aurorahyprland-input-build.txt",
-      "retention": "tracked-evidence",
-      "sha256": "bfeb38ab947750961d2ef2b237dbec423659b922f8b1713a85023d9c0da3455e",
-      "size": 2453
-    },
-    {
-      "path": "artifacts/aurorahyprland-kitty-install.txt",
-      "retention": "tracked-evidence",
-      "sha256": "1144e89458e2d7d665d65c381e68752b6b4c89a1a811965ddc5904f0dd8435ad",
-      "size": 1938
-    },
-    {
-      "path": "artifacts/aurorahyprland-producer-fence-build.txt",
-      "retention": "tracked-evidence",
-      "sha256": "27245dcb453d18d28fe1da6ebc21ccef1dd8280dd2bfa61e8c01afe43efcd8f9",
-      "size": 2504
-    },
-    {
-      "path": "artifacts/aurorahyprland-qtutils-build.txt",
-      "retention": "tracked-evidence",
-      "sha256": "c687b2971f014d366bf225e86ade1bc64e128bbcedd3c7c2a3d0656bb9190faf",
-      "size": 62095
-    },
-    {
-      "path": "artifacts/aurorahyprland-renderer-fix-build.txt",
-      "retention": "tracked-evidence",
-      "sha256": "f7483d9d709295444913311c3ea98185f75be63c04c3019eed1ceec80bc46eaf",
-      "size": 26974
-    },
-    {
-      "path": "artifacts/aurorahyprland-shell-deps.txt",
-      "retention": "tracked-evidence",
-      "sha256": "2456c9514526edfebc453b2ad41a6c04b59ecc2d68e8e0c61429fddc6e18defc",
-      "size": 2557
-    },
-    {
-      "path": "artifacts/aurorahyprland-sources.txt",
-      "retention": "tracked-evidence",
-      "sha256": "03894fc853d66d9283bbc652a173dc45e3bb301c32a38cad8bd5952c711ca2ad",
-      "size": 7691
-    },
-    {
-      "path": "artifacts/aurorahyprland-startup-crash.txt",
-      "retention": "tracked-evidence",
-      "sha256": "190d533770b52abbdda675e2d4ea48037b71e25469fabdc4157e9934cdabc73d",
-      "size": 4540
-    },
-    {
-      "path": "artifacts/aurorahyprland-wlegl-build.txt",
-      "retention": "tracked-evidence",
-      "sha256": "8959182ef20b0b96894f710ae50ee77b7f83724761dfb342934fb4e9f777ba67",
-      "size": 1277
+      "sha256": "9471abfcb1c274da198f54fb979df1886e29b9f03587c73ba3f7980f94e4bb3d",
+      "size": 2785
     },
     {
       "path": "artifacts/config.gz",
       "retention": "tracked-evidence",
       "sha256": "d6e068d68167c2d27e2587e4c839c8413eb98ec07e987ab7ebf270d85da1f58e",
       "size": 36110
+    },
+    {
+      "path": "artifacts/dethyprland-buffer-retest.txt",
+      "retention": "tracked-evidence",
+      "sha256": "f6693f5bdfd5785b528a29afb0dc9267ee52692df67a11d751a065e94a580cbb",
+      "size": 932
+    },
+    {
+      "path": "artifacts/dethyprland-buffer-smoke.txt",
+      "retention": "tracked-evidence",
+      "sha256": "f7d4672dc0cab947f905d9025af04d96adefbffe1560b199929252a542c1ed3d",
+      "size": 294
+    },
+    {
+      "path": "artifacts/dethyprland-build-deps.txt",
+      "retention": "tracked-evidence",
+      "sha256": "3b11804868e896453e1f067365e7c712154c08f4fd3f78c556f519b9294c4e79",
+      "size": 12163
+    },
+    {
+      "path": "artifacts/dethyprland-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "6a869594f54aceb56a3e131f809a499672ccd0080ad541d149260564b21f620e",
+      "size": 43741
+    },
+    {
+      "path": "artifacts/dethyprland-hwc-crash.txt",
+      "retention": "tracked-evidence",
+      "sha256": "f1a12307f6073e050bd7d2fa53dc875645a21827a9a2388b38aeb311baab5bbc",
+      "size": 7081
+    },
+    {
+      "path": "artifacts/dethyprland-input-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "b5b2680cbb48672bf702d4377959b829ef87659f97a2016aaf3147094c2d4332",
+      "size": 2366
+    },
+    {
+      "path": "artifacts/dethyprland-kitty-install.txt",
+      "retention": "tracked-evidence",
+      "sha256": "1144e89458e2d7d665d65c381e68752b6b4c89a1a811965ddc5904f0dd8435ad",
+      "size": 1938
+    },
+    {
+      "path": "artifacts/dethyprland-producer-fence-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "ee2e52935d53bd0285d6b9629b9e621c52fcffc7c1392b762f0dbf23a1f8b093",
+      "size": 2424
+    },
+    {
+      "path": "artifacts/dethyprland-qtutils-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "d091f2f6515bc6955c62a792bf574d4530eac91727e080642f019083d29829b1",
+      "size": 62059
+    },
+    {
+      "path": "artifacts/dethyprland-renderer-fix-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "17ff655c7f5ad1da844af160331efb7e986f2a4ceb2d7ed0e000265339ead9ec",
+      "size": 25993
+    },
+    {
+      "path": "artifacts/dethyprland-shell-deps.txt",
+      "retention": "tracked-evidence",
+      "sha256": "2456c9514526edfebc453b2ad41a6c04b59ecc2d68e8e0c61429fddc6e18defc",
+      "size": 2557
+    },
+    {
+      "path": "artifacts/dethyprland-sources.txt",
+      "retention": "tracked-evidence",
+      "sha256": "2537e3fd63115b0048639683985a4831885d2cca62dfeee1dff0b8b20d1fbe80",
+      "size": 7655
+    },
+    {
+      "path": "artifacts/dethyprland-startup-crash.txt",
+      "retention": "tracked-evidence",
+      "sha256": "190d533770b52abbdda675e2d4ea48037b71e25469fabdc4157e9934cdabc73d",
+      "size": 4540
+    },
+    {
+      "path": "artifacts/dethyprland-wlegl-build.txt",
+      "retention": "tracked-evidence",
+      "sha256": "8f35747993af6da331c15a7817050b58b45141496d86b1593b44caef8e678ba0",
+      "size": 1271
     },
     {
       "path": "artifacts/guest-gpu-smoke-20260708.txt",
@@ -135,8 +129,8 @@
     {
       "path": "artifacts/hybris-minigbm-benchmark-20260719.txt",
       "retention": "tracked-evidence",
-      "sha256": "cc35c9c7ffcbb02b9e94f1a0220b029e83f88f78ab022fdfd7cbbb0525ce062d",
-      "size": 1559
+      "sha256": "4f168c2b8c5eb8b535ca7d9aefb8171daf861b3dbcd14188c7b3500b844b090a",
+      "size": 1566
     },
     {
       "path": "artifacts/hybris-minigbm-fence-ahb-20260719.txt",
@@ -153,98 +147,8 @@
     {
       "path": "artifacts/node-perms-probe.txt",
       "retention": "tracked-evidence",
-      "sha256": "1ccc5367d47a8b10577dac85dbe751884d1bac15b037fdd3896d080cad13a456",
-      "size": 3791
-    },
-    {
-      "path": "artifacts/omarchy-alarm/arch-systemd.strace",
-      "retention": "tracked-evidence",
-      "sha256": "a38a08683c8477abf6c9c4401681a31eae043caf9069de7a06a7ebe342073284",
-      "size": 118968
-    },
-    {
-      "path": "artifacts/omarchy-alarm/boot-failure-and-rollback.txt",
-      "retention": "tracked-evidence",
-      "sha256": "9563effd623e6c3784da598049190954688c8199afd7bb41cd7a97b761beb2af",
-      "size": 699
-    },
-    {
-      "path": "artifacts/omarchy-alarm/boot.txt",
-      "retention": "tracked-evidence",
-      "sha256": "84662e68bdb2cec7e31583a1633aaef21b9dcbc44652900918061656e40e9c41",
-      "size": 62
-    },
-    {
-      "path": "artifacts/omarchy-alarm/build.txt",
-      "retention": "tracked-evidence",
-      "sha256": "a402ea333e09d22761038e2de63f39425b8c1d908b9c8c47f27faa9f42095528",
-      "size": 957
-    },
-    {
-      "path": "artifacts/omarchy-alarm/cross-container.txt",
-      "retention": "tracked-evidence",
-      "sha256": "4db79bb0fe5d5f99317f6d3cc5aba4276c6180287ea95d97a18f2667f963532b",
-      "size": 8807
-    },
-    {
-      "path": "artifacts/omarchy-alarm/extract.txt",
-      "retention": "tracked-evidence",
-      "sha256": "607b06bcb9527c2a4ad41ddbe4439321358b9253634e258d0e15a7e148d0f942",
-      "size": 170
-    },
-    {
-      "path": "artifacts/omarchy-alarm/fastfetch-install.txt",
-      "retention": "tracked-evidence",
-      "sha256": "df57973d6d0664608900c32326ce35e4dc83a6efe2ed52855180ac7772509873",
-      "size": 202
-    },
-    {
-      "path": "artifacts/omarchy-alarm/host-checks.txt",
-      "retention": "tracked-evidence",
-      "sha256": "1934f395028d1ee74266a66f39f2a2723abc60c324e08c52776bee9a680c35d4",
-      "size": 5359
-    },
-    {
-      "path": "artifacts/omarchy-alarm/init-console.txt",
-      "retention": "tracked-evidence",
-      "sha256": "73aae9c4b834cd7860788276916649c5ef5b3a54b911ac0ada98cafd5e1db718",
-      "size": 87
-    },
-    {
-      "path": "artifacts/omarchy-alarm/install.txt",
-      "retention": "tracked-evidence",
-      "sha256": "2abd0f73f9a822c7bf8418a314ee9968d02f7bfba4027b8713074386f239cfe3",
-      "size": 50
-    },
-    {
-      "path": "artifacts/omarchy-alarm/omarchy-deploy.txt",
-      "retention": "tracked-evidence",
-      "sha256": "9f79c77e3a7d8b91ecdc5919270f1bdc22649b79f774d8af0e3507510272fe48",
-      "size": 59
-    },
-    {
-      "path": "artifacts/omarchy-alarm/runtime.txt",
-      "retention": "tracked-evidence",
-      "sha256": "e8468fbbd176d17aea34e2ba3d40016850a7219a82bce38df10bf36a4594876d",
-      "size": 1294
-    },
-    {
-      "path": "artifacts/omarchy-alarm/source-signature.txt",
-      "retention": "tracked-evidence",
-      "sha256": "9f3fa70f7e3e368847e8904727849c85f5b1a0e934f6f68a4fdaba2d3f24bb6a",
-      "size": 841
-    },
-    {
-      "path": "artifacts/omarchy-alarm/systemd-build.txt",
-      "retention": "tracked-evidence",
-      "sha256": "a61dd1f65355089d4cb733e5d760977d869218650a9185afd66ee13e2c1fa4bb",
-      "size": 39700
-    },
-    {
-      "path": "artifacts/omarchy-alarm/trace-command.txt",
-      "retention": "tracked-evidence",
-      "sha256": "72613bdbcbf5fdcc3d34fc9a31a0909b1d9af340a392201a0d171d96be817870",
-      "size": 923
+      "sha256": "bd41a12feb4af8b4931dd60331ee26b00d49cb89e89b348c96f6a6518ef7acc6",
+      "size": 3812
     },
     {
       "path": "artifacts/opal-deployed.png",
@@ -255,26 +159,26 @@
     {
       "path": "artifacts/opal-deployed.txt",
       "retention": "tracked-evidence",
-      "sha256": "abe790d28281d9f26d3fe336c282cba76b0fc4a224fbdac4c02590856a762707",
-      "size": 1520
+      "sha256": "e6ec75e86c46ba08c7156bfb0b6b0c727a399e0dfecaf98c08f5e856d892a3d7",
+      "size": 1514
     },
     {
       "path": "artifacts/opal-foreground.txt",
       "retention": "tracked-evidence",
-      "sha256": "974745b0b836fbbfcc1f86cf49f9c980dd83085731456e0f7c4d26b49f5da582",
-      "size": 598
+      "sha256": "754615adb9e31f595fb1b5554a0932aad9e1d577bf1b0e0012a2641eb27118fd",
+      "size": 592
     },
     {
       "path": "artifacts/opal-gdb-basic.txt",
       "retention": "tracked-evidence",
-      "sha256": "17bc314c6d7aa5ef2053bc82ce284414c8fc7dd105d6df52f3be157a16e5764e",
-      "size": 5636
+      "sha256": "b05676e1b6fa7542bf7a402de3e4e1d2395552da0a028cb0be03ce4a855db46b",
+      "size": 5630
     },
     {
       "path": "artifacts/opal-gdb-icon-main.txt",
       "retention": "tracked-evidence",
-      "sha256": "67e9c1a4cb05569be202a2f56e2fb12d04de1c0c0cb7ef3b39b77cb61e1bfc97",
-      "size": 2023
+      "sha256": "743e1a410f7b7fce02b7bf22358e5f3ae3b142dd5da7fd7cf6867f1d69ed9ec2",
+      "size": 2017
     },
     {
       "path": "artifacts/opal-gdb-install.txt",
@@ -285,14 +189,14 @@
     {
       "path": "artifacts/opal-gdb.txt",
       "retention": "tracked-evidence",
-      "sha256": "01e26abbc88bfecae21537583e92c463e147c5cfe1e201ee7c2796a8b8366fd5",
-      "size": 14787
+      "sha256": "ee89f6f2f1dc87363d6891936c0200f0ca5017180e1eaac5945a5c908f5e2377",
+      "size": 14781
     },
     {
       "path": "artifacts/opal-gles-build.txt",
       "retention": "tracked-evidence",
-      "sha256": "c311fb5efa9e8b2b0cdd0c5a5aa456bea807ae24c541dee4bfe33cd5156fb7cc",
-      "size": 1174
+      "sha256": "ace2c76a5b6e9abd7ebe56357f336ee21d0ca8d5b1456c51712fae64c6da52f6",
+      "size": 1162
     },
     {
       "path": "artifacts/opal-user-phone.png",

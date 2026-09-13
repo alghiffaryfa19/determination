@@ -2,58 +2,58 @@
 # Start the guest headless so desktop-on only performs ownership handoff.
 
 set -u
-AURORA=/data/aurora
-LXC="$AURORA/lxc/bin"
+DET=/data/determination
+LXC="$DET/lxc/bin"
 export PATH="$LXC:$PATH"
-. "$AURORA/bin/device-config"
+. "$DET/bin/device-config"
 
 # Preserve Debian's legacy path while selecting independent guest slots.
-if [ -x "$AURORA/bin/guest-distro" ]; then
-    "$AURORA/bin/guest-distro" ensure || exit 1
-elif [ ! -L "$AURORA/active-guest" ]; then
-    ln -s guest "$AURORA/active-guest.new" && mv -f "$AURORA/active-guest.new" "$AURORA/active-guest"
+if [ -x "$DET/bin/guest-distro" ]; then
+    "$DET/bin/guest-distro" ensure || exit 1
+elif [ ! -L "$DET/active-guest" ]; then
+    ln -s guest "$DET/active-guest.new" && mv -f "$DET/active-guest.new" "$DET/active-guest"
 fi
-GUEST_ROOT=$(readlink -f "$AURORA/active-guest" 2>/dev/null)
+GUEST_ROOT=$(readlink -f "$DET/active-guest" 2>/dev/null)
 [ -n "$GUEST_ROOT" ] && [ -d "$GUEST_ROOT" ] || {
-    echo "FATAL: selected guest rootfs is missing: $AURORA/active-guest" >&2
+    echo "FATAL: selected guest rootfs is missing: $DET/active-guest" >&2
     exit 1
 }
-export AURORA_GUEST_ROOT="$GUEST_ROOT"
+export DET_GUEST_ROOT="$GUEST_ROOT"
 
 # Normalize legacy and imported rootfs images to the project-owned account
 # before copying units that reference it. Never rename an account in a running
 # guest. uid 1000 is part of the device-node contract, so preserve the numeric
 # identity while replacing the login name.
-if ! lxc-info -P "$AURORA" -n guest 2>/dev/null | grep -q RUNNING; then
+if ! lxc-info -P "$DET" -n guest 2>/dev/null | grep -q RUNNING; then
     current_guest_user=$(awk -F: '$3 == 1000 { print $1; exit }' "$GUEST_ROOT/etc/passwd" 2>/dev/null)
-    if [ -n "$current_guest_user" ] && [ "$current_guest_user" != aurora ]; then
+    if [ -n "$current_guest_user" ] && [ "$current_guest_user" != detuser ]; then
         chroot "$GUEST_ROOT" /bin/sh -c '
             old_user=$1
             old_group=$(id -gn "$old_user")
-            usermod -l aurora -d /home/aurora -m "$old_user"
-            if [ "$old_group" != aurora ] && ! getent group aurora >/dev/null 2>&1; then
-                groupmod -n aurora "$old_group"
+            usermod -l detuser -d /home/detuser -m "$old_user"
+            if [ "$old_group" != detuser ] && ! getent group detuser >/dev/null 2>&1; then
+                groupmod -n detuser "$old_group"
             fi
         ' sh "$current_guest_user" || {
             echo "FATAL: could not normalize the uid-1000 guest account" >&2
             exit 1
         }
     fi
-    if grep -q '^aurora:' "$GUEST_ROOT/etc/passwd" 2>/dev/null; then
+    if grep -q '^detuser:' "$GUEST_ROOT/etc/passwd" 2>/dev/null; then
         mkdir -p "$GUEST_ROOT/etc/sudoers.d"
-        printf '%s\n' 'aurora ALL=(ALL) ALL' > "$GUEST_ROOT/etc/sudoers.d/aurora"
-        chmod 0440 "$GUEST_ROOT/etc/sudoers.d/aurora"
-        ssh_config="$GUEST_ROOT/etc/ssh/sshd_config.d/50-aurora.conf"
+        printf '%s\n' 'detuser ALL=(ALL) ALL' > "$GUEST_ROOT/etc/sudoers.d/detuser"
+        chmod 0440 "$GUEST_ROOT/etc/sudoers.d/detuser"
+        ssh_config="$GUEST_ROOT/etc/ssh/sshd_config.d/50-determination.conf"
         if [ -f "$ssh_config" ]; then
-            sed -i 's/^AllowUsers .*/AllowUsers aurora/' "$ssh_config"
+            sed -i 's/^AllowUsers .*/AllowUsers detuser/' "$ssh_config"
         fi
     fi
 fi
 
 # Keep SSH host identity outside replaceable guest slots.
-SSH_IDENTITY="$AURORA/etc/ssh-host-keys"
+SSH_IDENTITY="$DET/etc/ssh-host-keys"
 if [ ! -f "$SSH_IDENTITY/ssh_host_ed25519_key" ]; then
-    for ssh_source in "$AURORA/guest/etc/ssh" "$GUEST_ROOT/etc/ssh"; do
+    for ssh_source in "$DET/guest/etc/ssh" "$GUEST_ROOT/etc/ssh"; do
         [ -f "$ssh_source/ssh_host_ed25519_key" ] || continue
         install -d -m 0700 "$SSH_IDENTITY"
         for ssh_key in "$ssh_source"/ssh_host_*_key "$ssh_source"/ssh_host_*_key.pub; do
@@ -74,85 +74,85 @@ if [ -f "$SSH_IDENTITY/ssh_host_ed25519_key" ] && [ -d "$GUEST_ROOT/etc/ssh" ]; 
     chmod 0644 "$GUEST_ROOT"/etc/ssh/ssh_host_*_key.pub
 fi
 
-mkdir -p "$AURORA/lxc/lib/lxc/rootfs" "$AURORA/run" "$AURORA/run/control" "$AURORA/log"
+mkdir -p "$DET/lxc/lib/lxc/rootfs" "$DET/run" "$DET/run/control" "$DET/log"
 
 # Regenerate device binds after possible Android OTA changes.
-"$AURORA/bin/generate-lxc-config" || { echo "FATAL: LXC config generation failed"; exit 1; }
-"$AURORA/bin/generate-guest-config" || { echo "FATAL: guest config generation failed"; exit 1; }
+"$DET/bin/generate-lxc-config" || { echo "FATAL: LXC config generation failed"; exit 1; }
+"$DET/bin/generate-guest-config" || { echo "FATAL: guest config generation failed"; exit 1; }
 
 # Remove only the obsolete compatibility symlink, never a real directory.
 [ -L /data/decemberos ] && rm -f /data/decemberos
-# LXC resolves the named container through $AURORA/guest/config.
-mkdir -p "$AURORA/guest"
-cp -f "$AURORA/lxc/config" "$AURORA/guest/config"
+# LXC resolves the named container through $DET/guest/config.
+mkdir -p "$DET/guest"
+cp -f "$DET/lxc/config" "$DET/guest/config"
 
 # Refresh distro-neutral static guest tools before every start.
-for aurora_guest_tool in aurora-guest-agent aurora-audio-probe aurora-audio-session aurora-pipewire-smoke \
-                      aurora-input-actions aurora-media-action aurora-connectivity aurora-connectivity-menu \
-                      aurora-platform aurora-phosh-session aurora-compat-check \
-                      aurora-firefox-content-defaults aurora-session-launch \
-                      aurora-plasma-session aurora-plasma-client aurora-hyprland-opal \
-                      aurora-hyprland-omarchy aurora-omarchy aurora-opal opal; do
-    if [ -f "$AURORA/guest-tools/$aurora_guest_tool" ]; then
+for det_guest_tool in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke \
+                      det-input-actions det-media-action det-connectivity det-connectivity-menu \
+                      det-platform det-phosh-session det-compat-check \
+                      det-firefox-content-defaults det-session-launch \
+                      det-plasma-session det-plasma-client det-hyprland-opal \
+                      det-hyprland-omarchy det-omarchy det-opal opal; do
+    if [ -f "$DET/guest-tools/$det_guest_tool" ]; then
         mkdir -p "$GUEST_ROOT/usr/local/bin"
-        cp -f "$AURORA/guest-tools/$aurora_guest_tool" \
-            "$GUEST_ROOT/usr/local/bin/$aurora_guest_tool"
-        chmod 0755 "$GUEST_ROOT/usr/local/bin/$aurora_guest_tool"
+        cp -f "$DET/guest-tools/$det_guest_tool" \
+            "$GUEST_ROOT/usr/local/bin/$det_guest_tool"
+        chmod 0755 "$GUEST_ROOT/usr/local/bin/$det_guest_tool"
     fi
 done
-if [ -d "$AURORA/guest-assets/opal" ]; then
-    mkdir -p "$GUEST_ROOT/usr/local/share/aurora-opal"
-    cp -a "$AURORA/guest-assets/opal/." "$GUEST_ROOT/usr/local/share/aurora-opal/"
+if [ -d "$DET/guest-assets/opal" ]; then
+    mkdir -p "$GUEST_ROOT/usr/local/share/det-opal"
+    cp -a "$DET/guest-assets/opal/." "$GUEST_ROOT/usr/local/share/det-opal/"
 fi
-if [ -d "$AURORA/guest-assets/omarchy" ]; then
-    mkdir -p "$GUEST_ROOT/usr/local/share/aurora-omarchy"
-    cp -a "$AURORA/guest-assets/omarchy/." "$GUEST_ROOT/usr/local/share/aurora-omarchy/"
+if [ -d "$DET/guest-assets/omarchy" ]; then
+    mkdir -p "$GUEST_ROOT/usr/local/share/det-omarchy"
+    cp -a "$DET/guest-assets/omarchy/." "$GUEST_ROOT/usr/local/share/det-omarchy/"
 fi
-for aurora_guest_config in "$AURORA"/guest-config/*.conf; do
-    [ -f "$aurora_guest_config" ] || continue
-    mkdir -p "$GUEST_ROOT/etc/aurora"
-    cp -f "$aurora_guest_config" "$GUEST_ROOT/etc/aurora/$(basename "$aurora_guest_config")"
-    chmod 0644 "$GUEST_ROOT/etc/aurora/$(basename "$aurora_guest_config")"
+for det_guest_config in "$DET"/guest-config/*.conf; do
+    [ -f "$det_guest_config" ] || continue
+    mkdir -p "$GUEST_ROOT/etc/determination"
+    cp -f "$det_guest_config" "$GUEST_ROOT/etc/determination/$(basename "$det_guest_config")"
+    chmod 0644 "$GUEST_ROOT/etc/determination/$(basename "$det_guest_config")"
 done
-if [ -f "$AURORA/guest-tools/setup-compatibility.sh" ]; then
+if [ -f "$DET/guest-tools/setup-compatibility.sh" ]; then
     mkdir -p "$GUEST_ROOT/usr/local/sbin"
-    cp -f "$AURORA/guest-tools/setup-compatibility.sh" \
+    cp -f "$DET/guest-tools/setup-compatibility.sh" \
         "$GUEST_ROOT/usr/local/sbin/setup-compatibility.sh"
     chmod 0755 "$GUEST_ROOT/usr/local/sbin/setup-compatibility.sh"
 fi
-if [ -f "$AURORA/guest-tools/aurora-phosh.service" ]; then
-    mkdir -p "$GUEST_ROOT/usr/local/lib/aurora"
-    cp -f "$AURORA/guest-tools/aurora-phosh.service" \
-        "$GUEST_ROOT/usr/local/lib/aurora/aurora-phosh.service"
-    chmod 0644 "$GUEST_ROOT/usr/local/lib/aurora/aurora-phosh.service"
+if [ -f "$DET/guest-tools/det-phosh.service" ]; then
+    mkdir -p "$GUEST_ROOT/usr/local/lib/determination"
+    cp -f "$DET/guest-tools/det-phosh.service" \
+        "$GUEST_ROOT/usr/local/lib/determination/det-phosh.service"
+    chmod 0644 "$GUEST_ROOT/usr/local/lib/determination/det-phosh.service"
     if [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
-        cp -f "$AURORA/guest-tools/aurora-phosh.service" \
-            "$GUEST_ROOT/etc/systemd/system/aurora-phosh.service"
-        chmod 0644 "$GUEST_ROOT/etc/systemd/system/aurora-phosh.service"
+        cp -f "$DET/guest-tools/det-phosh.service" \
+            "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
+        chmod 0644 "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
     fi
 fi
-if [ -f "$AURORA/guest-tools/aurora-plasma.service" ] && [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
-    cp -f "$AURORA/guest-tools/aurora-plasma.service" \
-        "$GUEST_ROOT/etc/systemd/system/aurora-plasma.service"
-    chmod 0644 "$GUEST_ROOT/etc/systemd/system/aurora-plasma.service"
+if [ -f "$DET/guest-tools/det-plasma.service" ] && [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
+    cp -f "$DET/guest-tools/det-plasma.service" \
+        "$GUEST_ROOT/etc/systemd/system/det-plasma.service"
+    chmod 0644 "$GUEST_ROOT/etc/systemd/system/det-plasma.service"
 fi
-if [ -f "$AURORA/guest-tools/aurora-input-udevdb" ]; then
+if [ -f "$DET/guest-tools/det-input-udevdb" ]; then
     mkdir -p "$GUEST_ROOT/usr/local/sbin"
-    cp -f "$AURORA/guest-tools/aurora-input-udevdb" "$GUEST_ROOT/usr/local/sbin/aurora-input-udevdb"
-    chmod 0755 "$GUEST_ROOT/usr/local/sbin/aurora-input-udevdb"
+    cp -f "$DET/guest-tools/det-input-udevdb" "$GUEST_ROOT/usr/local/sbin/det-input-udevdb"
+    chmod 0755 "$GUEST_ROOT/usr/local/sbin/det-input-udevdb"
 fi
-if [ -f "$AURORA/guest-tools/aurora-connectivity.desktop" ]; then
+if [ -f "$DET/guest-tools/determination-connectivity.desktop" ]; then
     mkdir -p "$GUEST_ROOT/usr/share/applications"
-    cp -f "$AURORA/guest-tools/aurora-connectivity.desktop" \
-        "$GUEST_ROOT/usr/share/applications/aurora-connectivity.desktop"
-    chmod 0644 "$GUEST_ROOT/usr/share/applications/aurora-connectivity.desktop"
+    cp -f "$DET/guest-tools/determination-connectivity.desktop" \
+        "$GUEST_ROOT/usr/share/applications/determination-connectivity.desktop"
+    chmod 0644 "$GUEST_ROOT/usr/share/applications/determination-connectivity.desktop"
 fi
-if [ "${AURORA_PROFILE_ID:-}" = guacamoleb ] && \
-   [ -f "$AURORA/guest-tools/90-aurora-direct.conf" ]; then
+if [ "${DET_PROFILE_ID:-}" = guacamoleb ] && \
+   [ -f "$DET/guest-tools/90-determination-direct.conf" ]; then
     mkdir -p "$GUEST_ROOT/etc/pipewire/pipewire.conf.d"
-    cp -f "$AURORA/guest-tools/90-aurora-direct.conf" \
-        "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-aurora-direct.conf"
-    chmod 0644 "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-aurora-direct.conf"
+    cp -f "$DET/guest-tools/90-determination-direct.conf" \
+        "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
+    chmod 0644 "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
 fi
 
 # Override Android /data's nodev and nosuid flags for the guest bind mount.
@@ -163,18 +163,18 @@ fi
 
 # netd periodically rebuilds routing state, so every rule must be re-assertable.
 net_assert() {
-    ip link add aurora0 type bridge 2>/dev/null
-    ip addr add 192.168.117.1/24 dev aurora0 2>/dev/null
-    ip link set aurora0 up
+    ip link add determ0 type bridge 2>/dev/null
+    ip addr add 192.168.117.1/24 dev determ0 2>/dev/null
+    ip link set determ0 up
     echo 1 > /proc/sys/net/ipv4/ip_forward
 
     iptables -t nat -C POSTROUTING -s 192.168.117.0/24 -j MASQUERADE 2>/dev/null ||
         iptables -t nat -A POSTROUTING -s 192.168.117.0/24 -j MASQUERADE
     # Guest accepts must precede Android's netd chains.
-    iptables -C INPUT -i aurora0 -j ACCEPT 2>/dev/null ||
-        iptables -I INPUT 1 -i aurora0 -j ACCEPT
-    iptables -C OUTPUT -o aurora0 -j ACCEPT 2>/dev/null ||
-        iptables -I OUTPUT 1 -o aurora0 -j ACCEPT
+    iptables -C INPUT -i determ0 -j ACCEPT 2>/dev/null ||
+        iptables -I INPUT 1 -i determ0 -j ACCEPT
+    iptables -C OUTPUT -o determ0 -j ACCEPT 2>/dev/null ||
+        iptables -I OUTPUT 1 -o determ0 -j ACCEPT
     iptables -C FORWARD -s 192.168.117.0/24 -j ACCEPT 2>/dev/null ||
         iptables -I FORWARD 1 -s 192.168.117.0/24 -j ACCEPT
     iptables -C FORWARD -d 192.168.117.0/24 -j ACCEPT 2>/dev/null ||
@@ -184,33 +184,33 @@ net_assert() {
     ip rule list | grep -q "to 192.168.117.0/24 lookup main" ||
         ip rule add pref 9000 to 192.168.117.0/24 lookup main
     # Match pref+iif because ip rule displays the numeric table ID.
-    [ -n "$AURORA_WIFI_IFACE" ] && {
-        ip rule list | grep -q "^21000:.*iif aurora0" ||
-            ip rule add pref 21000 iif aurora0 lookup "$AURORA_WIFI_IFACE" 2>/dev/null
+    [ -n "$DET_WIFI_IFACE" ] && {
+        ip rule list | grep -q "^21000:.*iif determ0" ||
+            ip rule add pref 21000 iif determ0 lookup "$DET_WIFI_IFACE" 2>/dev/null
     }
 
     # Keep table 117 as fallback when netd deletes its Wi-Fi table.
-    GW=$(ip route get 1.1.1.1 2>/dev/null | sed -n "s/.* via \([0-9.]*\) dev $AURORA_WIFI_IFACE .*/\1/p")
-    [ -n "$GW" ] && ip route replace default via "$GW" dev "$AURORA_WIFI_IFACE" table 117 2>/dev/null
-    ip rule list | grep -q "^21100:.*iif aurora0" ||
-        ip rule add pref 21100 iif aurora0 lookup 117 2>/dev/null
+    GW=$(ip route get 1.1.1.1 2>/dev/null | sed -n "s/.* via \([0-9.]*\) dev $DET_WIFI_IFACE .*/\1/p")
+    [ -n "$GW" ] && ip route replace default via "$GW" dev "$DET_WIFI_IFACE" table 117 2>/dev/null
+    ip rule list | grep -q "^21100:.*iif determ0" ||
+        ip rule add pref 21100 iif determ0 lookup 117 2>/dev/null
 }
 net_assert
 
 # Keep routing alive across netd rebuilds; never force Wi-Fi in phone mode.
-if ! kill -0 "$(cat "$AURORA/run/net-keeper.pid" 2>/dev/null)" 2>/dev/null; then
+if ! kill -0 "$(cat "$DET/run/net-keeper.pid" 2>/dev/null)" 2>/dev/null; then
     (
         fails=0
         while :; do
             net_assert 2>/dev/null
-            if [ -f "$AURORA/run/desktop-mode" ]; then
-                if [ -z "$AURORA_WIFI_IFACE" ] || [ "$(cat "/sys/class/net/$AURORA_WIFI_IFACE/operstate" 2>/dev/null)" = "up" ]; then
+            if [ -f "$DET/run/desktop-mode" ]; then
+                if [ -z "$DET_WIFI_IFACE" ] || [ "$(cat "/sys/class/net/$DET_WIFI_IFACE/operstate" 2>/dev/null)" = "up" ]; then
                     fails=0
                 else
                     fails=$((fails+1))
-                    linux_first=$(sed -n 's/^desired=//p' "$AURORA/state/boot-profile" 2>/dev/null | tail -n 1)
+                    linux_first=$(sed -n 's/^desired=//p' "$DET/state/boot-profile" 2>/dev/null | tail -n 1)
                     if [ "$linux_first" != linux-first ] && { [ "$fails" -eq 3 ] || [ $((fails % 9)) -eq 0 ]; }; then
-                        echo "$AURORA_WIFI_IFACE not up x$fails --- svc wifi enable ($(date))" >> "$AURORA/log/net-keeper.log"
+                        echo "$DET_WIFI_IFACE not up x$fails --- svc wifi enable ($(date))" >> "$DET/log/net-keeper.log"
                         timeout 15 svc wifi enable </dev/null >/dev/null 2>&1
                     fi
                 fi
@@ -221,17 +221,17 @@ if ! kill -0 "$(cat "$AURORA/run/net-keeper.pid" 2>/dev/null)" 2>/dev/null; then
             fi
         done
     ) &
-    echo $! > "$AURORA/run/net-keeper.pid"
+    echo $! > "$DET/run/net-keeper.pid"
 fi
 
-[ "$(stat -c %s "$AURORA/log/lxc.log" 2>/dev/null || echo 0)" -gt 262144 ] &&
-    tail -c 131072 "$AURORA/log/lxc.log" > "$AURORA/log/lxc.log.tmp" &&
-    mv "$AURORA/log/lxc.log.tmp" "$AURORA/log/lxc.log"
+[ "$(stat -c %s "$DET/log/lxc.log" 2>/dev/null || echo 0)" -gt 262144 ] &&
+    tail -c 131072 "$DET/log/lxc.log" > "$DET/log/lxc.log.tmp" &&
+    mv "$DET/log/lxc.log.tmp" "$DET/log/lxc.log"
 
-if ! lxc-info -P "$AURORA" -n guest 2>/dev/null | grep -q RUNNING; then
-    lxc-start -P "$AURORA" -n guest -f "$AURORA/lxc/config" -l WARN -o "$AURORA/log/lxc.log"
+if ! lxc-info -P "$DET" -n guest 2>/dev/null | grep -q RUNNING; then
+    lxc-start -P "$DET" -n guest -f "$DET/lxc/config" -l WARN -o "$DET/log/lxc.log"
     i=0
-    until lxc-info -P "$AURORA" -n guest 2>/dev/null | grep -q RUNNING; do
+    until lxc-info -P "$DET" -n guest 2>/dev/null | grep -q RUNNING; do
         i=$((i+1)); [ $i -gt 20 ] && exit 1; sleep 0.5
     done
 fi
@@ -239,7 +239,7 @@ fi
 # Fix flags inside the pivoted root; the host bind remount does not propagate.
 # ashmem is boot-ID-named, devpts lacks usable ptmx, and seatd requires VT nodes.
 BOOTID=$(cat /proc/sys/kernel/random/boot_id)
-lxc-attach -P "$AURORA" -n guest -- /bin/sh -c \
+lxc-attach -P "$DET" -n guest -- /bin/sh -c \
     "mount -o remount,bind,suid,dev,exec / 2>/dev/null; \
      [ -e /dev/ashmem$BOOTID ] || { mknod /dev/ashmem$BOOTID c 10 59 && chmod 666 /dev/ashmem$BOOTID; }; \
      mount -o remount,gid=5,mode=620,ptmxmode=666 devpts /dev/pts 2>/dev/null; \
@@ -248,7 +248,7 @@ lxc-attach -P "$AURORA" -n guest -- /bin/sh -c \
     2>/dev/null
 
 # Set ping_group_range through the host because guest procfs is read-only.
-GUEST_INIT=$(lxc-info -P "$AURORA" -n guest -pH 2>/dev/null)
+GUEST_INIT=$(lxc-info -P "$DET" -n guest -pH 2>/dev/null)
 if [ -n "$GUEST_INIT" ] && command -v nsenter >/dev/null 2>&1; then
     nsenter -t "$GUEST_INIT" -n -- sh -c \
         "echo '0 2147483647' > /proc/sys/net/ipv4/ping_group_range" ||
@@ -256,6 +256,6 @@ if [ -n "$GUEST_INIT" ] && command -v nsenter >/dev/null 2>&1; then
 fi
 
 # The host agent must outlive desktop toggles.
-if [ -x "$AURORA/bin/aurora-hostagent" ]; then
-    "$AURORA/bin/aurora-hostagent" &
+if [ -x "$DET/bin/det-hostagent" ]; then
+    "$DET/bin/det-hostagent" &
 fi

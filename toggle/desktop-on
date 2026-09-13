@@ -2,10 +2,10 @@
 # Internal-panel handoff: SurfaceFlinger must release the single-client HAL.
 
 set -u
-AURORA=${AURORA:-/data/aurora}
-LOG=$AURORA/log/toggle.log
-. "$AURORA/bin/device-config"
-. "$AURORA/bin/lifecycle-lib"
+DET=${DET:-/data/determination}
+LOG=$DET/log/toggle.log
+. "$DET/bin/device-config"
+. "$DET/bin/lifecycle-lib"
 # guacamoleb recon: composer service name is stable across this Android line.
 HWC_SVC=vendor.hwcomposer-2-4
 [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 262144 ] &&
@@ -14,26 +14,26 @@ exec >>"$LOG" 2>&1
 echo "--- desktop-on $(date)"
 
 # Claim the transition before helpers can inspect it.
-[ -f "$AURORA/run/desktop-mode" ] && { echo "already in desktop mode"; exit 0; }
-mkdir -p "$AURORA/run"
+[ -f "$DET/run/desktop-mode" ] && { echo "already in desktop mode"; exit 0; }
+mkdir -p "$DET/run"
 lc_lock_acquire || exit 1
 generation=$(lc_generation_next)
 lc_state_write ENTERING "$generation" preflight running || { lc_lock_release; exit 1; }
 # The suppressor requires this marker before it starts.
-touch "$AURORA/run/desktop-mode"
+touch "$DET/run/desktop-mode"
 # Cache connectivity reads before system_server is frozen.
-mkdir -p "$AURORA/run/connectivity-cache"
-timeout 8 cmd wifi status > "$AURORA/run/connectivity-cache/wifi-status" 2>/dev/null || true
-timeout 8 cmd wifi list-networks > "$AURORA/run/connectivity-cache/wifi-list" 2>/dev/null || true
+mkdir -p "$DET/run/connectivity-cache"
+timeout 8 cmd wifi status > "$DET/run/connectivity-cache/wifi-status" 2>/dev/null || true
+timeout 8 cmd wifi list-networks > "$DET/run/connectivity-cache/wifi-list" 2>/dev/null || true
 case "$(timeout 5 settings get global bluetooth_on 2>/dev/null)" in
-    1) echo on > "$AURORA/run/connectivity-cache/bt-status" ;;
-    0) echo off > "$AURORA/run/connectivity-cache/bt-status" ;;
+    1) echo on > "$DET/run/connectivity-cache/bt-status" ;;
+    0) echo off > "$DET/run/connectivity-cache/bt-status" ;;
 esac
 rollback() {
     rc=$?
-    if [ "$rc" -ne 0 ] && [ -f "$AURORA/run/desktop-mode" ]; then
-        echo "desktop-on failed at state $(sed -n 's/^step=//p' "$AURORA/run/transition.state" 2>/dev/null); restoring phone"
-        rm -f "$AURORA/run/desktop-mode"
+    if [ "$rc" -ne 0 ] && [ -f "$DET/run/desktop-mode" ]; then
+        echo "desktop-on failed at state $(sed -n 's/^step=//p' "$DET/run/transition.state" 2>/dev/null); restoring phone"
+        rm -f "$DET/run/desktop-mode"
         lc_pid_signal suppressor TERM "$generation"
         lc_pid_signal ss-freezer TERM "$generation"
         lc_pid_signal evgrab TERM "$generation"
@@ -43,9 +43,9 @@ rollback() {
             [ "$(getprop init.svc.$HWC_SVC)" = running ] || start $HWC_SVC 2>/dev/null || true
             sleep 1
         fi
-        if [ -x "$AURORA/bin/aurora-audio-route" ] &&
-           [ -f "$AURORA/run/audio-route.state" ]; then
-            "$AURORA/bin/aurora-audio-route" restore || true
+        if [ -x "$DET/bin/det-audio-route" ] &&
+           [ -f "$DET/run/audio-route.state" ]; then
+            "$DET/bin/det-audio-route" restore || true
         fi
         start surfaceflinger 2>/dev/null || true
         # Raw-KMS entry can leave bootanim wedged on its final frame; keep
@@ -72,17 +72,17 @@ trap rollback EXIT HUP INT TERM
 
 # Prove the guest is running before Android releases display ownership.
 lc_state_write ENTERING "$generation" guest running
-"$AURORA/bin/guest-start" || { echo "guest-start failed"; exit 1; }
-guest_state=$("$AURORA/lxc/bin/lxc-info" -P "$AURORA" -n guest -sH 2>/dev/null)
+"$DET/bin/guest-start" || { echo "guest-start failed"; exit 1; }
+guest_state=$("$DET/lxc/bin/lxc-info" -P "$DET" -n guest -sH 2>/dev/null)
 [ "$guest_state" = RUNNING ] || {
     echo "guest failed to reach RUNNING state (state=${guest_state:-unknown})"
     exit 1
 }
 
 # Grab input before Android's UI disappears.
-"$AURORA/bin/evgrab" -a -p "$AURORA/run/evgrab.legacy.pid" || { echo "evgrab failed"; exit 1; }
-evgrab_pid=$(sed -n 's/^pid=//p' "$AURORA/run/evgrab.legacy.pid" 2>/dev/null | head -n 1)
-[ -n "$evgrab_pid" ] || evgrab_pid=$(sed -n '1p' "$AURORA/run/evgrab.legacy.pid" 2>/dev/null)
+"$DET/bin/evgrab" -a -p "$DET/run/evgrab.legacy.pid" || { echo "evgrab failed"; exit 1; }
+evgrab_pid=$(sed -n 's/^pid=//p' "$DET/run/evgrab.legacy.pid" 2>/dev/null | head -n 1)
+[ -n "$evgrab_pid" ] || evgrab_pid=$(sed -n '1p' "$DET/run/evgrab.legacy.pid" 2>/dev/null)
 case "$evgrab_pid" in ''|*[!0-9]*) echo "evgrab identity unavailable"; exit 1;; esac
 lc_pid_write evgrab "$evgrab_pid" "$generation" || { echo "evgrab identity unavailable"; exit 1; }
 lc_state_write ENTERING "$generation" display-owner running
@@ -91,10 +91,10 @@ stop bootanim
 stop surfaceflinger
 
 # Keep SF stopped and restore the backlight it zeroes on every stop.
-BL_LEVEL=$AURORA_BACKLIGHT_LEVEL
-BL=$AURORA_BACKLIGHT_PATH
+BL_LEVEL=$DET_BACKLIGHT_LEVEL
+BL=$DET_BACKLIGHT_PATH
 (
-    while [ -f "$AURORA/run/desktop-mode" ]; do
+    while [ -f "$DET/run/desktop-mode" ]; do
         [ "$(getprop init.svc.surfaceflinger)" = "running" ] && {
             echo "suppressor: SF respawned, re-stopping ($(date))"
             stop surfaceflinger
@@ -108,7 +108,7 @@ lc_pid_write suppressor "$!" "$generation" || exit 1
 # Freeze system_server before its blocked display thread trips Watchdog.
 # desktop-off must SIGKILL it; SIGCONT resumes with accumulated block time.
 (
-    while [ -f "$AURORA/run/desktop-mode" ]; do
+    while [ -f "$DET/run/desktop-mode" ]; do
         pid=$(pidof system_server 2>/dev/null)
         if [ -n "$pid" ]; then
             state=$(awk '/^State:/{print $2; exit}' /proc/$pid/status 2>/dev/null)
@@ -135,31 +135,31 @@ sleep 1
 
 # Run the bounded transition while neither SF nor phoc owns HWC.
 lc_state_write ENTERING "$generation" animation running
-"$AURORA/bin/run-transition" desktop ||
+"$DET/bin/run-transition" desktop ||
     echo "WARN: native desktop transition skipped/failed rc=$? (see log/transition.log)"
 
 # Audio failure is non-fatal and remains journal-recoverable.
-if [ -x "$AURORA/bin/aurora-audio-route" ] &&
-   [ -f "$AURORA/etc/audio-owner.conf" ]; then
+if [ -x "$DET/bin/det-audio-route" ] &&
+   [ -f "$DET/etc/audio-owner.conf" ]; then
     lc_state_write ENTERING "$generation" audio running
     # Resolve an interrupted audio restore before claiming desktop audio.
-    audio_phase=$(sed -n 's/^phase=//p' "$AURORA/run/audio-owner.state" 2>/dev/null | tail -n 1)
+    audio_phase=$(sed -n 's/^phase=//p' "$DET/run/audio-owner.state" 2>/dev/null | tail -n 1)
     case "$audio_phase" in
         restoring|restore-failed)
             echo "recovering stale direct-audio journal phase=$audio_phase"
-            for audio_service in $(sed -n 's/^service=//p' "$AURORA/etc/audio-owner.conf"); do
+            for audio_service in $(sed -n 's/^service=//p' "$DET/etc/audio-owner.conf"); do
                 stop "$audio_service" 2>/dev/null || true
             done
-            "$AURORA/bin/aurora-audio-owner" recover --apply ||
+            "$DET/bin/det-audio-owner" recover --apply ||
                 echo "WARN: stale direct-audio journal recovery failed"
             ;;
     esac
-    "$AURORA/bin/aurora-audio-route" claim ||
+    "$DET/bin/det-audio-route" claim ||
         echo "WARN: direct audio claim failed; desktop continues muted"
 fi
 
 # Resolve the session preference; refusals fall back to qualified phosh.
-SESSION_RECORD=$("$AURORA/bin/session-select") || SESSION_RECORD=
+SESSION_RECORD=$("$DET/bin/session-select") || SESSION_RECORD=
 [ -n "$SESSION_RECORD" ] || { echo "session-select produced no record"; exit 1; }
 record_field() {
     printf '%s\n' "$SESSION_RECORD" | sed -n "s/^$1=//p" | head -n 1
@@ -171,8 +171,8 @@ sess_shell=$(record_field shell)
 sess_backend=$(record_field backend)
 case "$sess_compositor" in /*) ;; *) echo "session compositor path invalid"; exit 1 ;; esac
 umask 077
-printf '%s\n' "$SESSION_RECORD" > "$AURORA/run/session.active.new.$$" &&
-    mv -f "$AURORA/run/session.active.new.$$" "$AURORA/run/session.active"
+printf '%s\n' "$SESSION_RECORD" > "$DET/run/session.active.new.$$" &&
+    mv -f "$DET/run/session.active.new.$$" "$DET/run/session.active"
 
 # Raw-KMS sessions (KWin) own DRM directly and need the composer HAL gone.
 if [ "$sess_backend" = gralloc-minigbm ]; then
@@ -199,7 +199,7 @@ case "$ss_state" in
         # events once it drops --- release after their socket comes up instead.
         if [ "$sess_backend" != gralloc-minigbm ]; then
             lc_pid_signal evgrab TERM "$generation"
-            rm -f "$AURORA/run/evgrab.legacy.pid"
+            rm -f "$DET/run/evgrab.legacy.pid"
         fi
         echo "input boundary handed to guest --- system_server frozen $(date)"
         ;;
@@ -212,33 +212,33 @@ esac
 # The command-provider leaves one app_process worker per completed shell call.
 # They have no display or guest role and can occupy gigabytes after a work session.
 lc_state_write ENTERING "$generation" android-workers running
-"$AURORA/bin/desktop-memory" reclaim "$generation" ||
+"$DET/bin/desktop-memory" reclaim "$generation" ||
     echo "WARN: stale command-worker reclaim failed; desktop continues"
 
-CLOG="$AURORA/log/compositor.log"
+CLOG="$DET/log/compositor.log"
 : > "$CLOG"
 lc_state_write ENTERING "$generation" compositor running
 echo "selected session: $sess_id (compositor=$sess_compositor shell=${sess_shell:-none} backend=$sess_backend)"
 if [ "$sess_backend" = gralloc-minigbm ]; then
 # KWin path: systemd unit with a PAM/logind session (its DRM backend refuses
-# devices without one); aurora-plasma-session owns Mesa env and client spawn.
+# devices without one); det-plasma-session owns Mesa env and client spawn.
 (
     # Everything this loop does lands in CLOG, including its own early death.
     exec >> "$CLOG" 2>&1
     echo "=== compositor supervisor pid=$$ start $(date)"
     fails=0
-    while [ -f "$AURORA/run/desktop-mode" ]; do
+    while [ -f "$DET/run/desktop-mode" ]; do
         echo "--- launch $sess_id (prior consecutive fast-fails: $fails) $(date)"
         t0=$(date +%s)
-        "$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c '
+        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
             trap "echo env-prep: TERM-trap >> /tmp/envprep.log" TERM HUP INT
             tries=0
-            until [ -s /run/aurora-plasma.env ]; do
+            until [ -s /run/det-plasma.env ]; do
                 tries=$((tries+1))
                 [ "$tries" -le 3 ] || { echo "env-prep: giving up"; break; }
                 echo "env-prep: attempt $tries"
-                [ -x /usr/local/sbin/aurora-input-udevdb ] && aurora-input-udevdb 2>/dev/null
+                [ -x /usr/local/sbin/det-input-udevdb ] && det-input-udevdb 2>/dev/null
                 # KWin needs a udev DB entry for the DRM card or TakeDevice ENODEV.
                 mkdir -p /run/udev/data
                 for c in /sys/class/drm/card[0-9]; do
@@ -249,31 +249,31 @@ if [ "$sess_backend" = gralloc-minigbm ]; then
                 systemctl start systemd-logind 2>/dev/null || true
                 # Nightlight plugin segfaults under the Aug-9 patched libkwin
                 # (ABI skew with system libKF6ConfigCore); keep it off.
-                install -d -o aurora -g aurora -m 700 /home/aurora/.config
-                grep -q nightlightEnabled /home/aurora/.config/kwinrc 2>/dev/null ||
+                install -d -o detuser -g detuser -m 700 /home/detuser/.config
+                grep -q nightlightEnabled /home/detuser/.config/kwinrc 2>/dev/null ||
                     printf "[Plugins]\nnightlightEnabled=false\n" \
-                        > /home/aurora/.config/kwinrc
-                chown aurora:aurora /home/aurora/.config/kwinrc 2>/dev/null || true
+                        > /home/detuser/.config/kwinrc
+                chown detuser:detuser /home/detuser/.config/kwinrc 2>/dev/null || true
                 case "$(basename "$1")" in
-                    plasmashell|aurora-plasma-client) client=plasmashell ;;
+                    plasmashell|det-plasma-client) client=plasmashell ;;
                     *)                             client=foot ;;
                 esac
-                printf "AURORA_GRAPHICS_RENDERER=mesa\nAURORA_PLASMA_CLIENT=%s\n" "$client" \
-                    > /run/aurora-plasma.env
-                chmod 0644 /run/aurora-plasma.env
+                printf "DET_GRAPHICS_RENDERER=mesa\nDET_PLASMA_CLIENT=%s\n" "$client" \
+                    > /run/det-plasma.env
+                chmod 0644 /run/det-plasma.env
                 sleep 1
             done
             echo "env-prep: done client=$client try=$tries"' \
             plasma-env "$sess_shell" >> "$CLOG" 2>&1
-        "$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c '
+        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            systemctl restart aurora-plasma.service || exit 10
-            while systemctl is-active --quiet aurora-plasma.service; do sleep 1; done
-            journalctl -u aurora-plasma.service -n 100 --no-pager 2>/dev/null || true
+            systemctl restart det-plasma.service || exit 10
+            while systemctl is-active --quiet det-plasma.service; do sleep 1; done
+            journalctl -u det-plasma.service -n 100 --no-pager 2>/dev/null || true
         ' >> "$CLOG" 2>&1
         rc=$?
         dur=$(( $(date +%s) - t0 ))
-        [ -f "$AURORA/run/desktop-mode" ] || { echo "$sess_id exited rc=$rc after ${dur}s --- desktop mode off, stopping $(date)" >> "$CLOG"; break; }
+        [ -f "$DET/run/desktop-mode" ] || { echo "$sess_id exited rc=$rc after ${dur}s --- desktop mode off, stopping $(date)" >> "$CLOG"; break; }
         if [ "$dur" -lt 5 ]; then
             fails=$((fails+1))
             back=$fails; [ "$back" -gt 10 ] && back=10
@@ -290,27 +290,27 @@ lc_pid_write compositor "$!" "$generation" || exit 1
 else
 (
     fails=0
-    while [ -f "$AURORA/run/desktop-mode" ]; do
+    while [ -f "$DET/run/desktop-mode" ]; do
         echo "--- launch $sess_id (prior consecutive fast-fails: $fails) $(date)" >> "$CLOG"
         t0=$(date +%s)
         # Prepare root-owned input state before launching unprivileged compositor.
-        "$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c '
+        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            install -d -o aurora -g aurora -m 700 /run/user/1000
+            install -d -o detuser -g detuser -m 700 /run/user/1000
             # phoc segfaults instead of reporting an unreadable config.
             chmod a+r /etc/phoc.ini 2>/dev/null || true
-            if [ -x /usr/local/sbin/aurora-input-udevdb ]; then
-                aurora-input-udevdb 2>/dev/null && aurora-platform service-start seatd 2>/dev/null
+            if [ -x /usr/local/sbin/det-input-udevdb ]; then
+                det-input-udevdb 2>/dev/null && det-platform service-start seatd 2>/dev/null
             fi' >> "$CLOG" 2>&1
-        # aurora-platform preserves aurora's android_input supplementary group.
-        "$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c '
+        # det-platform preserves detuser's android_input supplementary group.
+        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
             export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-            exec aurora-platform run-user aurora \
-                /usr/local/bin/aurora-session-launch compositor "$1" ${2:-}
+            exec det-platform run-user detuser \
+                /usr/local/bin/det-session-launch compositor "$1" ${2:-}
         ' compositor-shim "$sess_compositor" "$sess_args" >> "$CLOG" 2>&1
         rc=$?
         dur=$(( $(date +%s) - t0 ))
-        [ -f "$AURORA/run/desktop-mode" ] || { echo "$sess_id exited rc=$rc after ${dur}s --- desktop mode off, stopping $(date)" >> "$CLOG"; break; }
+        [ -f "$DET/run/desktop-mode" ] || { echo "$sess_id exited rc=$rc after ${dur}s --- desktop mode off, stopping $(date)" >> "$CLOG"; break; }
         if [ "$dur" -lt 5 ]; then
             fails=$((fails+1))
             back=$fails; [ "$back" -gt 10 ] && back=10
@@ -332,33 +332,33 @@ if [ "$sess_backend" != gralloc-minigbm ]; then
     case "${sess_shell##*/}" in
     phosh)
         # Qualified path: dedicated launcher, systemd user unit when present.
-        while [ -f "$AURORA/run/desktop-mode" ]; do
-            "$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c '
+        while [ -f "$DET/run/desktop-mode" ]; do
+            "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
                 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
                 # OpenRC stays on the direct launcher until elogind is qualified.
-                if [ "$(aurora-platform init)" = systemd ] &&
-                        [ -f /etc/systemd/system/aurora-phosh.service ]; then
-                    systemctl stop aurora-phosh.service 2>/dev/null || true
-                    aurora-platform service-start aurora-phosh || exit 10
-                    while aurora-platform service-active aurora-phosh; do sleep 1; done
-                    journalctl -u aurora-phosh.service -n 100 --no-pager 2>/dev/null || true
+                if [ "$(det-platform init)" = systemd ] &&
+                        [ -f /etc/systemd/system/det-phosh.service ]; then
+                    systemctl stop det-phosh.service 2>/dev/null || true
+                    det-platform service-start det-phosh || exit 10
+                    while det-platform service-active det-phosh; do sleep 1; done
+                    journalctl -u det-phosh.service -n 100 --no-pager 2>/dev/null || true
                     exit 11
                 fi
-                exec aurora-platform run-user aurora /usr/local/bin/aurora-phosh-session
+                exec det-platform run-user detuser /usr/local/bin/det-phosh-session
             ' >> "$CLOG" 2>&1
-            [ -f "$AURORA/run/desktop-mode" ] || break
+            [ -f "$DET/run/desktop-mode" ] || break
             sleep 2
         done
         ;;
     *)
         # Generic shells: plain Wayland client; empty shell -> foot fallback.
-        while [ -f "$AURORA/run/desktop-mode" ]; do
-            "$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c '
+        while [ -f "$DET/run/desktop-mode" ]; do
+            "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
                 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-                exec aurora-platform run-user aurora \
-                    /usr/local/bin/aurora-session-launch client "$1"
+                exec det-platform run-user detuser \
+                    /usr/local/bin/det-session-launch client "$1"
             ' client-shim "$sess_shell" >> "$CLOG" 2>&1
-            [ -f "$AURORA/run/desktop-mode" ] || break
+            [ -f "$DET/run/desktop-mode" ] || break
             sleep 2
         done
         ;;
@@ -373,7 +373,7 @@ gralloc-minigbm) GUEST_SOCKET=/run/user/1000/wayland-0 ;;
 *)               GUEST_SOCKET=/run/user/1000/wayland-0 ;;
 esac
 i=0
-until "$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- \
+until "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- \
         /usr/bin/test -S "$GUEST_SOCKET" 2>/dev/null; do
     i=$((i + 1))
     [ "$i" -lt 150 ] || {
@@ -386,7 +386,7 @@ done
 # Raw-KMS compositors opened evdev under our grab; only now do events flow.
 if [ "$sess_backend" = gralloc-minigbm ]; then
     lc_pid_signal evgrab TERM "$generation"
-    rm -f "$AURORA/run/evgrab.legacy.pid"
+    rm -f "$DET/run/evgrab.legacy.pid"
     sleep 3
     # SF stop suspends the oplus touchpanel into gesture mode; kwin's raw-KMS
     # unblank cannot resume it (oplus atomic notifier compiled out). Manual fire.
@@ -395,8 +395,8 @@ fi
 lc_state_write DESKTOP "$generation" session committed
 trap - EXIT HUP INT TERM
 lc_lock_release
-if [ -x "$AURORA/bin/external-input" ]; then
-    "$AURORA/bin/external-input" start >/dev/null 2>&1 ||
+if [ -x "$DET/bin/external-input" ]; then
+    "$DET/bin/external-input" start >/dev/null 2>&1 ||
         echo "WARN: USB/Bluetooth peripheral bridge did not start"
 fi
 echo "desktop mode up ($sess_id session; log/compositor.log)"

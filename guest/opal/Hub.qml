@@ -298,7 +298,7 @@ Scope {
     SystemClock { id: clock; precision: SystemClock.Seconds }
     Process {
         id: bridge
-        command: ["/usr/local/bin/aurora-opal-bridge"]
+        command: ["/usr/local/bin/det-opal-bridge"]
         running: true
         stdinEnabled: true
         stdout: SplitParser {

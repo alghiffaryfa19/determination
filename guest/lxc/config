@@ -1,18 +1,18 @@
-# Aurora guest container base config (LXC).
+# Determination guest container base config (LXC).
 # The guest must see: Android /dev (binder, kgsl, ion/dmabuf, dri, input),
 # the property area, and /vendor + /system libs --- spec §1 implication chain.
 # toggle/generate-lxc-config appends only the device nodes present on the host.
 
-lxc.uts.name = aurora
+lxc.uts.name = determination
 lxc.arch = aarch64
 # guest-distro atomically retargets this compatibility pointer while the
-# container is stopped. Debian remains at /data/aurora/guest; optional
-# rootfs slots live below /data/aurora/guests/.
-lxc.rootfs.path = dir:/data/aurora/active-guest
+# container is stopped. Debian remains at /data/determination/guest; optional
+# rootfs slots live below /data/determination/guests/.
+lxc.rootfs.path = dir:/data/determination/active-guest
 lxc.init.cmd = /sbin/init
 
-# Android has no /etc/lxc conventions; keep everything under /data/aurora.
-lxc.log.file = /data/aurora/log/lxc.log
+# Android has no /etc/lxc conventions; keep everything under /data/determination.
+lxc.log.file = /data/determination/log/lxc.log
 lxc.log.level = WARN
 
 # --- Namespaces / privileges ---
@@ -57,20 +57,20 @@ lxc.mount.entry = /dev/__properties__ dev/__properties__ none bind,ro,create=dir
 
 # --- Guest -> host control channel (spec §4 convenience) ---
 # The guest cannot run root actions on the Android side (leave desktop mode,
-# power off). It drops command files here; aurora-hostagent (root) watches the
+# power off). It drops command files here; det-hostagent (root) watches the
 # host side and acts. /mnt is a plain rootfs dir systemd never remounts, so
 # the bind is stable (unlike /run, which systemd shadows with a tmpfs).
-lxc.mount.entry = /data/aurora/run/control mnt/aurora-control none bind,create=dir 0 0
+lxc.mount.entry = /data/determination/run/control mnt/det-control none bind,create=dir 0 0
 
 # Generated config also binds the companion app's device-protected files dir
-# at /mnt/aurora-presenter when the app is installed. /run is avoided
+# at /mnt/determination-presenter when the app is installed. /run is avoided
 # because systemd's guest tmpfs would hide an LXC mount placed beneath it.
 
 lxc.cgroup.devices.allow = a *:* rwm
 
 # --- Network: veth into Android's connectivity, NAT'd by toggle/guest-start ---
 lxc.net.0.type = veth
-lxc.net.0.link = aurora0
+lxc.net.0.link = determ0
 lxc.net.0.flags = up
 lxc.net.0.ipv4.address = 192.168.117.2/24
 lxc.net.0.ipv4.gateway = 192.168.117.1

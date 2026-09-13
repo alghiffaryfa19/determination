@@ -1,12 +1,12 @@
-#include "aurora/control/sessions.hpp"
+#include "determination/control/sessions.hpp"
 
-#include "aurora/control/system.hpp"
+#include "determination/control/system.hpp"
 
 #include <algorithm>
 #include <sstream>
 #include <dirent.h>
 
-namespace aurora::control {
+namespace determination::control {
 namespace {
 
 struct EnumSet {
@@ -212,4 +212,4 @@ std::string sessions_json(const std::vector<SessionFile> &files,
     return output.str();
 }
 
-} // namespace aurora::control
+} // namespace determination::control

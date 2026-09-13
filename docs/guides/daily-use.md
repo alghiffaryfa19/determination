@@ -16,6 +16,6 @@ does not mean concurrent desktop output has passed its hardware gate.
 Use the [troubleshooting guide](../operations/troubleshooting-and-qualification.md)
 when mode state, guest health, or presenter status is degraded.
 
-Application integration is installed and inspected with `aurora compat setup` and
-`aurora compat check`. See the [application compatibility guide](app-compatibility.md)
+Application integration is installed and inspected with `det compat setup` and
+`det compat check`. See the [application compatibility guide](app-compatibility.md)
 for the live session contracts and remaining hardware/API limits.

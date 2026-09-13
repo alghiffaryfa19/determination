@@ -546,7 +546,7 @@ Cleaning... 0 files.
     translations                             : false
     ukify                                    : disabled
     userdb                                   : false
-    version-tag                              : 257.13-aurora
+    version-tag                              : 257.13-determination
 
 Found ninja-1.12.1 at /usr/bin/ninja
 ninja: Entering directory `build/omarchy-alarm/systemd-build'

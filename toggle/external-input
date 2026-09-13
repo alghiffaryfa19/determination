@@ -2,11 +2,11 @@
 # USB/Bluetooth input capture for internal phoc or concurrent external KWin.
 set -u
 
-AURORA=/data/aurora
-LXC="$AURORA/lxc/bin/lxc-attach -P $AURORA -n guest --"
-PIDFILE="$AURORA/run/external-input.pid"
-SOCKET="$AURORA/run/control/external-input.fifo"
-FORWARDER="$AURORA/bin/aurora-input-forwarder"
+DET=/data/determination
+LXC="$DET/lxc/bin/lxc-attach -P $DET -n guest --"
+PIDFILE="$DET/run/external-input.pid"
+SOCKET="$DET/run/control/external-input.fifo"
+FORWARDER="$DET/bin/det-input-forwarder"
 
 read_pid() {
     pid=$(cat "$PIDFILE" 2>/dev/null || true)
@@ -25,12 +25,12 @@ status() {
 case "${1:-status}" in
     start)
         [ -x "$FORWARDER" ] || {
-            echo "FATAL: aurora-input-forwarder is not installed" >&2
+            echo "FATAL: det-input-forwarder is not installed" >&2
             exit 2
         }
-        if [ ! -f "$AURORA/run/desktop-mode" ]; then
-            "$AURORA/bin/guest-start" >/dev/null 2>&1 || exit 1
-            $LXC /bin/systemctl is-active --quiet aurora-plasma-presenter.service || {
+        if [ ! -f "$DET/run/desktop-mode" ]; then
+            "$DET/bin/guest-start" >/dev/null 2>&1 || exit 1
+            $LXC /bin/systemctl is-active --quiet det-plasma-presenter.service || {
                 echo "FATAL: no internal or external desktop is active" >&2
                 exit 3
             }
@@ -44,10 +44,10 @@ case "${1:-status}" in
         # The Android capture helper is root, while the Wayland client must run
         # as the same uid as KWin so KWin can identify its executable and apply
         # the narrow fake-input desktop permission. Android AID_SYSTEM and the
-        # guest aurora account intentionally share gid 1000.
+        # guest detuser account intentionally share gid 1000.
         chown 0:1000 "$SOCKET"
         chmod 0660 "$SOCKET"
-        $LXC /bin/systemctl start aurora-input-proxy.service || exit 1
+        $LXC /bin/systemctl start det-input-proxy.service || exit 1
         i=0
         while [ ! -p "$SOCKET" ] && [ "$i" -lt 50 ]; do
             i=$((i + 1))
@@ -55,16 +55,16 @@ case "${1:-status}" in
         done
         [ -p "$SOCKET" ] || {
             echo "FATAL: guest input proxy FIFO did not appear" >&2
-            $LXC /bin/systemctl stop aurora-input-proxy.service 2>/dev/null || true
+            $LXC /bin/systemctl stop det-input-proxy.service 2>/dev/null || true
             exit 5
         }
-        setsid "$FORWARDER" "$SOCKET" >>"$AURORA/log/external-input.log" 2>&1 &
+        setsid "$FORWARDER" "$SOCKET" >>"$DET/log/external-input.log" 2>&1 &
         pid=$!
         echo "$pid" > "$PIDFILE"
         sleep 0.2
         kill -0 "$pid" 2>/dev/null || {
             rm -f "$PIDFILE"
-            $LXC /bin/systemctl stop aurora-input-proxy.service 2>/dev/null || true
+            $LXC /bin/systemctl stop det-input-proxy.service 2>/dev/null || true
             echo "FATAL: peripheral forwarder did not stay alive" >&2
             exit 6
         }
@@ -74,7 +74,7 @@ case "${1:-status}" in
         read_pid
         [ -z "$pid" ] || kill -TERM "$pid" 2>/dev/null || true
         rm -f "$PIDFILE"
-        $LXC /bin/systemctl stop aurora-input-proxy.service 2>/dev/null || true
+        $LXC /bin/systemctl stop det-input-proxy.service 2>/dev/null || true
         rm -f "$SOCKET"
         echo "inactive"
         ;;

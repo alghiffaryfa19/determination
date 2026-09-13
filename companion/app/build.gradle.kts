@@ -6,18 +6,18 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-val auroraVersion = Properties().apply {
+val determinationVersion = Properties().apply {
     rootProject.file("../version.properties").inputStream().use { load(it) }
 }
-val auroraVersionName = auroraVersion.getProperty("version")
+val determinationVersionName = determinationVersion.getProperty("version")
     ?: error("version.properties has no version")
-val auroraVersionCode = auroraVersion.getProperty("versionCode")?.toIntOrNull()
+val determinationVersionCode = determinationVersion.getProperty("versionCode")?.toIntOrNull()
     ?: error("version.properties has no numeric versionCode")
-val auroraCodename = auroraVersion.getProperty("codename")
+val determinationCodename = determinationVersion.getProperty("codename")
     ?: error("version.properties has no codename")
 
 android {
-    namespace = "com.aurora.companion"
+    namespace = "com.determination.companion"
     compileSdk = 35
     ndkVersion = "27.2.12479018"
 
@@ -34,12 +34,12 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.aurora.companion"
+        applicationId = "com.determination.companion"
         minSdk = 26
         targetSdk = 35
-        versionCode = auroraVersionCode
-        versionName = auroraVersionName
-        buildConfigField("String", "RELEASE_CODENAME", "\"$auroraCodename\"")
+        versionCode = determinationVersionCode
+        versionName = determinationVersionName
+        buildConfigField("String", "RELEASE_CODENAME", "\"$determinationCodename\"")
         ndk {
             abiFilters += listOf("arm64-v8a", "armeabi-v7a")
         }

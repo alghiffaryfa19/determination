@@ -2,7 +2,7 @@
 
 ## Supported security boundary
 
-Aurora is currently a personal-device alpha. The guest and host control
+Determination is currently a personal-device alpha. The guest and host control
 boundary is prototype-grade. Do not rely on it to isolate untrusted desktop
 software or Android applications.
 

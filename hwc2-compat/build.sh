@@ -387,8 +387,8 @@ install() {
         [ -f "out/$library" ] || { echo "missing out/$library" >&2; exit 1; }
         "$ADB" push "out/$library" /sdcard/Download/ >/dev/null
     done
-    "$ADB" shell "su -c 'set -eu; target=/data/aurora/guest/usr/lib/android; \
-        stage=\$target/.aurora-stage-\$\$; mkdir -p \$stage; \
+    "$ADB" shell "su -c 'set -eu; target=/data/determination/guest/usr/lib/android; \
+        stage=\$target/.determination-stage-\$\$; mkdir -p \$stage; \
         for library in libhwc2_compat_layer.so libui_compat_layer.so; do \
           cp /sdcard/Download/\$library \$stage/\$library; chmod 644 \$stage/\$library; \
         done; mv \$stage/libhwc2_compat_layer.so \$target/; \

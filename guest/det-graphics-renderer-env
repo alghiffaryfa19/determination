@@ -1,0 +1,68 @@
+#!/bin/sh
+# Source this file from a Mesa compositor session.
+#
+# auto          system Mesa chooses a native hardware driver
+# mesa-prefix   Mesa from DET_MESA_PREFIX chooses a native hardware driver
+# zink          zink over the system-selected Vulkan ICD
+# turnip-zink   guacamoleb's explicitly selected zink/Turnip/KGSL proof
+
+# GLVND otherwise discovers both Mesa and libhybris.  A Mesa compositor must
+# never load the libhybris EGL vendor: Android bionic TLS is not valid in this
+# glibc process.  Keep vendor EGL confined to det-gralloc-pool.
+if [ -n "${DET_MESA_EGL_VENDOR:-}" ]; then
+    export __EGL_VENDOR_LIBRARY_FILENAMES="$DET_MESA_EGL_VENDOR"
+else
+    for det_mesa_vendor in \
+        /usr/share/glvnd/egl_vendor.d/*mesa*.json \
+        /usr/local/share/glvnd/egl_vendor.d/*mesa*.json
+    do
+        [ -r "$det_mesa_vendor" ] || continue
+        export __EGL_VENDOR_LIBRARY_FILENAMES="$det_mesa_vendor"
+        break
+    done
+    unset det_mesa_vendor
+fi
+
+det_prepend_mesa_prefix() {
+    det_mesa_prefix=${DET_MESA_PREFIX:-/opt/mesa}
+    det_mesa_lib="$det_mesa_prefix/lib/aarch64-linux-gnu"
+    [ -d "$det_mesa_lib" ] || {
+        echo "FATAL: Mesa prefix library directory missing: $det_mesa_lib" >&2
+        return 1
+    }
+    export LD_LIBRARY_PATH="$det_mesa_lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export LIBGL_DRIVERS_PATH="$det_mesa_lib/dri"
+}
+
+DET_EXTERNAL_RENDERER=${DET_EXTERNAL_RENDERER:-auto}
+case "$DET_EXTERNAL_RENDERER" in
+    auto)
+        unset MESA_LOADER_DRIVER_OVERRIDE ZINK_MATCH_ANY_DEVICE
+        unset VK_DRIVER_FILES VK_ICD_FILENAMES
+        ;;
+    mesa-prefix)
+        det_prepend_mesa_prefix
+        unset MESA_LOADER_DRIVER_OVERRIDE ZINK_MATCH_ANY_DEVICE
+        unset VK_DRIVER_FILES VK_ICD_FILENAMES
+        ;;
+    zink)
+        [ -z "${DET_MESA_PREFIX:-}" ] || det_prepend_mesa_prefix
+        export MESA_LOADER_DRIVER_OVERRIDE=zink
+        unset ZINK_MATCH_ANY_DEVICE
+        [ -z "${DET_VK_DRIVER_FILES:-}" ] || \
+            export VK_DRIVER_FILES="$DET_VK_DRIVER_FILES"
+        ;;
+    turnip-zink)
+        [ -r /opt/mesa/env.sh ] || {
+            echo "FATAL: Turnip/Zink profile requested but /opt/mesa/env.sh is missing" >&2
+            return 1
+        }
+        . /opt/mesa/env.sh
+        ;;
+    *)
+        echo "FATAL: invalid DET_EXTERNAL_RENDERER=$DET_EXTERNAL_RENDERER" >&2
+        return 2
+        ;;
+esac
+export DET_EXTERNAL_RENDERER
+unset -f det_prepend_mesa_prefix 2>/dev/null || true

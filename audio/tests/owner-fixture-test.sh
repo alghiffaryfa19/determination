@@ -6,10 +6,10 @@ PROBE=$2
 FIXTURE=$(mktemp -d)
 trap 'rm -rf "$FIXTURE"' EXIT
 
-mkdir -p "$FIXTURE/aurora/bin" "$FIXTURE/aurora/etc" "$FIXTURE/root/proc/asound" \
+mkdir -p "$FIXTURE/det/bin" "$FIXTURE/det/etc" "$FIXTURE/root/proc/asound" \
     "$FIXTURE/root/proc/sys/kernel/random" "$FIXTURE/root/dev/snd" \
     "$FIXTURE/services"
-cp "$PROBE" "$FIXTURE/aurora/bin/aurora-audio-probe"
+cp "$PROBE" "$FIXTURE/det/bin/det-audio-probe"
 printf ' 0 [Tavil]: msm - sm8150-tavil-snd-card\n' > "$FIXTURE/root/proc/asound/cards"
 printf 'fixture-boot-id\n' > "$FIXTURE/root/proc/sys/kernel/random/boot_id"
 printf 'running\n' > "$FIXTURE/services/audioserver"
@@ -20,7 +20,7 @@ printf '%s\n' \
     'card_contains=sm8150-tavil-snd-card' \
     'service=audioserver' \
     'service=vendor.audio-hal' \
-    'timeout_ms=1000' > "$FIXTURE/aurora/etc/audio-owner.conf"
+    'timeout_ms=1000' > "$FIXTURE/det/etc/audio-owner.conf"
 
 printf '%s\n' \
     '#!/bin/sh' \
@@ -43,7 +43,7 @@ printf '%s\n' \
     'fi' > "$FIXTURE/setprop"
 chmod +x "$FIXTURE/getprop" "$FIXTURE/setprop"
 
-COMMON="--root $FIXTURE/aurora --profile $FIXTURE/aurora/etc/audio-owner.conf --probe $FIXTURE/aurora/bin/aurora-audio-probe --probe-root $FIXTURE/root --getprop $FIXTURE/getprop --setprop $FIXTURE/setprop"
+COMMON="--root $FIXTURE/det --profile $FIXTURE/det/etc/audio-owner.conf --probe $FIXTURE/det/bin/det-audio-probe --probe-root $FIXTURE/root --getprop $FIXTURE/getprop --setprop $FIXTURE/setprop"
 # shellcheck disable=SC2086 -- fixture paths contain no whitespace.
 $OWNER claim $COMMON | grep -q '"apply":false'
 grep -q running "$FIXTURE/services/audioserver"
@@ -52,9 +52,9 @@ grep -q running "$FIXTURE/services/audioserver"
 $OWNER claim --apply $COMMON | grep -q 'hardware claimed'
 grep -q stopped "$FIXTURE/services/audioserver"
 grep -q stopped "$FIXTURE/services/vendor.audio-hal"
-test -f "$FIXTURE/aurora/run/control/audio-claimed"
+test -f "$FIXTURE/det/run/control/audio-claimed"
 # shellcheck disable=SC2086 -- fixture paths contain no whitespace.
-$OWNER status --root "$FIXTURE/aurora" | grep -q '"phase":"claimed"'
+$OWNER status --root "$FIXTURE/det" | grep -q '"phase":"claimed"'
 
 # A post-claim guest holder must block Android restoration until it releases.
 mkdir -p "$FIXTURE/root/proc/77/fd"
@@ -66,7 +66,7 @@ if $OWNER restore --apply $COMMON >/dev/null 2>&1; then
     exit 1
 fi
 grep -q stopped "$FIXTURE/services/audioserver"
-test ! -e "$FIXTURE/aurora/run/control/audio-claimed"
+test ! -e "$FIXTURE/det/run/control/audio-claimed"
 rm -f "$FIXTURE/root/proc/77/fd/9"
 # shellcheck disable=SC2086 -- fixture paths contain no whitespace.
 $OWNER recover --apply $COMMON | grep -q 'ownership restored'
@@ -75,7 +75,7 @@ $OWNER recover --apply $COMMON | grep -q 'ownership restored'
 grep -q running "$FIXTURE/services/audioserver"
 grep -q running "$FIXTURE/services/vendor.audio-hal"
 # shellcheck disable=SC2086 -- fixture paths contain no whitespace.
-$OWNER status --root "$FIXTURE/aurora" | grep -q '"phase":"restored"'
+$OWNER status --root "$FIXTURE/det" | grep -q '"phase":"restored"'
 
 # A surviving /dev/snd holder must abort the claim and restore both services.
 printf 'still-owning-audio\n' > "$FIXTURE/root/proc/77/comm"
@@ -87,4 +87,4 @@ if $OWNER claim --apply $COMMON >/dev/null 2>&1; then
 fi
 grep -q running "$FIXTURE/services/audioserver"
 grep -q running "$FIXTURE/services/vendor.audio-hal"
-$OWNER status --root "$FIXTURE/aurora" | grep -q '"phase":"rolled-back"'
+$OWNER status --root "$FIXTURE/det" | grep -q '"phase":"rolled-back"'

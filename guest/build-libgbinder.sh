@@ -13,9 +13,9 @@ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:${PKG
 B=${B:-/root/build}
 mkdir -p "$B"
 
-if command -v aurora-platform >/dev/null 2>&1; then
-    aurora-platform package-refresh
-    aurora-platform deps libgbinder
+if command -v det-platform >/dev/null 2>&1; then
+    det-platform package-refresh
+    det-platform deps libgbinder
 else
     DEBIAN_FRONTEND=noninteractive apt-get install -y git build-essential pkg-config libglib2.0-dev
 fi

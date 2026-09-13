@@ -24,7 +24,7 @@ shares the vendor kernel and borrows Android's hardware ecosystem through either
 libhybris/HWC or native DRM/Turnip. That is coherent. It accepts the ugly facts
 instead of pretending a 2019 Qualcomm phone is a standards-compliant PC.
 
-But let us not bullshit ourselves. Aurora is currently an excellent,
+But let us not bullshit ourselves. Determination is currently an excellent,
 well-recorded **OnePlus 7 bring-up**, not a platform. Its internal-panel mode is
 held together by shell supervisors, global device permissions, undocumented
 vendor behaviour encoded as patches, and the small matter of freezing
@@ -334,7 +334,7 @@ backend-class quirks, and which still demand source changes.
 
 ## Final verdict
 
-Aurora is ambitious in the useful sense: it attacks the ugly integration
+Determination is ambitious in the useful sense: it attacks the ugly integration
 layer everyone else avoids, and it has already produced results that deserve to
 be taken seriously. The architecture's core—Android PID 1, shared vendor kernel,
 containerized GNU userspace, explicit display arbitration—is sound for the

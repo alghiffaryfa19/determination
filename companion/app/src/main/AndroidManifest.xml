@@ -2,13 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <permission
-        android:name="com.aurora.permission.CONTROL"
+        android:name="com.determination.permission.CONTROL"
         android:description="@string/control_permission_description"
         android:label="@string/control_permission_label"
         android:protectionLevel="signature" />
 
     <!-- The companion is a UI, updater, and optional Android external-display
-         presenter. Aurora audio is direct ALSA/PipeWire hardware access;
+         presenter. Determination audio is direct ALSA/PipeWire hardware access;
          the network permission is used only for explicit update checks/downloads. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -23,7 +23,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true"
-        android:theme="@style/Theme.Aurora">
+        android:theme="@style/Theme.Determination">
 
         <activity
             android:name=".MainActivity"
@@ -43,14 +43,14 @@
             android:excludeFromRecents="true"
             android:exported="true"
             android:noHistory="true"
-            android:theme="@style/Theme.Aurora.Dialog" />
+            android:theme="@style/Theme.Determination.Dialog" />
 
         <activity
             android:name=".ShareToLinuxActivity"
             android:exported="true"
             android:label="@string/share_to_linux"
             android:noHistory="true"
-            android:theme="@style/Theme.Aurora.Dialog">
+            android:theme="@style/Theme.Determination.Dialog">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -61,13 +61,13 @@
         <!-- Ordinary apps may ask the user to change mode; no app can silently
              acquire display ownership through this activity. -->
         <activity
-            android:name=".AuroraModeRequestActivity"
+            android:name=".DeterminationModeRequestActivity"
             android:excludeFromRecents="true"
             android:exported="true"
             android:noHistory="true"
-            android:theme="@style/Theme.Aurora.Dialog">
+            android:theme="@style/Theme.Determination.Dialog">
             <intent-filter>
-                <action android:name="com.aurora.action.REQUEST_MODE" />
+                <action android:name="com.determination.action.REQUEST_MODE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -75,23 +75,23 @@
         <!-- Permissionless but read-only. Call as an explicit ordered broadcast
              and consume result extras; there is no su fallback. -->
         <receiver
-            android:name=".AuroraStatusReceiver"
+            android:name=".DeterminationStatusReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.aurora.action.STATUS" />
-                <action android:name="com.aurora.action.CAPABILITIES" />
-                <action android:name="com.aurora.action.METRICS" />
+                <action android:name="com.determination.action.STATUS" />
+                <action android:name="com.determination.action.CAPABILITIES" />
+                <action android:name="com.determination.action.METRICS" />
             </intent-filter>
         </receiver>
 
-        <!-- Trusted integrations use generated IAuroraControl AIDL.
+        <!-- Trusted integrations use generated IDeterminationControl AIDL.
              Signature permission prevents arbitrary silent transitions. -->
         <service
-            android:name=".AuroraControlService"
+            android:name=".DeterminationControlService"
             android:exported="true"
-            android:permission="com.aurora.permission.CONTROL">
+            android:permission="com.determination.permission.CONTROL">
             <intent-filter>
-                <action android:name="com.aurora.action.BIND_CONTROL" />
+                <action android:name="com.determination.action.BIND_CONTROL" />
             </intent-filter>
         </service>
 
@@ -108,7 +108,7 @@
         </service>
 
         <!-- Optional concurrent-DP adapter. It owns only an Android Presentation
-             surface; aurorad, guest lifecycle and all audio remain independent. -->
+             surface; detd, guest lifecycle and all audio remain independent. -->
         <service
             android:name=".ExternalDisplayService"
             android:directBootAware="true"

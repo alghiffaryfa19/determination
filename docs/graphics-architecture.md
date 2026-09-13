@@ -1,6 +1,6 @@
 # Compatibility graphics architecture
 
-Aurora's product graphics invariant is:
+Determination's product graphics invariant is:
 
 > Use the device's Android vendor EGL/GLES implementation through libhybris.
 
@@ -98,9 +98,9 @@ Captured outputs: `artifacts/hybris-minigbm-20260719.txt` and
 Run the display-safe benchmark with:
 
 ```sh
-./aurora hybrid-bench
+./det hybrid-bench
 # Optional reproducible geometry/count override:
-./aurora hybrid-bench 1080 2340 240
+./det hybrid-bench 1080 2340 240
 ```
 
 On guacamoleb at 1080x2340, 30 warmup + 240 measured frames produced:

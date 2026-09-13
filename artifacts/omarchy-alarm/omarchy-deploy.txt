@@ -1,1 +1,1 @@
-aurora-omarchy: files ready (not a graphics qualification)
+det-omarchy: files ready (not a graphics qualification)

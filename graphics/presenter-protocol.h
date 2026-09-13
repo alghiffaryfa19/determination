@@ -1,7 +1,7 @@
 #pragma once
 
 /*
- * Aurora zero-copy presenter protocol.
+ * Determination zero-copy presenter protocol.
  *
  * The control packets travel over AF_UNIX SOCK_SEQPACKET. REGISTER is followed
  * by one AHardwareBuffer_sendHandleToUnixSocket() message. PRESENT optionally
@@ -15,26 +15,26 @@
 extern "C" {
 #endif
 
-#define AURORA_PRESENTER_MAGIC 0x44545031u /* "DTP1" */
-#define AURORA_PRESENTER_VERSION 1u
+#define DET_PRESENTER_MAGIC 0x44545031u /* "DTP1" */
+#define DET_PRESENTER_VERSION 1u
 
-enum aurora_presenter_op {
-    AURORA_PRESENTER_REGISTER = 1,
-    AURORA_PRESENTER_PRESENT = 2,
-    AURORA_PRESENTER_UNREGISTER = 3,
+enum det_presenter_op {
+    DET_PRESENTER_REGISTER = 1,
+    DET_PRESENTER_PRESENT = 2,
+    DET_PRESENTER_UNREGISTER = 3,
 };
 
 /* Response opcodes use the high bit and do not fit a pre-C23 enum's int. */
-#define AURORA_PRESENTER_COMPLETE UINT32_C(0x80000002)
-#define AURORA_PRESENTER_ERROR UINT32_C(0x800000ff)
+#define DET_PRESENTER_COMPLETE UINT32_C(0x80000002)
+#define DET_PRESENTER_ERROR UINT32_C(0x800000ff)
 
-enum aurora_presenter_flags {
-    AURORA_PRESENTER_HAS_ACQUIRE_FENCE = 1u << 0,
-    AURORA_PRESENTER_HAS_PRESENT_FENCE = 1u << 1,
-    AURORA_PRESENTER_HAS_RELEASE_FENCE = 1u << 2,
+enum det_presenter_flags {
+    DET_PRESENTER_HAS_ACQUIRE_FENCE = 1u << 0,
+    DET_PRESENTER_HAS_PRESENT_FENCE = 1u << 1,
+    DET_PRESENTER_HAS_RELEASE_FENCE = 1u << 2,
 };
 
-struct aurora_presenter_packet {
+struct det_presenter_packet {
     uint32_t magic;
     uint16_t version;
     uint16_t size;
@@ -56,22 +56,22 @@ struct aurora_presenter_packet {
 };
 
 #ifdef __cplusplus
-static_assert(sizeof(aurora_presenter_packet) == 96,
+static_assert(sizeof(det_presenter_packet) == 96,
               "presenter protocol layout changed");
 #else
-_Static_assert(sizeof(struct aurora_presenter_packet) == 96,
+_Static_assert(sizeof(struct det_presenter_packet) == 96,
                "presenter protocol layout changed");
 #endif
 
-static inline struct aurora_presenter_packet aurora_presenter_packet_init(uint32_t op)
+static inline struct det_presenter_packet det_presenter_packet_init(uint32_t op)
 {
 #ifdef __cplusplus
-    struct aurora_presenter_packet packet{};
+    struct det_presenter_packet packet{};
 #else
-    struct aurora_presenter_packet packet = {0};
+    struct det_presenter_packet packet = {0};
 #endif
-    packet.magic = AURORA_PRESENTER_MAGIC;
-    packet.version = AURORA_PRESENTER_VERSION;
+    packet.magic = DET_PRESENTER_MAGIC;
+    packet.version = DET_PRESENTER_VERSION;
     packet.size = (uint16_t)sizeof(packet);
     packet.op = op;
     return packet;

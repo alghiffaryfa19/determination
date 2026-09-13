@@ -1,5 +1,5 @@
 #!/bin/sh
-# Aurora: the ARM guest runs Hyprland directly with no uwsm session, so
+# Determination: the ARM guest runs Hyprland directly with no uwsm session, so
 # uwsm-app has nothing to wrap. Launch apps straight through; callers pass
 # `-- cmd...` exactly as they would to uwsm-app.
 set -u

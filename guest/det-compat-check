@@ -1,0 +1,70 @@
+#!/bin/sh
+# Report the application-facing desktop contract from inside a live session.
+set -u
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+if [ "${1:-}" = --live ] && [ "$(id -u)" -eq 0 ]; then
+    phosh_pid=$(pgrep -x phosh 2>/dev/null | head -n 1)
+    [ -n "$phosh_pid" ] || { echo 'FAIL  Phosh is not running'; exit 1; }
+    proc_env=/proc/$phosh_pid/environ
+    env_value() { tr '\000' '\n' < "$proc_env" | sed -n "s/^$1=//p" | head -n 1; }
+    exec det-platform run-user detuser env \
+        HOME=/home/detuser USER=detuser LOGNAME=detuser \
+        XDG_RUNTIME_DIR="$(env_value XDG_RUNTIME_DIR)" \
+        XDG_SESSION_ID="$(env_value XDG_SESSION_ID)" \
+        WAYLAND_DISPLAY="$(env_value WAYLAND_DISPLAY)" \
+        DBUS_SESSION_BUS_ADDRESS="$(env_value DBUS_SESSION_BUS_ADDRESS)" \
+        XDG_SESSION_TYPE="$(env_value XDG_SESSION_TYPE)" \
+        XDG_CURRENT_DESKTOP="$(env_value XDG_CURRENT_DESKTOP)" \
+        EGL_PLATFORM="$(env_value EGL_PLATFORM)" \
+        HYBRIS_EGLPLATFORM="$(env_value HYBRIS_EGLPLATFORM)" \
+        GSK_RENDERER="$(env_value GSK_RENDERER)" \
+        GTK_USE_PORTAL="$(env_value GTK_USE_PORTAL)" \
+        MOZ_ENABLE_WAYLAND="$(env_value MOZ_ENABLE_WAYLAND)" \
+        /usr/local/bin/det-compat-check
+fi
+
+passes=0
+warnings=0
+failures=0
+pass() { passes=$((passes + 1)); printf 'PASS  %s\n' "$*"; }
+warn() { warnings=$((warnings + 1)); printf 'WARN  %s\n' "$*"; }
+fail() { failures=$((failures + 1)); printf 'FAIL  %s\n' "$*"; }
+
+[ "$(id -u)" -eq 1000 ] && pass 'session runs as uid 1000' || fail "session uid is $(id -u), expected 1000"
+[ "${XDG_SESSION_TYPE:-}" = wayland ] && pass 'Wayland session identity' || fail 'XDG_SESSION_TYPE is not wayland'
+case "${XDG_CURRENT_DESKTOP:-}" in *Phosh*) pass 'Phosh desktop identity' ;; *) fail 'XDG_CURRENT_DESKTOP does not advertise Phosh' ;; esac
+[ -n "${XDG_RUNTIME_DIR:-}" ] && [ -d "$XDG_RUNTIME_DIR" ] && pass 'XDG runtime directory' || fail 'XDG runtime directory is absent'
+[ -n "${WAYLAND_DISPLAY:-}" ] && [ -S "${XDG_RUNTIME_DIR:-/nonexistent}/${WAYLAND_DISPLAY:-wayland-0}" ] && pass 'Wayland compositor socket' || fail 'Wayland compositor socket is absent'
+[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ] && pass 'session D-Bus address' || fail 'session D-Bus address is absent'
+
+session_id=${XDG_SESSION_ID:-}
+if [ -n "$session_id" ] && loginctl show-session "$session_id" -p Name -p Type -p Class >/dev/null 2>&1; then
+    pass "logind session $session_id"
+elif loginctl list-sessions --no-legend 2>/dev/null | awk '$3 == "detuser" { found=1 } END { exit !found }'; then
+    pass 'logind knows detuser'
+else
+    fail 'logind has no graphical user session'
+fi
+
+bus_has() {
+    command -v gdbus >/dev/null 2>&1 || return 1
+    gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus \
+        --method org.freedesktop.DBus.NameHasOwner "$1" 2>/dev/null | grep -q true
+}
+bus_has org.freedesktop.portal.Desktop && pass 'XDG desktop portal' || fail 'XDG desktop portal is not active'
+bus_has org.freedesktop.secrets && pass 'Secret Service' || warn 'Secret Service is not active'
+bus_has org.a11y.Bus && pass 'accessibility bus' || warn 'accessibility bus is not active'
+bus_has org.sigxcpu.Feedback && pass 'feedback service' || warn 'feedback service is not active yet'
+
+[ "${EGL_PLATFORM:-}" = wayland ] && [ "${HYBRIS_EGLPLATFORM:-}" = wayland ] && \
+    pass 'applications use hybris Wayland EGL' || fail 'application EGL platform is not Wayland'
+[ "${GSK_RENDERER:-}" = ngl ] && pass 'GTK4 GLES renderer' || warn 'GTK4 renderer is not pinned to ngl'
+[ "${GTK_USE_PORTAL:-}" = 1 ] && pass 'GTK portal integration' || warn 'GTK_USE_PORTAL is not enabled'
+[ "${MOZ_ENABLE_WAYLAND:-}" = 1 ] && pass 'Firefox Wayland integration' || warn 'Firefox Wayland integration is not enabled'
+
+command -v flatpak >/dev/null 2>&1 && pass 'Flatpak runtime available' || warn 'Flatpak is not installed'
+command -v xdg-open >/dev/null 2>&1 && pass 'XDG URI dispatcher available' || warn 'xdg-open is not installed'
+
+printf '\nSummary: %d pass, %d warning, %d failure\n' "$passes" "$warnings" "$failures"
+[ "$failures" -eq 0 ]

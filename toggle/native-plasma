@@ -13,22 +13,22 @@
 # Ends by itself; desktop-off-style restore. Logs: /data/local/tmp/
 # native-plasma.out + kwin log at guest /var/log/kwin.log (pulled by caller).
 set -u
-AURORA=/data/aurora
-LXC="$AURORA/lxc/bin/lxc-attach -P $AURORA -n guest --"
-GATE="$AURORA/run/native-gate"
-. "$AURORA/bin/device-config"
-BL=$AURORA_BACKLIGHT_PATH
-BL_LEVEL=$AURORA_BACKLIGHT_LEVEL
+DET=/data/determination
+LXC="$DET/lxc/bin/lxc-attach -P $DET -n guest --"
+GATE="$DET/run/native-gate"
+. "$DET/bin/device-config"
+BL=$DET_BACKLIGHT_PATH
+BL_LEVEL=$DET_BACKLIGHT_LEVEL
 STAGE="${1:-kwin}"
 
-# This script is the old native-Mesa experiment. Production Aurora
+# This script is the old native-Mesa experiment. Production Determination
 # deliberately defaults to vendor EGL/GLES through libhybris for GPU breadth.
 # Requiring an explicit override prevents a diagnostic Turnip stack from
 # silently becoming the product graphics architecture again.
-if [ "$AURORA_GRAPHICS_RENDERER" != mesa ]; then
-    echo "FATAL: native-plasma uses Mesa/Zink, but AURORA_GRAPHICS_RENDERER=$AURORA_GRAPHICS_RENDERER"
+if [ "$DET_GRAPHICS_RENDERER" != mesa ]; then
+    echo "FATAL: native-plasma uses Mesa/Zink, but DET_GRAPHICS_RENDERER=$DET_GRAPHICS_RENDERER"
     echo "Use the libhybris compositor path. For the archived experiment only:"
-    echo "  AURORA_GRAPHICS_RENDERER=mesa sh $0 $STAGE"
+    echo "  DET_GRAPHICS_RENDERER=mesa sh $0 $STAGE"
     exit 2
 fi
 case "$STAGE" in
@@ -36,11 +36,11 @@ case "$STAGE" in
     plasma) HOLD=180;;
     *) echo "usage: native-plasma [kwin|plasma]"; exit 1;;
 esac
-# AURORA_HOLD env overrides the hold (e.g. 86400 for a persistent session;
+# DET_HOLD env overrides the hold (e.g. 86400 for a persistent session;
 # end it early with: sh native-restore).
-HOLD="${AURORA_HOLD:-$HOLD}"
+HOLD="${DET_HOLD:-$HOLD}"
 
-[ -f "$AURORA/run/desktop-mode" ] && { echo "FATAL: desktop mode active --- run desktop-off first"; exit 1; }
+[ -f "$DET/run/desktop-mode" ] && { echo "FATAL: desktop mode active --- run desktop-off first"; exit 1; }
 $LXC /bin/true 2>/dev/null || { echo "FATAL: guest not running"; exit 1; }
 $LXC /usr/bin/test -x /usr/bin/kwin_wayland || { echo "FATAL: kwin_wayland missing (plasma install still running?)"; exit 1; }
 
@@ -49,7 +49,7 @@ restore() {
     [ "$restored" = 1 ] && return
     restored=1
     echo "== restore =="
-    sh "$AURORA/bin/native-restore"
+    sh "$DET/bin/native-restore"
 }
 trap restore EXIT INT TERM
 
@@ -60,13 +60,13 @@ trap restore EXIT INT TERM
 (
     setsid sh -c "
         while kill -0 $$ 2>/dev/null; do sleep 1; done
-        [ -f '$GATE' ] && sh '$AURORA/bin/native-restore' >> /data/local/tmp/native-restore-watchdog.log 2>&1
+        [ -f '$GATE' ] && sh '$DET/bin/native-restore' >> /data/local/tmp/native-restore-watchdog.log 2>&1
     " </dev/null >/dev/null 2>&1 &
 ) &
 
 echo "--- native-plasma stage=$STAGE $(date)"
 echo "== 1. input grab =="
-"$AURORA/bin/evgrab" -a -p "$AURORA/run/evgrab.pid" || { echo "FATAL: evgrab failed"; exit 1; }
+"$DET/bin/evgrab" -a -p "$DET/run/evgrab.pid" || { echo "FATAL: evgrab failed"; exit 1; }
 
 echo "== 2. stop SF + suppressor + ss-freezer =="
 stop bootanim
@@ -115,12 +115,12 @@ dmesg -c > /dev/null 2>&1
 
 echo "== 4. guest prep (udev db, logind) =="
 # logind TakeDevice returns ENODEV for any device without a udev DB entry
-# (no udevd in the container). aurora-input-udevdb fakes the input nodes;
+# (no udevd in the container). det-input-udevdb fakes the input nodes;
 # fake the DRM card the same way (seat0 + master-of-seat tags) or KWin's
 # "Failed to open /dev/dri/card0 (No such device)" comes back (2026-07-14).
 $LXC /bin/sh -c '
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-    [ -x /usr/local/sbin/aurora-input-udevdb ] && aurora-input-udevdb 2>/dev/null
+    [ -x /usr/local/sbin/det-input-udevdb ] && det-input-udevdb 2>/dev/null
     mkdir -p /run/udev/data
     for c in /sys/class/drm/card[0-9]; do
         [ -e "$c/dev" ] || continue
@@ -130,23 +130,23 @@ $LXC /bin/sh -c '
     systemctl start systemd-logind
     true'
 
-echo "== 5. launch kwin ($STAGE) via aurora-plasma.service =="
+echo "== 5. launch kwin ($STAGE) via det-plasma.service =="
 # KWin 6 refuses to open devices outside a logind session (NoopSession::
-# openRestricted is `return -1` --- even root). aurora-plasma.service uses
+# openRestricted is `return -1` --- even root). det-plasma.service uses
 # PAMName=login + TTYPath so pam_systemd registers a real logind session
-# (greetd-style). Session script: guest /usr/local/bin/aurora-plasma-session
+# (greetd-style). Session script: guest /usr/local/bin/det-plasma-session
 # (mesa /opt/mesa env). KWin 6 DRM backend is atomic-only: this doubles as
 # the atomic probe modetest couldn't deliver.
 if [ "$STAGE" = plasma ]; then
-    $LXC /bin/sh -c 'printf "AURORA_GRAPHICS_RENDERER=mesa\nAURORA_PLASMA_CLIENT=plasmashell\n" > /run/aurora-plasma.env'
+    $LXC /bin/sh -c 'printf "DET_GRAPHICS_RENDERER=mesa\nDET_PLASMA_CLIENT=plasmashell\n" > /run/det-plasma.env'
 else
-    $LXC /bin/sh -c 'printf "AURORA_GRAPHICS_RENDERER=mesa\nAURORA_PLASMA_CLIENT=foot\n" > /run/aurora-plasma.env'
+    $LXC /bin/sh -c 'printf "DET_GRAPHICS_RENDERER=mesa\nDET_PLASMA_CLIENT=foot\n" > /run/det-plasma.env'
 fi
-$LXC /bin/sh -c 'export PATH=/usr/sbin:/usr/bin:/sbin:/bin; systemctl daemon-reload; systemctl restart aurora-plasma; sleep 2; systemctl is-active aurora-plasma; loginctl list-sessions --no-legend 2>/dev/null' 2>&1
+$LXC /bin/sh -c 'export PATH=/usr/sbin:/usr/bin:/sbin:/bin; systemctl daemon-reload; systemctl restart det-plasma; sleep 2; systemctl is-active det-plasma; loginctl list-sessions --no-legend 2>/dev/null' 2>&1
 
 # Input handoff: once kwin binds its wayland socket, release evgrab so kwin
 # (which opened the nodes at startup) starts receiving events.
-GPID=$("$AURORA/lxc/bin/lxc-info" -P "$AURORA" -n guest -p 2>/dev/null | awk '{print $2}')
+GPID=$("$DET/lxc/bin/lxc-info" -P "$DET" -n guest -p 2>/dev/null | awk '{print $2}')
 i=0
 while [ $i -lt 100 ]; do
     [ -n "$GPID" ] && [ -S "/proc/$GPID/root/run/user/0/wayland-0" ] && break
@@ -154,8 +154,8 @@ while [ $i -lt 100 ]; do
 done
 if [ -S "/proc/$GPID/root/run/user/0/wayland-0" ]; then
     echo "kwin socket up after ~$((i*3/10))s --- releasing input grab"
-    [ -f "$AURORA/run/evgrab.pid" ] && kill "$(cat "$AURORA/run/evgrab.pid")" 2>/dev/null
-    rm -f "$AURORA/run/evgrab.pid"
+    [ -f "$DET/run/evgrab.pid" ] && kill "$(cat "$DET/run/evgrab.pid")" 2>/dev/null
+    rm -f "$DET/run/evgrab.pid"
 else
     echo "WARN: kwin socket never appeared --- check /var/log/kwin.log (holding anyway for log capture)"
 fi
@@ -182,7 +182,7 @@ $LXC /bin/sh -c '
     grep -H -E "^(ACTIVE|STATE|VTNR|SEAT|TTY)" /run/systemd/sessions/* 2>/dev/null
     echo "-- active VT: $(cat /sys/class/tty/tty0/active 2>/dev/null)"
     echo "-- kwin event1 (touchpanel) InputDevice properties:"
-    BUS=$(cat /run/aurora-plasma-bus 2>/dev/null)
+    BUS=$(cat /run/det-plasma-bus 2>/dev/null)
     [ -n "$BUS" ] && busctl --address="$BUS" call org.kde.KWin \
         /org/kde/KWin/InputDevice/event1 org.freedesktop.DBus.Properties \
         GetAll s org.kde.KWin.InputDevice 2>&1 | tr "}" "\n" | grep -iE "enabled|output|touch|name" | head

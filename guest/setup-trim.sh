@@ -44,7 +44,7 @@ echo "== cap journald =="
 # The journal lives on the host's /data flash via the rootfs bind --- unbounded
 # growth is both space and flash wear. 32M is days of logs at our volume.
 mkdir -p /etc/systemd/journald.conf.d
-cat > /etc/systemd/journald.conf.d/aurora.conf <<'EOF'
+cat > /etc/systemd/journald.conf.d/determination.conf <<'EOF'
 [Journal]
 SystemMaxUse=32M
 RuntimeMaxUse=16M
@@ -56,11 +56,11 @@ echo "== apt/dpkg diet (future installs) =="
 # the default so ad-hoc `apt install` from a guest terminal behaves the same.
 # (Remember the gnome-settings-daemon-common lesson: if an app misbehaves,
 # check its Recommends first.)
-cat > /etc/apt/apt.conf.d/90aurora-norecommends <<'EOF'
+cat > /etc/apt/apt.conf.d/90determination-norecommends <<'EOF'
 APT::Install-Recommends "false";
 EOF
 # No man pages / docs on the phone (keep Debian copyright files).
-cat > /etc/dpkg/dpkg.cfg.d/90aurora-trim <<'EOF'
+cat > /etc/dpkg/dpkg.cfg.d/90determination-trim <<'EOF'
 path-exclude=/usr/share/man/*
 path-exclude=/usr/share/doc/*
 path-include=/usr/share/doc/*/copyright

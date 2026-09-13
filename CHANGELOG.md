@@ -23,9 +23,9 @@ different and are recorded in the release manifest.
 - Internal phone-to-desktop handoff with SurfaceFlinger release, exclusive
   input transfer, and restoration to Android.
 - Manifest-driven session selection for internal desktop mode: the companion
-  picker (or `$AURORA/etc/compositor`) chooses among deployed
-  `$AURORA/etc/sessions/*.session` manifests, `toggle/session-select` enforces
-  qualification honesty with a phosh fallback, `aurora-session-launch` carries
+  picker (or `$DET/etc/compositor`) chooses among deployed
+  `$DET/etc/sessions/*.session` manifests, `toggle/session-select` enforces
+  qualification honesty with a phosh fallback, `det-session-launch` carries
   the shared compositor/client environment contract, and desktop-on/off grow
   raw-KMS branches (composer HAL stop/restore, logind PAM session, DRM udev
   DB, touchpanel resume) so Plasma Mobile/KWin launches through the same
@@ -43,7 +43,7 @@ different and are recorded in the release manifest.
   full native-handle setup cost, and minigbm import/export timing.
 - Runtime device discovery and exact-match device-profile foundations.
 - Verified boot-image install, backup, restore, and dry-run paths.
-- Native `aurorad`/`auroractl` control plane with framed authenticated RPC, durable
+- Native `detd`/`detctl` control plane with framed authenticated RPC, durable
   state, bounded adapters, journalled transitions, rollback and restart
   reconciliation; boot remains observe-only pending device qualification.
 - Native guest agent and capability-scoped guest endpoint, replacing the file
@@ -68,12 +68,12 @@ different and are recorded in the release manifest.
 
 - Replaced the original developer-specific guest identity, local toolchain
   paths, package attribution, release naming, and repository-owner URLs with a
-  neutral `aurora` account and distributor-configurable project metadata.
+  neutral `detuser` account and distributor-configurable project metadata.
 - Existing uid-1000 guest accounts are renamed offline on first start after an
   update, preserving hardware permissions, the home directory, SSH access, and
   password-gated sudo configuration.
 - Guided Linux setup now asks for a user-facing display name while retaining
-  the stable `aurora` login required by services and device permissions.
+  the stable `detuser` login required by services and device permissions.
 - Lifecycle operations now use a shared lock, generation, boot identity, and
   process start-time checks so stale PID files and overlapping transitions
   cannot target unrelated processes.

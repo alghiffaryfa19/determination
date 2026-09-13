@@ -1,11 +1,11 @@
 #!/bin/sh
-# Aurora kernel install/restore driven from the PC over a USB cable ---
+# Determination kernel install/restore driven from the PC over a USB cable ---
 # the cable-era sibling of the on-phone action zips, with one safety layer
 # the zips cannot have: the pre-flash backup is ALSO pulled to this machine
 # (artifacts/backups/), so a copy survives anything that happens to the
 # phone's storage.
 #
-# The one step that stays manual is Magisk-patching aurora-boot.img in
+# The one step that stays manual is Magisk-patching determination-boot.img in
 # the Magisk app (Install -> Select and Patch a File) --- the app owns the
 # patch settings and we do not second-guess them from here.
 #
@@ -26,11 +26,11 @@ REPO=$(cd .. && pwd)
 export PATH="$REPO/toolchain/usr/bin:$PATH"
 
 ADB="${ADB:-$HOME/platform-tools/adb}"
-BOOTIMG="$REPO/boot/aurora-boot.img"
+BOOTIMG="$REPO/boot/determination-boot.img"
 PRISTINE="${PRISTINE:-$REPO/artifacts/boot_a-crdroid-12.11.img}"
-MARKER="aurora@aurora"
+MARKER="detuser@determination"
 DMB=/data/adb/magisk/magiskboot
-DWORK=/data/local/tmp/aurora-hostflash
+DWORK=/data/local/tmp/det-hostflash
 
 die() { echo "!!! $*" >&2; exit 1; }
 rsh() { "$ADB" shell "su -c \"$*\""; }
@@ -58,7 +58,7 @@ if [ "$cmd" = verify ]; then
     # /proc/version, not uname -a: toybox uname omits the (builder@host) field
     un=$("$ADB" shell cat /proc/version)
     echo "$un"
-    echo "$un" | grep -q "$MARKER" || die "running kernel is NOT the Aurora build"
+    echo "$un" | grep -q "$MARKER" || die "running kernel is NOT the Determination build"
     bad=0
     for opt in PID_NS USER_NS IPC_NS CGROUP_DEVICE CGROUP_PIDS POSIX_MQUEUE \
                VT NF_TABLES CHECKPOINT_RESTORE BINFMT_MISC MACVLAN QCA_CLD_WLAN; do
@@ -68,8 +68,8 @@ if [ "$cmd" = verify ]; then
             echo "  MISSING: CONFIG_$opt"; bad=1
         fi
     done
-    [ "$bad" = 0 ] || die "running config is missing Aurora options"
-    echo "verify OK: Aurora kernel is running with all expected options"
+    [ "$bad" = 0 ] || die "running config is missing Determination options"
+    echo "verify OK: Determination kernel is running with all expected options"
     exit 0
 fi
 
@@ -151,16 +151,16 @@ for candidate in $("$ADB" shell "ls -t /sdcard/Download/magisk_patched-*.img 2>/
     rsh "head -c 8 '$candidate'" | grep -q 'ANDROID!' || { echo "  reject: bad boot magic"; continue; }
     rsh "rm -rf $DWORK && mkdir -p $DWORK && cd $DWORK && $DMB unpack '$candidate'" >/dev/null 2>&1 || { echo "  reject: unpack failed"; continue; }
     if ! rsh "grep -qF \\\"$BANNER\\\" $DWORK/kernel"; then
-        echo "  reject: wrong Aurora kernel"; continue
+        echo "  reject: wrong Determination kernel"; continue
     fi
     rc=0; rsh "cd $DWORK && $DMB cpio ramdisk.cpio test" >/dev/null 2>&1 || rc=$?
     [ "$rc" = 1 ] || { echo "  reject: ramdisk is not Magisk-patched (rc=$rc)"; continue; }
     img=$candidate; imgsize=$candidate_size; break
 done
 rsh "rm -rf $DWORK"
-[ -n "$img" ] || die "no valid magisk_patched-*.img in /sdcard/Download --- patch aurora-boot.img in the Magisk app first"
+[ -n "$img" ] || die "no valid magisk_patched-*.img in /sdcard/Download --- patch determination-boot.img in the Magisk app first"
 echo "candidate accepted: $img"
-echo "verified: exact Aurora kernel build + Magisk-patched ramdisk"
+echo "verified: exact Determination kernel build + Magisk-patched ramdisk"
 
 want=$(rsh "sha256sum $img" | cut -d' ' -f1)
 cur=$(rsh "head -c $imgsize $part | sha256sum" | cut -d' ' -f1)
@@ -169,7 +169,7 @@ if [ "$cur" = "$want" ]; then
     exit 0
 fi
 
-take_backup aurora
+take_backup determination
 
 if [ "$cmd" = check ]; then
     echo
@@ -181,7 +181,7 @@ fi
 
 flash_and_verify "$img" "$want" "$imgsize"
 echo
-echo "Aurora kernel flashed. Backups: $backup (device), $hostbackup (here)."
+echo "Determination kernel flashed. Backups: $backup (device), $hostbackup (here)."
 echo "After reboot run: $0 verify"
 $REBOOT && "$ADB" reboot
 exit 0

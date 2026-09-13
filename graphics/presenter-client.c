@@ -16,16 +16,16 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-struct aurora_native_handle {
+struct det_native_handle {
     int version;
     int num_fds;
     int num_ints;
     int data[];
 };
 
-struct aurora_ahardware_buffer;
+struct det_ahardware_buffer;
 
-struct aurora_ahardware_buffer_desc {
+struct det_ahardware_buffer_desc {
     uint32_t width;
     uint32_t height;
     uint32_t layers;
@@ -36,15 +36,15 @@ struct aurora_ahardware_buffer_desc {
     uint64_t rfu1;
 };
 
-typedef int (*aurora_create_from_handle_fn)(
-    const struct aurora_ahardware_buffer_desc *desc,
-    const struct aurora_native_handle *handle, int32_t method,
-    struct aurora_ahardware_buffer **out_buffer);
-typedef int (*aurora_send_handle_fn)(const struct aurora_ahardware_buffer *buffer,
+typedef int (*det_create_from_handle_fn)(
+    const struct det_ahardware_buffer_desc *desc,
+    const struct det_native_handle *handle, int32_t method,
+    struct det_ahardware_buffer **out_buffer);
+typedef int (*det_send_handle_fn)(const struct det_ahardware_buffer *buffer,
                                   int socket_fd);
-typedef void (*aurora_release_buffer_fn)(struct aurora_ahardware_buffer *buffer);
+typedef void (*det_release_buffer_fn)(struct det_ahardware_buffer *buffer);
 
-static int send_packet(int fd, struct aurora_presenter_packet *packet,
+static int send_packet(int fd, struct det_presenter_packet *packet,
                        int fence_fd)
 {
     struct iovec iov = {
@@ -72,7 +72,7 @@ static int send_packet(int fd, struct aurora_presenter_packet *packet,
         ? 0 : -1;
 }
 
-int aurora_presenter_connect(struct aurora_presenter_client *client,
+int det_presenter_connect(struct det_presenter_client *client,
                           const char *socket_path)
 {
     struct sockaddr_un address = {.sun_family = AF_UNIX};
@@ -107,11 +107,11 @@ int aurora_presenter_connect(struct aurora_presenter_client *client,
     return 0;
 
 fail:
-    aurora_presenter_disconnect(client);
+    det_presenter_disconnect(client);
     return -1;
 }
 
-void aurora_presenter_disconnect(struct aurora_presenter_client *client)
+void det_presenter_disconnect(struct det_presenter_client *client)
 {
     if (client->fd >= 0)
         close(client->fd);
@@ -121,23 +121,23 @@ void aurora_presenter_disconnect(struct aurora_presenter_client *client)
     client->fd = -1;
 }
 
-int aurora_presenter_register_buffer(struct aurora_presenter_client *client,
+int det_presenter_register_buffer(struct det_presenter_client *client,
                                   uint64_t buffer_id, uint32_t width,
                                   uint32_t height, uint32_t format,
                                   uint32_t stride, uint64_t usage,
                                   int num_ints, const int *ints,
                                   int num_fds, const int *fds)
 {
-    enum { AURORA_CREATE_FROM_HANDLE_METHOD_CLONE = 3 };
-    aurora_create_from_handle_fn create_from_handle =
-        (aurora_create_from_handle_fn)client->create_from_handle;
-    aurora_send_handle_fn send_handle =
-        (aurora_send_handle_fn)client->send_handle;
-    aurora_release_buffer_fn release_buffer =
-        (aurora_release_buffer_fn)client->release_buffer;
-    struct aurora_native_handle *handle = NULL;
-    struct aurora_ahardware_buffer *buffer = NULL;
-    struct aurora_ahardware_buffer_desc desc = {
+    enum { DET_CREATE_FROM_HANDLE_METHOD_CLONE = 3 };
+    det_create_from_handle_fn create_from_handle =
+        (det_create_from_handle_fn)client->create_from_handle;
+    det_send_handle_fn send_handle =
+        (det_send_handle_fn)client->send_handle;
+    det_release_buffer_fn release_buffer =
+        (det_release_buffer_fn)client->release_buffer;
+    struct det_native_handle *handle = NULL;
+    struct det_ahardware_buffer *buffer = NULL;
+    struct det_ahardware_buffer_desc desc = {
         .width = width,
         .height = height,
         .layers = 1,
@@ -145,12 +145,12 @@ int aurora_presenter_register_buffer(struct aurora_presenter_client *client,
         .usage = usage,
         .stride = stride,
     };
-    struct aurora_presenter_packet packet =
-        aurora_presenter_packet_init(AURORA_PRESENTER_REGISTER);
+    struct det_presenter_packet packet =
+        det_presenter_packet_init(DET_PRESENTER_REGISTER);
     int status = -1;
 
     if (client->fd < 0 || buffer_id == 0 ||
-        !aurora_presenter_dimensions_valid(width, height) ||
+        !det_presenter_dimensions_valid(width, height) ||
         num_fds <= 0 || num_fds > 16 ||
         num_ints < 0 || num_ints > 128 || !fds || (num_ints && !ints)) {
         errno = EINVAL;
@@ -166,7 +166,7 @@ int aurora_presenter_register_buffer(struct aurora_presenter_client *client,
     memcpy(handle->data, fds, (size_t)num_fds * sizeof(int));
     memcpy(handle->data + num_fds, ints, (size_t)num_ints * sizeof(int));
     if (create_from_handle(&desc, handle,
-                           AURORA_CREATE_FROM_HANDLE_METHOD_CLONE,
+                           DET_CREATE_FROM_HANDLE_METHOD_CLONE,
                            &buffer) != 0 || !buffer)
         goto out;
 
@@ -189,13 +189,13 @@ out:
     return status;
 }
 
-int aurora_presenter_present(struct aurora_presenter_client *client,
+int det_presenter_present(struct det_presenter_client *client,
                           uint64_t serial, uint64_t buffer_id,
                           uint64_t desired_present_time_ns,
                           int acquire_fence_fd)
 {
-    struct aurora_presenter_packet packet =
-        aurora_presenter_packet_init(AURORA_PRESENTER_PRESENT);
+    struct det_presenter_packet packet =
+        det_presenter_packet_init(DET_PRESENTER_PRESENT);
 
     if (client->fd < 0 || serial == 0 || buffer_id == 0) {
         errno = EINVAL;
@@ -205,12 +205,12 @@ int aurora_presenter_present(struct aurora_presenter_client *client,
     packet.buffer_id = buffer_id;
     packet.desired_present_time_ns = desired_present_time_ns;
     if (acquire_fence_fd >= 0)
-        packet.flags |= AURORA_PRESENTER_HAS_ACQUIRE_FENCE;
+        packet.flags |= DET_PRESENTER_HAS_ACQUIRE_FENCE;
     return send_packet(client->fd, &packet, acquire_fence_fd);
 }
 
-int aurora_presenter_receive_completion(struct aurora_presenter_client *client,
-                                     struct aurora_presenter_packet *packet,
+int det_presenter_receive_completion(struct det_presenter_client *client,
+                                     struct det_presenter_packet *packet,
                                      int *present_fence_fd,
                                      int *release_fence_fd)
 {
@@ -243,20 +243,20 @@ int aurora_presenter_receive_completion(struct aurora_presenter_client *client,
     }
     if (size != (ssize_t)sizeof(*packet) ||
         (message.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) ||
-        packet->magic != AURORA_PRESENTER_MAGIC ||
-        packet->version != AURORA_PRESENTER_VERSION ||
+        packet->magic != DET_PRESENTER_MAGIC ||
+        packet->version != DET_PRESENTER_VERSION ||
         packet->size != sizeof(*packet) ||
-        packet->op != AURORA_PRESENTER_COMPLETE ||
-        !aurora_presenter_completion_flags_valid(packet->flags)) {
+        packet->op != DET_PRESENTER_COMPLETE ||
+        !det_presenter_completion_flags_valid(packet->flags)) {
         goto bad_fds;
     }
     size_t index = 0;
-    if (packet->flags & AURORA_PRESENTER_HAS_PRESENT_FENCE) {
+    if (packet->flags & DET_PRESENTER_HAS_PRESENT_FENCE) {
         if (index >= fd_count)
             goto bad_fds;
         *present_fence_fd = received_fds[index++];
     }
-    if (packet->flags & AURORA_PRESENTER_HAS_RELEASE_FENCE) {
+    if (packet->flags & DET_PRESENTER_HAS_RELEASE_FENCE) {
         if (index >= fd_count)
             goto bad_fds;
         *release_fence_fd = received_fds[index++];

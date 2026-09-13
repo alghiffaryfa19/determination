@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+export PATH=/opt/dethyprland/bin:/usr/local/bin:/usr/bin:/bin
+export LD_LIBRARY_PATH=/opt/dethyprland/lib:/usr/local/lib:/usr/local/lib/aarch64-linux-gnu
+export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
+export ANDROID_ROOT=/system DET_HYBRIS=1
+export DET_HYBRIS_HWC=${DET_HYBRIS_HWC:-1}
+export EGL_PLATFORM=null HYBRIS_EGLPLATFORM=null
+export XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=Hyprland
+export SHELL=/bin/bash LANG=C.UTF-8 LIBSEAT_BACKEND=seatd
+export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/1000}
+CONFIG=${DET_HYPRLAND_CONFIG:-/etc/determination/hyprland.conf}
+[ "$(id -u)" != 0 ] || { echo 'Dethyprland must run as the guest user' >&2; exit 2; }
+[ -x /opt/dethyprland/bin/Hyprland ] || exit 2
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
+    exec dbus-run-session -- "$0" "$@"
+fi
+exec /opt/dethyprland/bin/Hyprland --config "$CONFIG" "$@"

@@ -1,7 +1,7 @@
 recon classifier fixtures passed
 Generated /tmp/tmp.FsjDvFgQIQ/lxc/config (1 device mounts)
-device-config: invalid AURORA_EXTRA_DEVICES
-device-config: invalid unknown key AURORA_NOT_A_PROFILE_KEY
+device-config: invalid DET_EXTRA_DEVICES
+device-config: invalid unknown key DET_NOT_A_PROFILE_KEY
 boot profile accepted: linux-first generation=1
 boot profile recovered to phone after failed attempt=1
 usage: desktop-off [--emergency]
@@ -22,7 +22,7 @@ session-select tests passed
 audio session singleton: PASS
 compatibility contract tests passed
 omarchy-system-reboot: Android power control is unavailable from this session
-omarchy-update: not implemented for Aurora
+omarchy-update: not implemented for Determination
 Omarchy command tests passed
 Markdown link check passed for 53 files.
 artifact index is current
@@ -68,24 +68,24 @@ ok:   release-critical guest and HWC sources are validated against immutable pin
 ok:   built Magisk module version = v0.5.0-alpha.1
 ok:   built Magisk module versionCode = 12
 
-Aurora 0.5.0-alpha.1 "Aqua": check checks passed.
+Determination 0.5.0-alpha.1 "Aqua": check checks passed.
 presenter and gralloc-pool protocol policy tests passed
 -- Configuring done (0.0s)
 -- Generating done (0.0s)
 -- Build files have been written to: /home/melissa/decemberos/control/build/host
-[1/10] Building CXX object CMakeFiles/auroracontrol.dir/src/capability.cpp.o
-[2/10] Building CXX object CMakeFiles/aurorad.dir/src/aurorad.cpp.o
-[3/10] Building CXX object CMakeFiles/aurora-control-tests.dir/tests/control_tests.cpp.o
-[4/10] Building CXX object CMakeFiles/auroracontrol.dir/src/transition.cpp.o
-[5/10] Building CXX object CMakeFiles/auroracontrol.dir/src/sessions.cpp.o
-[6/10] Linking CXX static library libauroracontrol.a
-[7/10] Linking CXX executable auroractl
-[8/10] Linking CXX executable aurora-guest-agent
-[9/10] Linking CXX executable aurora-control-tests
-[10/10] Linking CXX executable aurorad
+[1/10] Building CXX object CMakeFiles/detcontrol.dir/src/capability.cpp.o
+[2/10] Building CXX object CMakeFiles/detd.dir/src/detd.cpp.o
+[3/10] Building CXX object CMakeFiles/det-control-tests.dir/tests/control_tests.cpp.o
+[4/10] Building CXX object CMakeFiles/detcontrol.dir/src/transition.cpp.o
+[5/10] Building CXX object CMakeFiles/detcontrol.dir/src/sessions.cpp.o
+[6/10] Linking CXX static library libdetcontrol.a
+[7/10] Linking CXX executable detctl
+[8/10] Linking CXX executable det-guest-agent
+[9/10] Linking CXX executable det-control-tests
+[10/10] Linking CXX executable detd
 Test project /home/melissa/decemberos/control/build/host
-    Start 1: aurora-control-tests
-1/1 Test #1: aurora-control-tests ................   Passed    0.46 sec
+    Start 1: det-control-tests
+1/1 Test #1: det-control-tests ................   Passed    0.46 sec
 
 100% tests passed out of 1
 

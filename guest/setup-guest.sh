@@ -1,6 +1,6 @@
 #!/system/bin/sh
-# Aurora guest customization --- runs ON THE PHONE as root, against an
-# already-extracted rootfs at /data/aurora/guest (the debootstrap-on-
+# Determination guest customization --- runs ON THE PHONE as root, against an
+# already-extracted rootfs at /data/determination/guest (the debootstrap-on-
 # device path). Mirror of guest/customize-hook.sh --- keep the two in sync.
 #
 # Prereqs pushed to /data/local/tmp: droidian.gpg (fetch from
@@ -8,7 +8,7 @@
 # --- the packaged keyring debs are all stale; only git has the Jan/2025
 # staging signing key).
 set -e
-G=/data/aurora/guest
+G=/data/determination/guest
 CH() { chroot "$G" /bin/sh -c "export PATH=/usr/sbin:/usr/bin:/sbin:/bin; $*"; }
 
 # Droidian staging repo (trixie suite) --- key pushed alongside this script.
@@ -40,12 +40,12 @@ ln -sf /system/product "$G/product" 2>/dev/null || true
 ln -sf /system/system_ext "$G/system_ext" 2>/dev/null || true
 
 # Android device-node groups (recon 2026-07-12, artifacts/node-perms-probe.txt):
-# the session runs as the unprivileged user aurora, NOT root. Almost every
+# the session runs as the unprivileged user detuser, NOT root. Almost every
 # node it touches is already reachable --- GPU/dri/binder/ashmem are world-rw and
-# kgsl/ion are owned by uid/gid 1000 (== aurora == Android AID_SYSTEM). The
+# kgsl/ion are owned by uid/gid 1000 (== detuser == Android AID_SYSTEM). The
 # ONLY gate is /dev/input/* (0660 root:1004, AID_INPUT): Debian's input group is
 # gid 995 and does NOT match, so we create a group at Android's numeric gid and
-# add aurora. seatd's socket is group video(44), which aurora already gets.
+# add detuser. seatd's socket is group video(44), which detuser already gets.
 CH "getent group android_input   >/dev/null || groupadd -g 1004 android_input"
 CH "getent group android_graphics >/dev/null || groupadd -g 1003 android_graphics"
 CH "getent group android_audio    >/dev/null || groupadd -g 1005 android_audio"
@@ -53,20 +53,20 @@ CH "getent group android_audio    >/dev/null || groupadd -g 1005 android_audio"
 # The project guest account uses uid 1000 because Android owns GPU/audio nodes
 # with that numeric uid. Rename an existing uid-1000 account during upgrades so
 # older and third-party rootfs images converge on the same neutral identity.
-CH 'uid1000_user=$(getent passwd 1000 | cut -d: -f1 || true); if [ -n "$uid1000_user" ] && [ "$uid1000_user" != aurora ]; then uid1000_group=$(id -gn "$uid1000_user"); usermod -l aurora -d /home/aurora -m "$uid1000_user"; if [ "$uid1000_group" != aurora ] && ! getent group aurora >/dev/null 2>&1; then groupmod -n aurora "$uid1000_group"; fi; elif ! id aurora >/dev/null 2>&1; then useradd -m -u 1000 -s /bin/bash aurora; fi'
-CH "usermod -aG video,input,render,audio,android_input,android_graphics,android_audio aurora"
+CH 'uid1000_user=$(getent passwd 1000 | cut -d: -f1 || true); if [ -n "$uid1000_user" ] && [ "$uid1000_user" != detuser ]; then uid1000_group=$(id -gn "$uid1000_user"); usermod -l detuser -d /home/detuser -m "$uid1000_user"; if [ "$uid1000_group" != detuser ] && ! getent group detuser >/dev/null 2>&1; then groupmod -n detuser "$uid1000_group"; fi; elif ! id detuser >/dev/null 2>&1; then useradd -m -u 1000 -s /bin/bash detuser; fi'
+CH "usermod -aG video,input,render,audio,android_input,android_graphics,android_audio detuser"
 
 # Password-gated sudo (proper sudo, not NOPASSWD-ALL). No password is baked into
-# the image --- set one on-device with \`aurora passwd\` before sudo will work. Guest
+# the image --- set one on-device with \`det passwd\` before sudo will work. Guest
 # provisioning does not need it: setup-*.sh run as root via lxc-attach, not sudo.
 mkdir -p "$G/etc/sudoers.d"
-echo 'aurora ALL=(ALL) ALL' > "$G/etc/sudoers.d/aurora"
-chmod 440 "$G/etc/sudoers.d/aurora"
+echo 'detuser ALL=(ALL) ALL' > "$G/etc/sudoers.d/detuser"
+chmod 440 "$G/etc/sudoers.d/detuser"
 
 # Hostname + hosts
-echo aurora > "$G/etc/hostname"
-grep -q aurora "$G/etc/hosts" 2>/dev/null || \
-    printf '127.0.0.1\tlocalhost\n127.0.1.1\taurora\n' > "$G/etc/hosts"
+echo determination > "$G/etc/hostname"
+grep -q determination "$G/etc/hosts" 2>/dev/null || \
+    printf '127.0.0.1\tlocalhost\n127.0.1.1\tdetermination\n' > "$G/etc/hosts"
 
 # veth network inside the guest (lxc config assigns the address too; this
 # keeps it across systemd-networkd restarts)

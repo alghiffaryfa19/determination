@@ -32,7 +32,7 @@ release; development branches are not release inputs.
 | Release audit | `release/check.sh check` | static development checks |
 
 Distributors set the companion's packaged update source with the
-`auroraUpdateManifestUrl` Gradle property; users can override it with an
+`determinationUpdateManifestUrl` Gradle property; users can override it with an
 HTTPS mirror in Settings. An unset property leaves online updates unconfigured
 instead of silently coupling builds to one repository owner. The online
 packager does not build or sign anything. It refuses missing inputs, hashes the
@@ -46,14 +46,14 @@ The latter is mandatory: matching only `ro.product.device` is not enough to
 authorize an unattended boot-partition write across ROM or OTA revisions.
 
 ```sh
-REPOSITORY_URL=https://github.com/your-project/aurora \
+REPOSITORY_URL=https://github.com/your-project/determination \
 UPDATE_DEVICES=guacamoleb,OnePlus7 \
 UPDATE_ANDROID_BUILDS='oneplus/guacamoleb/...:16/BUILD/...' \
 release/build-online-bundle.sh \
   "$REPOSITORY_URL/releases/download/v$VERSION"
 ```
 
-The generated `aurora-update.json`, every artifact, and `SHA256SUMS`
+The generated `determination-update.json`, every artifact, and `SHA256SUMS`
 belong on the same GitHub release. The installer downloads over HTTPS, checks
 the declared byte length and SHA-256, and then moves the verified file into a
 root-only staging directory. A detached, pinned release-manifest signature is

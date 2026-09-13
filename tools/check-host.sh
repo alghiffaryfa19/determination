@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run every host-safe Aurora validation from one entrypoint.
+# Run every host-safe Determination validation from one entrypoint.
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
@@ -51,14 +51,14 @@ else
     "$WORK/control-tests"
 
     "$CXX" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
-        -ffunction-sections -fdata-sections audio/src/aurora_audio_probe.cpp \
-        -Wl,--gc-sections -o "$WORK/aurora-audio-probe"
+        -ffunction-sections -fdata-sections audio/src/det_audio_probe.cpp \
+        -Wl,--gc-sections -o "$WORK/det-audio-probe"
     "$CXX" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
-        -ffunction-sections -fdata-sections audio/src/aurora_audio_owner.cpp \
-        -Wl,--gc-sections -o "$WORK/aurora-audio-owner"
-    sh audio/tests/fixture-test.sh "$WORK/aurora-audio-probe"
+        -ffunction-sections -fdata-sections audio/src/det_audio_owner.cpp \
+        -Wl,--gc-sections -o "$WORK/det-audio-owner"
+    sh audio/tests/fixture-test.sh "$WORK/det-audio-probe"
     sh audio/tests/owner-fixture-test.sh \
-        "$WORK/aurora-audio-owner" "$WORK/aurora-audio-probe"
+        "$WORK/det-audio-owner" "$WORK/det-audio-probe"
 fi
 
 ${CC:-cc} -D_GNU_SOURCE -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \

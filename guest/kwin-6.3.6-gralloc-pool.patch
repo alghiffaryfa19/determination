@@ -1,7 +1,7 @@
-## SPDX-FileCopyrightText: 2026 Aurora contributors
+## SPDX-FileCopyrightText: 2026 Determination contributors
 ## SPDX-License-Identifier: GPL-2.0-or-later
 ##
-## Aurora patch for KWin 6.3.6. It modifies GPL-2.0-or-later KWin
+## Determination patch for KWin 6.3.6. It modifies GPL-2.0-or-later KWin
 ## sources; retain the complete upstream KWin notice set.
 
 --- a/src/opengl/eglswapchain.h
@@ -62,7 +62,7 @@
  class GLTexture;
  class VirtualEglBackend;
  class GLRenderTimeQuery;
-+class AuroraGrallocPoolAllocator;
++class DetGrallocPoolAllocator;
 +class GraphicsBuffer;
  
  class VirtualEglLayer : public OutputLayer
@@ -92,7 +92,7 @@
  
      VirtualBackend *m_backend;
 +    bool m_poolRequested = false;
-+    std::unique_ptr<AuroraGrallocPoolAllocator> m_poolAllocator;
++    std::unique_ptr<DetGrallocPoolAllocator> m_poolAllocator;
      std::map<Output *, std::unique_ptr<VirtualEglLayer>> m_outputs;
  };
  
@@ -112,7 +112,7 @@
  #include "virtual_output.h"
  
  #include <drm_fourcc.h>
-+#include <aurora/gralloc-pool-protocol.h>
++#include <determination/gralloc-pool-protocol.h>
 +
 +#include <array>
 +#include <algorithm>
@@ -130,11 +130,11 @@
  namespace KWin
  {
  
-+class AuroraGrallocPoolBuffer : public GraphicsBuffer
++class DetGrallocPoolBuffer : public GraphicsBuffer
 +{
 +public:
-+    AuroraGrallocPoolBuffer(const aurora_gralloc_pool_packet &packet,
-+                         std::array<int, AURORA_GRALLOC_POOL_MAX_HANDLE_FDS> &handleFds)
++    DetGrallocPoolBuffer(const det_gralloc_pool_packet &packet,
++                         std::array<int, DET_GRALLOC_POOL_MAX_HANDLE_FDS> &handleFds)
 +        : m_id(packet.buffer_id)
 +        , m_size(packet.width, packet.height)
 +        , m_hasAlpha(GraphicsBuffer::alphaChannelFromDrmFormat(packet.drm_format))
@@ -190,10 +190,10 @@
 +    DmaBufAttributes m_attributes;
 +};
 +
-+class AuroraGrallocPoolAllocator : public GraphicsBufferAllocator
++class DetGrallocPoolAllocator : public GraphicsBufferAllocator
 +{
 +public:
-+    explicit AuroraGrallocPoolAllocator(const QByteArray &socketPath)
++    explicit DetGrallocPoolAllocator(const QByteArray &socketPath)
 +    {
 +        sockaddr_un address = {.sun_family = AF_UNIX};
 +        if (socketPath.isEmpty() ||
@@ -214,14 +214,14 @@
 +            return;
 +        }
 +
-+        AuroraGrallocPoolBuffer *first = receiveBuffer();
++        DetGrallocPoolBuffer *first = receiveBuffer();
 +        if (!first) {
 +            m_fd.reset();
 +            return;
 +        }
 +        m_available.append(first);
 +        for (uint32_t i = 1; i < m_poolSize; ++i) {
-+            AuroraGrallocPoolBuffer *buffer = receiveBuffer();
++            DetGrallocPoolBuffer *buffer = receiveBuffer();
 +            if (!buffer) {
 +                qDeleteAll(m_available);
 +                m_available.clear();
@@ -235,7 +235,7 @@
 +                             << "format=" << Qt::hex << m_format;
 +    }
 +
-+    ~AuroraGrallocPoolAllocator() override
++    ~DetGrallocPoolAllocator() override
 +    {
 +        qDeleteAll(m_available);
 +    }
@@ -260,7 +260,7 @@
 +
 +    uint64_t bufferId(GraphicsBuffer *buffer) const
 +    {
-+        auto poolBuffer = dynamic_cast<AuroraGrallocPoolBuffer *>(buffer);
++        auto poolBuffer = dynamic_cast<DetGrallocPoolBuffer *>(buffer);
 +        return poolBuffer ? poolBuffer->id() : 0;
 +    }
 +
@@ -273,9 +273,9 @@
 +            return std::nullopt;
 +        }
 +
-+        aurora_gralloc_pool_packet request =
-+            aurora_gralloc_pool_packet_init(AURORA_GRALLOC_POOL_PRESENT);
-+        request.flags = AURORA_GRALLOC_POOL_HAS_ACQUIRE_FENCE;
++        det_gralloc_pool_packet request =
++            det_gralloc_pool_packet_init(DET_GRALLOC_POOL_PRESENT);
++        request.flags = DET_GRALLOC_POOL_HAS_ACQUIRE_FENCE;
 +        request.serial = ++m_serial;
 +        request.buffer_id = id;
 +        iovec iov = {.iov_base = &request, .iov_len = sizeof(request)};
@@ -303,7 +303,7 @@
 +            qCWarning(KWIN_VIRTUAL) << "gralloc pool completion timeout";
 +            return std::nullopt;
 +        }
-+        aurora_gralloc_pool_packet completion;
++        det_gralloc_pool_packet completion;
 +        std::array<int, 2> receivedFds = {-1, -1};
 +        iovec completionIov = {
 +            .iov_base = &completion,
@@ -336,14 +336,14 @@
 +            }
 +        };
 +        const uint32_t allowedFlags =
-+            AURORA_GRALLOC_POOL_HAS_PRESENT_FENCE |
-+            AURORA_GRALLOC_POOL_HAS_RELEASE_FENCE;
++            DET_GRALLOC_POOL_HAS_PRESENT_FENCE |
++            DET_GRALLOC_POOL_HAS_RELEASE_FENCE;
 +        if (received != ssize_t(sizeof(completion)) ||
 +            (completionMessage.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) ||
-+            completion.magic != AURORA_GRALLOC_POOL_MAGIC ||
-+            completion.version != AURORA_GRALLOC_POOL_VERSION ||
++            completion.magic != DET_GRALLOC_POOL_MAGIC ||
++            completion.version != DET_GRALLOC_POOL_VERSION ||
 +            completion.size != sizeof(completion) ||
-+            completion.op != AURORA_GRALLOC_POOL_COMPLETE ||
++            completion.op != DET_GRALLOC_POOL_COMPLETE ||
 +            completion.serial != request.serial ||
 +            completion.buffer_id != id || completion.status != 0 ||
 +            (completion.flags & ~allowedFlags)) {
@@ -352,7 +352,7 @@
 +            return std::nullopt;
 +        }
 +        size_t index = 0;
-+        if (completion.flags & AURORA_GRALLOC_POOL_HAS_PRESENT_FENCE) {
++        if (completion.flags & DET_GRALLOC_POOL_HAS_PRESENT_FENCE) {
 +            if (index >= fdCount) {
 +                closeReceived();
 +                return std::nullopt;
@@ -360,7 +360,7 @@
 +            close(std::exchange(receivedFds[index++], -1));
 +        }
 +        FileDescriptor releaseFence;
-+        if (completion.flags & AURORA_GRALLOC_POOL_HAS_RELEASE_FENCE) {
++        if (completion.flags & DET_GRALLOC_POOL_HAS_RELEASE_FENCE) {
 +            if (index >= fdCount || completion.released_buffer_id == 0) {
 +                closeReceived();
 +                return std::nullopt;
@@ -378,19 +378,19 @@
 +    }
 +
 +private:
-+    AuroraGrallocPoolBuffer *receiveBuffer()
++    DetGrallocPoolBuffer *receiveBuffer()
 +    {
 +        pollfd ready = {.fd = m_fd.get(), .events = POLLIN};
 +        if (poll(&ready, 1, 5000) <= 0) {
 +            qCWarning(KWIN_VIRTUAL) << "gralloc pool buffer timeout";
 +            return nullptr;
 +        }
-+        aurora_gralloc_pool_packet packet;
-+        std::array<int, AURORA_GRALLOC_POOL_MAX_HANDLE_FDS> handleFds;
++        det_gralloc_pool_packet packet;
++        std::array<int, DET_GRALLOC_POOL_MAX_HANDLE_FDS> handleFds;
 +        handleFds.fill(-1);
 +        iovec iov = {.iov_base = &packet, .iov_len = sizeof(packet)};
 +        alignas(cmsghdr) char control[
-+            CMSG_SPACE(sizeof(int) * AURORA_GRALLOC_POOL_MAX_HANDLE_FDS)] = {};
++            CMSG_SPACE(sizeof(int) * DET_GRALLOC_POOL_MAX_HANDLE_FDS)] = {};
 +        msghdr message = {
 +            .msg_iov = &iov,
 +            .msg_iovlen = 1,
@@ -403,7 +403,7 @@
 +            if (header->cmsg_level == SOL_SOCKET &&
 +                header->cmsg_type == SCM_RIGHTS) {
 +                fdCount = std::min<size_t>(
-+                    AURORA_GRALLOC_POOL_MAX_HANDLE_FDS,
++                    DET_GRALLOC_POOL_MAX_HANDLE_FDS,
 +                    (header->cmsg_len - CMSG_LEN(0)) / sizeof(int));
 +                memcpy(handleFds.data(), CMSG_DATA(header),
 +                       fdCount * sizeof(int));
@@ -418,7 +418,7 @@
 +        };
 +        if (received != ssize_t(sizeof(packet)) ||
 +            (message.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) ||
-+            !aurora_gralloc_pool_buffer_valid(&packet) ||
++            !det_gralloc_pool_buffer_valid(&packet) ||
 +            fdCount != packet.handle_fd_count ||
 +            (m_poolSize && (packet.pool_size != m_poolSize ||
 +                            QSize(packet.width, packet.height) != m_size ||
@@ -437,12 +437,12 @@
 +            << "handle=" << packet.handle_fd_count << "fd+"
 +            << packet.native_int_count << "int"
 +            << "minigbm="
-+            << bool(packet.flags & AURORA_GRALLOC_POOL_MINIGBM_VALIDATED);
-+        return new AuroraGrallocPoolBuffer(packet, handleFds);
++            << bool(packet.flags & DET_GRALLOC_POOL_MINIGBM_VALIDATED);
++        return new DetGrallocPoolBuffer(packet, handleFds);
 +    }
 +
 +    FileDescriptor m_fd;
-+    QList<AuroraGrallocPoolBuffer *> m_available;
++    QList<DetGrallocPoolBuffer *> m_available;
 +    QSize m_size;
 +    uint32_t m_format = 0;
 +    uint32_t m_poolSize = 0;
@@ -512,10 +512,10 @@
      : AbstractEglBackend()
      , m_backend(b)
  {
-+    const QByteArray poolSocket = qgetenv("AURORA_GRALLOC_POOL");
++    const QByteArray poolSocket = qgetenv("DETERMINATION_GRALLOC_POOL");
 +    if (!poolSocket.isEmpty()) {
 +        m_poolRequested = true;
-+        auto allocator = std::make_unique<AuroraGrallocPoolAllocator>(poolSocket);
++        auto allocator = std::make_unique<DetGrallocPoolAllocator>(poolSocket);
 +        if (allocator->isValid()) {
 +            m_poolAllocator = std::move(allocator);
 +        } else {

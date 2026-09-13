@@ -1,8 +1,8 @@
 # Third-party notices
 
-Aurora's original source code is licensed under the [MIT License](LICENSE),
+Determination's original source code is licensed under the [MIT License](LICENSE),
 unless a file states otherwise. This notice records the direct third-party source
-that Aurora builds, vendors, modifies, links, or packages. It does not
+that Determination builds, vendors, modifies, links, or packages. It does not
 replace the copyright notices carried by an installed Debian, Arch, or Alpine
 rootfs.
 
@@ -14,15 +14,15 @@ must also retain that component's copyright notices and provide its applicable
 source, patches, and build instructions where its licence requires it.
 
 The project's source pins are in [`guest/sources.lock`](guest/sources.lock) and
-[`guest/fetch-aurorahyprland.sh`](guest/fetch-aurorahyprland.sh). A release must record
+[`guest/fetch-dethyprland.sh`](guest/fetch-dethyprland.sh). A release must record
 the exact kernel, minigbm, Mesa, and vendored-source revisions it actually used;
 a branch name or moving clone is not sufficient provenance.
 
 ## Direct components
 
-| Component | Licence | How Aurora uses it | Release requirement |
+| Component | Licence | How Determination uses it | Release requirement |
 | --- | --- | --- | --- |
-| Linux kernel / crDroid SM8150 kernel | GPL-2.0-only, except files marked otherwise | Builds the custom kernel in the boot image. | Ship the exact corresponding source, configuration, Aurora changes, and build recipe with every boot-image release. |
+| Linux kernel / crDroid SM8150 kernel | GPL-2.0-only, except files marked otherwise | Builds the custom kernel in the boot image. | Ship the exact corresponding source, configuration, Determination changes, and build recipe with every boot-image release. |
 | LXC 4.0.12 | LGPL-2.1-or-later and GPL-2.0-only, by file | Builds and statically ships selected LXC host tools; [`guest/lxc-4.0.12-no-legacy-seccomp.patch`](guest/lxc-4.0.12-no-legacy-seccomp.patch) modifies an LGPL-2.1+ file. | Carry both licence texts, LXC notices, the exact source tarball/source reference, and the patch. |
 | libhybris | Mixed file-level licences: Apache-2.0, BSD variants, GPL-3.0, ISC, LGPL-2.1, and MIT | Built from the pinned upstream source; the build recipe applies local compatibility changes. | Preserve all upstream licence files and publish the exact source revision plus all applied changes. Do not collapse it to one licence. |
 | HWC2 compatibility layer and AOSP headers | libhybris's mixed file-level licences; AOSP source is predominantly Apache-2.0 | [`hwc2-compat/build.sh`](hwc2-compat/build.sh) builds bionic compatibility libraries from pinned libhybris compatibility code and Android 16 AOSP headers. | Preserve the source notices, record the AOSP tag and libhybris revision in the release manifest, and provide all local changes. Device `/system` libraries are linked from the user's own phone and must not be redistributed. |
@@ -34,11 +34,11 @@ a branch name or moving clone is not sufficient provenance.
 | minigbm | BSD-3-Clause | Built for the compositor-facing GBM layer; [`guest/build-minigbm.sh`](guest/build-minigbm.sh) changes its MSM driver-name check. | Retain the BSD-3 notice and publish the source revision and local change. |
 | Mesa | Mixed, file-level licences | Optional native-Mesa/Turnip experiment; [`guest/build-mesa.sh`](guest/build-mesa.sh) applies a local Zink change. | Keep Mesa's full notice set and publish the selected source tag, source, and patch if its output is distributed. |
 | KWin 6.3.6 | Mixed source tree; the modified KWin sources are GPL-2.0-or-later | Experimental Plasma Mobile backend. | The KWin patches are GPL-2.0-or-later. Retain the source package's complete notices and publish the corresponding modified source if shipped. |
-| Hyprland, Aquamarine, Hypr utilities, Hypr protocols, and hyprwayland-scanner | BSD-3-Clause | AuroraHyprland sources fetched by [`guest/fetch-aurorahyprland.sh`](guest/fetch-aurorahyprland.sh); Aurora patches live in [`graphics/aurorahyprland/patches/`](graphics/aurorahyprland/patches). | Retain BSD-3 notices for each upstream project and the local patch provenance. |
+| Hyprland, Aquamarine, Hypr utilities, Hypr protocols, and hyprwayland-scanner | BSD-3-Clause | Dethyprland sources fetched by [`guest/fetch-dethyprland.sh`](guest/fetch-dethyprland.sh); Determination patches live in [`graphics/dethyprland/patches/`](graphics/dethyprland/patches). | Retain BSD-3 notices for each upstream project and the local patch provenance. |
 | Omarchy shell | MIT | Adapted shell sources and command integration in [`guest/omarchy`](guest/omarchy). | Preserve [`guest/omarchy/LICENSE`](guest/omarchy/LICENSE) and the upstream source identity. |
 | Quickshell | LGPL-3.0-only, with upstream per-file exceptions | Vendored at [`guest/vendor/quickshell`](guest/vendor/quickshell) and modified by [`guest/quickshell-vendor-egl.patch`](guest/quickshell-vendor-egl.patch). | Preserve its `LICENSE`, `LICENSE-GPL`, and per-file notices; make the matching modified source available with each shipped binary. |
 | wayland-protocols | MIT | Vendored at [`guest/vendor/wayland-protocols`](guest/vendor/wayland-protocols). | Preserve `COPYING` and the notices in individual protocol XML files. |
-| Android Wayland EGL protocol | X11-style permissive licence | [`graphics/aurorahyprland/wayland-android.xml`](graphics/aurorahyprland/wayland-android.xml) is derived from Collabora's protocol. | Keep the copyright and permission notice embedded in that XML and in generated derivatives. |
+| Android Wayland EGL protocol | X11-style permissive licence | [`graphics/dethyprland/wayland-android.xml`](graphics/dethyprland/wayland-android.xml) is derived from Collabora's protocol. | Keep the copyright and permission notice embedded in that XML and in generated derivatives. |
 | Virtual-pointer and virtual-keyboard protocol XML | MIT-style permissive licences embedded in each file | [`graphics/protocols/`](graphics/protocols/) is used by the input proxy. | Keep each XML's embedded copyright and permission notice in generated derivatives. |
 | Magisk Zygisk API header | ISC | [`zygisk/jni/zygisk.hpp`](zygisk/jni/zygisk.hpp) is a copied API header. | Keep its existing ISC header. |
 | AndroidX, Material Components, Jetpack Compose, Kotlin, and Haze | Apache-2.0 | Maven dependencies of the companion APK; versions are declared in [`companion/app/build.gradle.kts`](companion/app/build.gradle.kts). | Include their generated dependency notices in a distributed APK notice bundle. |

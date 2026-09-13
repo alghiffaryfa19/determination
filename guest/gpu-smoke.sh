@@ -29,8 +29,8 @@
 #   adb shell "su -c 'sh /data/local/tmp/gpu-smoke.sh'" \
 #       | tee artifacts/guest-gpu-smoke-$(date +%Y%m%d).txt    # desktop mode
 set -u
-AURORA=/data/aurora
-LXC="$AURORA/lxc/bin/lxc-attach -P $AURORA -n guest --"
+DET=/data/determination
+LXC="$DET/lxc/bin/lxc-attach -P $DET -n guest --"
 
 if [ "${1:-}" = "prep" ]; then
     exec $LXC /bin/sh -c '
@@ -43,7 +43,7 @@ if [ "${1:-}" = "prep" ]; then
     '
 fi
 
-[ -f "$AURORA/run/desktop-mode" ] || {
+[ -f "$DET/run/desktop-mode" ] || {
     echo "FATAL: desktop mode not active --- run desktop-on first (and warn the device operator: windows will appear)"; exit 1; }
 
 $LXC /bin/sh -c '

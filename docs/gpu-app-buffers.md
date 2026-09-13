@@ -1,6 +1,6 @@
 # GPU-accelerated app buffers (zero-copy client rendering)
 
-How Wayland clients in the Aurora guest render on the device GPU and
+How Wayland clients in the Determination guest render on the device GPU and
 hand their frames to phoc without a copy : and why this design is portable
 to essentially any Halium-capable Android device, not just the OnePlus 7.
 
@@ -40,7 +40,7 @@ phoc / wlroots (android renderer, hybris EGL on the hwcomposer platform)
 ```
 
 Both halves speak `android_wlegl` (protocol XML lives in both trees). No
-Aurora-specific patch is needed for the buffer path itself : the
+Determination-specific patch is needed for the buffer path itself : the
 work is environment wiring plus verification.
 
 ### Who provides what

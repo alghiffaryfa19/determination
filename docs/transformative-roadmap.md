@@ -1,12 +1,12 @@
-# Aurora transformative roadmap
+# Determination transformative roadmap
 
 **Status:** living implementation programme  
 **Started:** 2026-08-24  
-**Product boundary:** Android remains PID 1; Aurora remains a boot image,
+**Product boundary:** Android remains PID 1; Determination remains a boot image,
 Magisk module, Zygisk integration, Android companion, and Linux guest. It is not
 a ROM and does not replace `/system` or `/vendor`.
 
-This roadmap is the execution contract for turning Aurora into the most
+This roadmap is the execution contract for turning Determination into the most
 capable Android-hosted Linux convergence platform available. The benchmark is
 not “more checkboxes than postmarketOS.” The benchmark is a better daily system:
 Android remains a real phone, Linux is a real first-class desktop, transitions
@@ -21,7 +21,7 @@ silently replace them with an easier but different product.
 
 ## 1. What “done” means
 
-Aurora is complete only when the following system-level outcomes are
+Determination is complete only when the following system-level outcomes are
 true together:
 
 1. Android can remain fully interactive on the internal panel while Linux runs
@@ -82,9 +82,9 @@ true together:
 
 ## 3. Foundation: one authority, many clients
 
-### 3.1 Complete `aurorad` authority
+### 3.1 Complete `detd` authority
 
-Move `aurorad` from observe-only deployment to staged authority without making the
+Move `detd` from observe-only deployment to staged authority without making the
 phone depend on an unqualified daemon.
 
 Deliverables:
@@ -202,7 +202,7 @@ restore path. It can:
 - request a reboot when local restoration cannot be proven;
 - leave a bounded, human-readable rescue receipt.
 
-Recovery is available from the app, Quick Settings, `aurora`, a Magisk action zip,
+Recovery is available from the app, Quick Settings, `det`, a Magisk action zip,
 USB recovery media, and the next boot. None depend on a notification.
 
 ### 4.3 Qualification harness
@@ -238,7 +238,7 @@ binary happens to exist.
 - eliminate bare-session fallback on qualified systemd guests;
 - finish feedbackd, geoclue policy, portals, secret storage, GVfs, Flatpak,
   accessibility, colour management, and GNOME settings integration;
-- provide Aurora panels for session, Android handoff, external displays,
+- provide Determination panels for session, Android handoff, external displays,
   power, network, audio routes, input mappings, and recovery;
 - persist monitor, scale, orientation, wallpaper, keyboard, and application
   session state;
@@ -546,7 +546,7 @@ freshness expiry, not aggressive polling.
 
 ## 13. Desktop experience
 
-- Aurora control centre using the guest agent D-Bus/API rather than
+- Determination control centre using the guest agent D-Bus/API rather than
   host shell access;
 - convergence shelf for transfers, Android links, recent sessions, and dock
   state;
@@ -641,7 +641,7 @@ is tested rather than admired.
 
 ## 18. Diagnostics and developer platform
 
-`aurora doctor --json` becomes a coherent offline snapshot with schema and
+`det doctor --json` becomes a coherent offline snapshot with schema and
 freshness. It includes identities, modes, operation journal, component health,
 process/namespace identity, display path, frame/fence metrics, input ownership,
 audio route, network, memory, battery, thermal, storage, update state, hook
@@ -649,12 +649,12 @@ health, capability verdicts, contradictions, and a ranked recovery suggestion.
 
 Additional tools:
 
-- `aurora events` for sequenced state changes;
-- `aurora trace transition|presenter|audio|input` with bounded capture;
-- `aurora capsule` for a sanitised support archive;
-- `aurora qualify` for named static/device/stress gates;
-- `aurora capabilities` for the exact support graph;
-- `aurora benchmark` for transition, frame, input, audio, network, and storage;
+- `det events` for sequenced state changes;
+- `det trace transition|presenter|audio|input` with bounded capture;
+- `det capsule` for a sanitised support archive;
+- `det qualify` for named static/device/stress gates;
+- `det capabilities` for the exact support graph;
+- `det benchmark` for transition, frame, input, audio, network, and storage;
 - a protocol SDK and examples for trusted Android and guest clients;
 - deterministic simulators for app development without root or a connected
   phone;
@@ -701,7 +701,7 @@ Targets:
 
 ## 21. Delight that earns its keep
 
-- a real “absolute aurora” qualification badge after 50 clean cycles;
+- a real “absolute determination” qualification badge after 50 clean cycles;
 - build-ID colour bars for photographed external first-frame evidence;
 - a soul-status CLI/app element driven by real health, never fake counters;
 - dock-specific session profiles and instant summon;
@@ -826,7 +826,7 @@ claiming hardware qualification:
    operation query, and event snapshots;
 2. derive honest capability states from current observations and source
    manifests;
-3. add `auroractl capabilities`, `health`, and operation inspection;
+3. add `detctl capabilities`, `health`, and operation inspection;
 4. expose coherent data through Zygisk and the companion without arbitrary
    shell commands;
 5. add session manifests and a validator used by CLI/app/session launch;
@@ -858,6 +858,6 @@ Every roadmap item is tracked as one of:
 - **release-qualified:** reproducible install, upgrade, rollback, and recovery
   pass for a declared support profile.
 
-Anything below release-qualified remains visible as such. Aurora becomes
+Anything below release-qualified remains visible as such. Determination becomes
 better than alternatives by being more capable and less mysterious—not by
 renaming untested work “done.”

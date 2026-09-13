@@ -7,6 +7,6 @@ Primary key fingerprint: 68B3 537F 39A3 13B3 E574  D067 7719 3F15 2BDB E6A6
 tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.security.capability'
 tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.security.capability'
 customized Arch Linux ARM rootfs at /home/melissa/decemberos/build/omarchy-alarm/tmp.S1e3UmZWzK/rootfs
-Rootfs: /home/melissa/decemberos/build/omarchy-alarm/aurora-rootfs-arch.tar.gz
-Install: aurora distro install arch /home/melissa/decemberos/build/omarchy-alarm/aurora-rootfs-arch.tar.gz
-Then:    aurora distro select arch && aurora distro provision
+Rootfs: /home/melissa/decemberos/build/omarchy-alarm/determination-rootfs-arch.tar.gz
+Install: det distro install arch /home/melissa/decemberos/build/omarchy-alarm/determination-rootfs-arch.tar.gz
+Then:    det distro select arch && det distro provision

@@ -37,11 +37,11 @@
 
 namespace {
 
-constexpr char kTag[] = "AuroraPresenter";
+constexpr char kTag[] = "DetPresenter";
 
-#define AURORA_LOGI(...) __android_log_print(ANDROID_LOG_INFO, kTag, __VA_ARGS__)
-#define AURORA_LOGW(...) __android_log_print(ANDROID_LOG_WARN, kTag, __VA_ARGS__)
-#define AURORA_LOGE(...) __android_log_print(ANDROID_LOG_ERROR, kTag, __VA_ARGS__)
+#define DET_LOGI(...) __android_log_print(ANDROID_LOG_INFO, kTag, __VA_ARGS__)
+#define DET_LOGW(...) __android_log_print(ANDROID_LOG_WARN, kTag, __VA_ARGS__)
+#define DET_LOGE(...) __android_log_print(ANDROID_LOG_ERROR, kTag, __VA_ARGS__)
 
 struct SurfaceApi {
     void *library = nullptr;
@@ -74,32 +74,32 @@ struct SurfaceApi {
         if (!library) {
             throw std::runtime_error("dlopen(libandroid.so) failed");
         }
-#define AURORA_REQUIRED(member, symbol)                                        \
+#define DET_REQUIRED(member, symbol)                                        \
     do {                                                                    \
         member = reinterpret_cast<decltype(member)>(dlsym(library, symbol));\
         if (!member) {                                                      \
             throw std::runtime_error(std::string("missing ") + symbol);    \
         }                                                                   \
     } while (0)
-        AURORA_REQUIRED(createFromWindow, "ASurfaceControl_createFromWindow");
-        AURORA_REQUIRED(acquireSurface, "ASurfaceControl_acquire");
-        AURORA_REQUIRED(releaseSurface, "ASurfaceControl_release");
-        AURORA_REQUIRED(createTransaction, "ASurfaceTransaction_create");
-        AURORA_REQUIRED(deleteTransaction, "ASurfaceTransaction_delete");
-        AURORA_REQUIRED(apply, "ASurfaceTransaction_apply");
-        AURORA_REQUIRED(setVisibility, "ASurfaceTransaction_setVisibility");
-        AURORA_REQUIRED(setZOrder, "ASurfaceTransaction_setZOrder");
-        AURORA_REQUIRED(setGeometry, "ASurfaceTransaction_setGeometry");
-        AURORA_REQUIRED(setBuffer, "ASurfaceTransaction_setBuffer");
-        AURORA_REQUIRED(setDesiredPresentTime,
+        DET_REQUIRED(createFromWindow, "ASurfaceControl_createFromWindow");
+        DET_REQUIRED(acquireSurface, "ASurfaceControl_acquire");
+        DET_REQUIRED(releaseSurface, "ASurfaceControl_release");
+        DET_REQUIRED(createTransaction, "ASurfaceTransaction_create");
+        DET_REQUIRED(deleteTransaction, "ASurfaceTransaction_delete");
+        DET_REQUIRED(apply, "ASurfaceTransaction_apply");
+        DET_REQUIRED(setVisibility, "ASurfaceTransaction_setVisibility");
+        DET_REQUIRED(setZOrder, "ASurfaceTransaction_setZOrder");
+        DET_REQUIRED(setGeometry, "ASurfaceTransaction_setGeometry");
+        DET_REQUIRED(setBuffer, "ASurfaceTransaction_setBuffer");
+        DET_REQUIRED(setDesiredPresentTime,
                      "ASurfaceTransaction_setDesiredPresentTime");
-        AURORA_REQUIRED(setOnComplete, "ASurfaceTransaction_setOnComplete");
-        AURORA_REQUIRED(getLatchTime, "ASurfaceTransactionStats_getLatchTime");
-        AURORA_REQUIRED(getPresentFence,
+        DET_REQUIRED(setOnComplete, "ASurfaceTransaction_setOnComplete");
+        DET_REQUIRED(getLatchTime, "ASurfaceTransactionStats_getLatchTime");
+        DET_REQUIRED(getPresentFence,
                      "ASurfaceTransactionStats_getPresentFenceFd");
-        AURORA_REQUIRED(getReleaseFence,
+        DET_REQUIRED(getReleaseFence,
                      "ASurfaceTransactionStats_getPreviousReleaseFenceFd");
-#undef AURORA_REQUIRED
+#undef DET_REQUIRED
         setEnableBackPressure =
             reinterpret_cast<decltype(setEnableBackPressure)>(
                 dlsym(library, "ASurfaceTransaction_setEnableBackPressure"));
@@ -122,7 +122,7 @@ int64_t monotonicNanos()
 }
 
 struct ReceivedPacket {
-    aurora_presenter_packet packet{};
+    det_presenter_packet packet{};
     int fence = -1;
 
     ~ReceivedPacket()
@@ -151,13 +151,13 @@ bool receivePacket(int fd, ReceivedPacket *received)
     }
     if (size != static_cast<ssize_t>(sizeof(received->packet)) ||
         (message.msg_flags & (MSG_TRUNC | MSG_CTRUNC)) != 0) {
-        AURORA_LOGW("bad control packet size=%zd flags=0x%x", size, message.msg_flags);
+        DET_LOGW("bad control packet size=%zd flags=0x%x", size, message.msg_flags);
         return false;
     }
-    if (received->packet.magic != AURORA_PRESENTER_MAGIC ||
-        received->packet.version != AURORA_PRESENTER_VERSION ||
+    if (received->packet.magic != DET_PRESENTER_MAGIC ||
+        received->packet.version != DET_PRESENTER_VERSION ||
         received->packet.size != sizeof(received->packet)) {
-        AURORA_LOGW("bad protocol header magic=0x%x version=%u size=%u",
+        DET_LOGW("bad protocol header magic=0x%x version=%u size=%u",
                  received->packet.magic, received->packet.version,
                  received->packet.size);
         return false;
@@ -182,17 +182,17 @@ struct Connection : std::enable_shared_from_this<Connection> {
         }
     }
 
-    bool sendCompletion(aurora_presenter_packet packet, int presentFence,
+    bool sendCompletion(det_presenter_packet packet, int presentFence,
                         int releaseFence)
     {
         int fences[2];
         size_t fenceCount = 0;
         if (presentFence >= 0) {
-            packet.flags |= AURORA_PRESENTER_HAS_PRESENT_FENCE;
+            packet.flags |= DET_PRESENTER_HAS_PRESENT_FENCE;
             fences[fenceCount++] = presentFence;
         }
         if (releaseFence >= 0) {
-            packet.flags |= AURORA_PRESENTER_HAS_RELEASE_FENCE;
+            packet.flags |= DET_PRESENTER_HAS_RELEASE_FENCE;
             fences[fenceCount++] = releaseFence;
         }
 
@@ -233,8 +233,8 @@ void onComplete(void *opaque, ASurfaceTransactionStats *stats)
 {
     std::unique_ptr<CompletionContext> context(
         static_cast<CompletionContext *>(opaque));
-    aurora_presenter_packet packet =
-        aurora_presenter_packet_init(AURORA_PRESENTER_COMPLETE);
+    det_presenter_packet packet =
+        det_presenter_packet_init(DET_PRESENTER_COMPLETE);
     packet.serial = context->serial;
     packet.buffer_id = context->bufferId;
     packet.released_buffer_id = context->releasedBufferId;
@@ -247,7 +247,7 @@ void onComplete(void *opaque, ASurfaceTransactionStats *stats)
         : -1;
     if (!context->connection->sendCompletion(packet, presentFence,
                                               releaseFence)) {
-        AURORA_LOGW("completion send failed serial=%llu: %s",
+        DET_LOGW("completion send failed serial=%llu: %s",
                  static_cast<unsigned long long>(context->serial),
                  std::strerror(errno));
     }
@@ -279,7 +279,7 @@ public:
                 ANATIVEWINDOW_FRAME_RATE_COMPATIBILITY_FIXED_SOURCE);
         }
         m_surface = surfaceApi().createFromWindow(m_window,
-                                                  "Aurora guest");
+                                                  "Determination guest");
         if (!m_surface) {
             ANativeWindow_release(m_window);
             m_window = nullptr;
@@ -374,8 +374,8 @@ public:
     bool input(uint16_t type, uint16_t code, int32_t value,
                int32_t minimum, int32_t maximum, uint32_t sourceFlags)
     {
-        if (type > EV_MAX || sourceFlags & ~(AURORA_INPUT_SOURCE_ABSOLUTE |
-            AURORA_INPUT_SOURCE_DIRECT | AURORA_INPUT_SOURCE_MULTITOUCH)) {
+        if (type > EV_MAX || sourceFlags & ~(DET_INPUT_SOURCE_ABSOLUTE |
+            DET_INPUT_SOURCE_DIRECT | DET_INPUT_SOURCE_MULTITOUCH)) {
             return false;
         }
         return sendInputEvent(type, code, value, minimum, maximum, sourceFlags);
@@ -387,19 +387,19 @@ private:
     {
         return sendInputEvent(
             type, code, value, minimum, maximum,
-            AURORA_INPUT_SOURCE_ABSOLUTE | AURORA_INPUT_SOURCE_DIRECT |
-                AURORA_INPUT_SOURCE_MULTITOUCH);
+            DET_INPUT_SOURCE_ABSOLUTE | DET_INPUT_SOURCE_DIRECT |
+                DET_INPUT_SOURCE_MULTITOUCH);
     }
 
     bool sendInputEvent(uint16_t type, uint16_t code, int32_t value,
                         int32_t minimum, int32_t maximum,
                         uint32_t sourceFlags)
     {
-        aurora_input_forward_packet packet{};
-        packet.magic = AURORA_INPUT_FORWARD_MAGIC;
-        packet.version = AURORA_INPUT_FORWARD_VERSION;
+        det_input_forward_packet packet{};
+        packet.magic = DET_INPUT_FORWARD_MAGIC;
+        packet.version = DET_INPUT_FORWARD_VERSION;
         packet.size = sizeof(packet);
-        packet.source_id = AURORA_INPUT_ANDROID_TOUCH_SOURCE_ID;
+        packet.source_id = DET_INPUT_ANDROID_TOUCH_SOURCE_ID;
         packet.type = type;
         packet.code = code;
         packet.value = value;
@@ -420,7 +420,7 @@ private:
     void serveTouch()
     {
         if (m_touchSocketPath.size() >= sizeof(sockaddr_un::sun_path)) {
-            AURORA_LOGE("touch socket path too long: %s", m_touchSocketPath.c_str());
+            DET_LOGE("touch socket path too long: %s", m_touchSocketPath.c_str());
             return;
         }
         unlink(m_touchSocketPath.c_str());
@@ -436,16 +436,16 @@ private:
                  sizeof(address)) != 0 ||
             chmod(m_touchSocketPath.c_str(), 0666) != 0 ||
             listen(server, 1) != 0) {
-            AURORA_LOGE("touch bind/listen failed: %s", std::strerror(errno));
+            DET_LOGE("touch bind/listen failed: %s", std::strerror(errno));
             return;
         }
-        AURORA_LOGI("touch input listening on %s", m_touchSocketPath.c_str());
+        DET_LOGI("touch input listening on %s", m_touchSocketPath.c_str());
 
         while (m_running.load()) {
             const int client = accept4(server, nullptr, nullptr, SOCK_CLOEXEC);
             if (client < 0) {
                 if (m_running.load())
-                    AURORA_LOGW("touch accept failed: %s", std::strerror(errno));
+                    DET_LOGW("touch accept failed: %s", std::strerror(errno));
                 continue;
             }
             ucred credential{};
@@ -453,7 +453,7 @@ private:
             if (getsockopt(client, SOL_SOCKET, SO_PEERCRED, &credential,
                            &credentialSize) != 0 ||
                 (credential.uid != 0 && credential.uid != 1000)) {
-                AURORA_LOGW("rejected touch peer uid=%u", credential.uid);
+                DET_LOGW("rejected touch peer uid=%u", credential.uid);
                 close(client);
                 continue;
             }
@@ -461,7 +461,7 @@ private:
                 std::lock_guard lock(m_touchMutex);
                 m_touchClient = client;
             }
-            AURORA_LOGI("guest touch proxy connected");
+            DET_LOGI("guest touch proxy connected");
             /* POLLHUP/POLLERR are output-only poll flags. Ask for readable
              * state and Linux will still report peer shutdown; requesting
              * HUP as an input event caused a hot reconnect loop on Android. */
@@ -480,20 +480,20 @@ private:
                     m_touchClient = -1;
             }
             close(client);
-            AURORA_LOGI("guest touch proxy disconnected");
+            DET_LOGI("guest touch proxy disconnected");
         }
     }
 
     void serve()
     {
         if (m_socketPath.size() >= sizeof(sockaddr_un::sun_path)) {
-            AURORA_LOGE("socket path too long: %s", m_socketPath.c_str());
+            DET_LOGE("socket path too long: %s", m_socketPath.c_str());
             return;
         }
         unlink(m_socketPath.c_str());
         const int server = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
         if (server < 0) {
-            AURORA_LOGE("socket failed: %s", std::strerror(errno));
+            DET_LOGE("socket failed: %s", std::strerror(errno));
             return;
         }
         m_server.store(server);
@@ -503,7 +503,7 @@ private:
                     m_socketPath.size() + 1);
         if (bind(server, reinterpret_cast<sockaddr *>(&address),
                  sizeof(address)) != 0 || listen(server, 1) != 0) {
-            AURORA_LOGE("bind/listen %s failed: %s", m_socketPath.c_str(),
+            DET_LOGE("bind/listen %s failed: %s", m_socketPath.c_str(),
                      std::strerror(errno));
             return;
         }
@@ -511,13 +511,13 @@ private:
         // uid 1000. The filesystem mode permits that crossing; SO_PEERCRED
         // below is the actual authorization boundary.
         chmod(m_socketPath.c_str(), 0666);
-        AURORA_LOGI("listening on %s", m_socketPath.c_str());
+        DET_LOGI("listening on %s", m_socketPath.c_str());
 
         while (m_running.load()) {
             const int fd = accept4(server, nullptr, nullptr, SOCK_CLOEXEC);
             if (fd < 0) {
                 if (m_running.load()) {
-                    AURORA_LOGW("accept failed: %s", std::strerror(errno));
+                    DET_LOGW("accept failed: %s", std::strerror(errno));
                 }
                 continue;
             }
@@ -526,7 +526,7 @@ private:
             if (getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &credential,
                            &credentialSize) != 0 ||
                 (credential.uid != 0 && credential.uid != 1000)) {
-                AURORA_LOGW("rejected presenter peer uid=%u", credential.uid);
+                DET_LOGW("rejected presenter peer uid=%u", credential.uid);
                 close(fd);
                 continue;
             }
@@ -542,7 +542,7 @@ private:
         uint64_t currentBuffer = 0;
         uint64_t registeredPixels = 0;
         uint64_t lastSerial = 0;
-        AURORA_LOGI("guest presenter connected");
+        DET_LOGI("guest presenter connected");
 
         while (m_running.load()) {
             ReceivedPacket received;
@@ -550,27 +550,27 @@ private:
                 break;
             }
             const auto &packet = received.packet;
-            if (packet.op == AURORA_PRESENTER_REGISTER) {
+            if (packet.op == DET_PRESENTER_REGISTER) {
                 if (received.fence >= 0 || packet.buffer_id == 0 ||
-                    !aurora_presenter_dimensions_valid(packet.width, packet.height) ||
-                    buffers.size() >= AURORA_PRESENTER_MAX_BUFFERS ||
+                    !det_presenter_dimensions_valid(packet.width, packet.height) ||
+                    buffers.size() >= DET_PRESENTER_MAX_BUFFERS ||
                     buffers.contains(packet.buffer_id)) {
-                    AURORA_LOGW("rejected buffer registration id=%llu %ux%u count=%zu",
+                    DET_LOGW("rejected buffer registration id=%llu %ux%u count=%zu",
                              static_cast<unsigned long long>(packet.buffer_id),
                              packet.width, packet.height, buffers.size());
                     break;
                 }
                 const uint64_t pixels = static_cast<uint64_t>(packet.width) *
                                         static_cast<uint64_t>(packet.height);
-                if (pixels > AURORA_PRESENTER_MAX_REGISTERED_PIXELS - registeredPixels) {
-                    AURORA_LOGW("registered buffer pixel quota exceeded");
+                if (pixels > DET_PRESENTER_MAX_REGISTERED_PIXELS - registeredPixels) {
+                    DET_LOGW("registered buffer pixel quota exceeded");
                     break;
                 }
                 AHardwareBuffer *buffer = nullptr;
                 const int status = AHardwareBuffer_recvHandleFromUnixSocket(
                     connection->fd, &buffer);
                 if (status != 0 || !buffer) {
-                    AURORA_LOGW("AHardwareBuffer receive failed id=%llu status=%d",
+                    DET_LOGW("AHardwareBuffer receive failed id=%llu status=%d",
                              static_cast<unsigned long long>(packet.buffer_id),
                              status);
                     break;
@@ -582,19 +582,19 @@ private:
                     description.format != packet.format ||
                     description.stride != packet.stride ||
                     description.layers != 1) {
-                    AURORA_LOGW("buffer metadata mismatch id=%llu",
+                    DET_LOGW("buffer metadata mismatch id=%llu",
                              static_cast<unsigned long long>(packet.buffer_id));
                     AHardwareBuffer_release(buffer);
                     break;
                 }
                 buffers[packet.buffer_id] = buffer;
                 registeredPixels += pixels;
-                AURORA_LOGI("registered buffer id=%llu %ux%u stride=%u",
+                DET_LOGI("registered buffer id=%llu %ux%u stride=%u",
                          static_cast<unsigned long long>(packet.buffer_id),
                          packet.width, packet.height, packet.stride);
                 continue;
             }
-            if (packet.op == AURORA_PRESENTER_UNREGISTER) {
+            if (packet.op == DET_PRESENTER_UNREGISTER) {
                 if (received.fence >= 0) break;
                 if (auto found = buffers.find(packet.buffer_id);
                     found != buffers.end()) {
@@ -607,14 +607,14 @@ private:
                 }
                 continue;
             }
-            if (packet.op != AURORA_PRESENTER_PRESENT) {
-                AURORA_LOGW("unknown presenter op=0x%x", packet.op);
+            if (packet.op != DET_PRESENTER_PRESENT) {
+                DET_LOGW("unknown presenter op=0x%x", packet.op);
                 break;
             }
             if (packet.serial == 0 || packet.serial <= lastSerial ||
-                connection->inflight.load() >= AURORA_PRESENTER_MAX_INFLIGHT_FRAMES ||
-                !aurora_presenter_present_flags_valid(packet.flags)) {
-                AURORA_LOGW("rejected present serial=%llu last=%llu inflight=%u",
+                connection->inflight.load() >= DET_PRESENTER_MAX_INFLIGHT_FRAMES ||
+                !det_presenter_present_flags_valid(packet.flags)) {
+                DET_LOGW("rejected present serial=%llu last=%llu inflight=%u",
                          static_cast<unsigned long long>(packet.serial),
                          static_cast<unsigned long long>(lastSerial),
                          connection->inflight.load());
@@ -622,19 +622,19 @@ private:
             }
             const auto found = buffers.find(packet.buffer_id);
             if (found == buffers.end()) {
-                AURORA_LOGW("present of unknown buffer id=%llu",
+                DET_LOGW("present of unknown buffer id=%llu",
                          static_cast<unsigned long long>(packet.buffer_id));
                 break;
             }
-            if ((packet.flags & AURORA_PRESENTER_HAS_ACQUIRE_FENCE) != 0 &&
+            if ((packet.flags & DET_PRESENTER_HAS_ACQUIRE_FENCE) != 0 &&
                 received.fence < 0) {
-                AURORA_LOGW("present serial=%llu missing acquire fence",
+                DET_LOGW("present serial=%llu missing acquire fence",
                          static_cast<unsigned long long>(packet.serial));
                 break;
             }
-            if ((packet.flags & AURORA_PRESENTER_HAS_ACQUIRE_FENCE) == 0 &&
+            if ((packet.flags & DET_PRESENTER_HAS_ACQUIRE_FENCE) == 0 &&
                 received.fence >= 0) {
-                AURORA_LOGW("present serial=%llu carried an undeclared fence",
+                DET_LOGW("present serial=%llu carried an undeclared fence",
                          static_cast<unsigned long long>(packet.serial));
                 break;
             }
@@ -678,7 +678,7 @@ private:
             (void)id;
             AHardwareBuffer_release(buffer);
         }
-        AURORA_LOGI("guest presenter disconnected");
+        DET_LOGI("guest presenter disconnected");
     }
 
     std::string m_socketPath;
@@ -703,7 +703,7 @@ std::unique_ptr<Presenter> gPresenter;
 } // namespace
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_aurora_companion_NativePresenter_nativeStart(
+Java_com_determination_companion_NativePresenter_nativeStart(
     JNIEnv *env, jobject, jobject surface, jstring socketPath, jint width,
     jint height, jfloat refreshRate)
 {
@@ -719,14 +719,14 @@ Java_com_aurora_companion_NativePresenter_nativeStart(
         env->ReleaseStringUTFChars(socketPath, path);
         return JNI_TRUE;
     } catch (const std::exception &error) {
-        AURORA_LOGE("presenter start failed: %s", error.what());
+        DET_LOGE("presenter start failed: %s", error.what());
         env->ReleaseStringUTFChars(socketPath, path);
         return JNI_FALSE;
     }
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_aurora_companion_NativePresenter_nativeResize(
+Java_com_determination_companion_NativePresenter_nativeResize(
     JNIEnv *, jobject, jint width, jint height)
 {
     std::lock_guard lock(gPresenterMutex);
@@ -736,7 +736,7 @@ Java_com_aurora_companion_NativePresenter_nativeResize(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_aurora_companion_NativePresenter_nativeTouch(
+Java_com_determination_companion_NativePresenter_nativeTouch(
     JNIEnv *, jobject, jint action, jint pointerId, jfloat x, jfloat y,
     jint width, jint height)
 {
@@ -748,7 +748,7 @@ Java_com_aurora_companion_NativePresenter_nativeTouch(
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_aurora_companion_NativePresenter_nativeInput(
+Java_com_determination_companion_NativePresenter_nativeInput(
     JNIEnv *, jobject, jint type, jint code, jint value, jint minimum,
     jint maximum, jint sourceFlags)
 {
@@ -761,7 +761,7 @@ Java_com_aurora_companion_NativePresenter_nativeInput(
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_aurora_companion_NativePresenter_nativeStop(JNIEnv *, jobject)
+Java_com_determination_companion_NativePresenter_nativeStop(JNIEnv *, jobject)
 {
     std::lock_guard lock(gPresenterMutex);
     gPresenter.reset();

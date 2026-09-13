@@ -3,7 +3,7 @@
 This directory contains the verbatim standard licence texts referenced by
 [`../THIRD_PARTY_NOTICES.md`](../THIRD_PARTY_NOTICES.md).
 
-`../LICENSE` is the MIT licence for Aurora's original code. It is not a
+`../LICENSE` is the MIT licence for Determination's original code. It is not a
 relicence of third-party source, generated code, or a component carrying its own
 copyright/licence header.
 

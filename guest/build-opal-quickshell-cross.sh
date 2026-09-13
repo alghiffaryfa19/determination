@@ -2,8 +2,8 @@
 set -eu
 
 HERE=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
-BUILD=${AURORA_OPAL_BUILD_DIR:-"$HERE/build/opal-quickshell-cross"}
-IMAGE=${AURORA_OPAL_BUILD_IMAGE:-aurora/quickshell-cross:trixie}
+BUILD=${DET_OPAL_BUILD_DIR:-"$HERE/build/opal-quickshell-cross"}
+IMAGE=${DET_OPAL_BUILD_IMAGE:-determination/quickshell-cross:trixie}
 
 command -v podman >/dev/null 2>&1 || {
     echo 'podman is required for the host cross-build' >&2
@@ -48,8 +48,8 @@ exec podman run --rm \
             -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=ONLY \
             -DQt6_DIR=/usr/lib/aarch64-linux-gnu/cmake/Qt6 \
             -DQT_HOST_PATH=/usr \
-            -DCMAKE_INSTALL_PREFIX=/opt/aurorahyprland \
-            -DDISTRIBUTOR=Aurora \
+            -DCMAKE_INSTALL_PREFIX=/opt/dethyprland \
+            -DDISTRIBUTOR=Determination \
             -DCRASH_HANDLER=OFF -DUSE_JEMALLOC=OFF -DX11=OFF \
             -DSERVICE_PAM=OFF -DSERVICE_POLKIT=OFF -DSERVICE_PIPEWIRE=OFF \
             -DWAYLAND_PROTOCOLS=/work/guest/vendor/wayland-protocols \

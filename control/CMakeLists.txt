@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.22)
-project(aurora_control LANGUAGES CXX)
+project(determination_control LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_library(auroracontrol STATIC
+add_library(detcontrol STATIC
     src/adapter.cpp
     src/capability.cpp
     src/journal.cpp
@@ -17,41 +17,41 @@ add_library(auroracontrol STATIC
     src/system.cpp
     src/transition.cpp
 )
-target_include_directories(auroracontrol PUBLIC include)
-target_compile_options(auroracontrol PRIVATE -Wall -Wextra -Wpedantic -Werror)
+target_include_directories(detcontrol PUBLIC include)
+target_compile_options(detcontrol PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
-add_executable(aurorad src/aurorad.cpp)
-target_link_libraries(aurorad PRIVATE auroracontrol)
-target_compile_options(aurorad PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_executable(detd src/detd.cpp)
+target_link_libraries(detd PRIVATE detcontrol)
+target_compile_options(detd PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
-add_executable(auroractl src/auroractl.cpp)
-target_link_libraries(auroractl PRIVATE auroracontrol)
-target_compile_options(auroractl PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_executable(detctl src/detctl.cpp)
+target_link_libraries(detctl PRIVATE detcontrol)
+target_compile_options(detctl PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
 if(NOT ANDROID)
-    add_executable(aurora-guest-agent src/aurora_guest_agent.cpp)
-    target_link_libraries(aurora-guest-agent PRIVATE auroracontrol)
-    target_compile_options(aurora-guest-agent PRIVATE
+    add_executable(det-guest-agent src/det_guest_agent.cpp)
+    target_link_libraries(det-guest-agent PRIVATE detcontrol)
+    target_compile_options(det-guest-agent PRIVATE
         -Wall -Wextra -Wpedantic -Werror
     )
-    if(AURORA_STATIC_GUEST)
-        target_link_options(aurora-guest-agent PRIVATE -static)
+    if(DET_STATIC_GUEST)
+        target_link_options(det-guest-agent PRIVATE -static)
     endif()
 endif()
 
 if(ANDROID)
-    target_link_libraries(auroracontrol PUBLIC log)
-    target_link_options(aurorad PRIVATE -static-libstdc++)
-    target_link_options(auroractl PRIVATE -static-libstdc++)
+    target_link_libraries(detcontrol PUBLIC log)
+    target_link_options(detd PRIVATE -static-libstdc++)
+    target_link_options(detctl PRIVATE -static-libstdc++)
 else()
     enable_testing()
 
-    add_executable(aurora-control-tests
+    add_executable(det-control-tests
         tests/control_tests.cpp
     )
-    target_link_libraries(aurora-control-tests PRIVATE auroracontrol)
-    target_compile_options(aurora-control-tests PRIVATE
+    target_link_libraries(det-control-tests PRIVATE detcontrol)
+    target_compile_options(det-control-tests PRIVATE
         -Wall -Wextra -Wpedantic -Werror
     )
-    add_test(NAME aurora-control-tests COMMAND aurora-control-tests)
+    add_test(NAME det-control-tests COMMAND det-control-tests)
 endif()

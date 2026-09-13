@@ -2,18 +2,18 @@
 # Desktop-to-phone handoff: release composer before restarting SurfaceFlinger.
 
 set -u
-AURORA=${AURORA:-/data/aurora}
-. "$AURORA/bin/lifecycle-lib"
+DET=${DET:-/data/determination}
+. "$DET/bin/lifecycle-lib"
 emergency=0
 case "${1:-}" in
     "") ;;
     --emergency) emergency=1 ;;
     *) echo "usage: desktop-off [--emergency]" >&2; exit 2 ;;
 esac
-exec >>"$AURORA/log/toggle.log" 2>&1
+exec >>"$DET/log/toggle.log" 2>&1
 echo "--- desktop-off $(date)"
 lc_lock_acquire || exit 1
-generation=$(sed -n 's/^generation=//p' "$AURORA/run/transition.state" 2>/dev/null | tail -n 1)
+generation=$(sed -n 's/^generation=//p' "$DET/run/transition.state" 2>/dev/null | tail -n 1)
 [ -n "$generation" ] || generation=0
 signal_generation=$generation
 [ "$emergency" -eq 0 ] || signal_generation=
@@ -22,9 +22,9 @@ finish() { lc_lock_release; }
 trap finish EXIT HUP INT TERM
 
 # Stop the suppressor before restarting SF.
-rm -f "$AURORA/run/desktop-mode"
+rm -f "$DET/run/desktop-mode"
 lc_pid_signal suppressor TERM "$signal_generation"
-"$AURORA/bin/external-input" stop >/dev/null 2>&1 || true
+"$DET/bin/external-input" stop >/dev/null 2>&1 || true
 lc_state_write EXITING "$generation" android-owner running
 
 # SIGCONT would resume system_server with fatal accumulated Watchdog time.
@@ -46,14 +46,14 @@ fi
 
 # Teardown targets come from desktop-on's session.active record; defaults = phosh.
 active_field() {
-    sed -n "s/^$1=//p" "$AURORA/run/session.active" 2>/dev/null | head -n 1
+    sed -n "s/^$1=//p" "$DET/run/session.active" 2>/dev/null | head -n 1
 }
 active_id=$(active_field id)
 active_compositor=$(active_field compositor)
 active_shell=$(active_field shell)
 active_backend=$(active_field backend)
 if [ -z "$active_compositor" ]; then
-    active_record=$("$AURORA/bin/session-select" 2>/dev/null) || active_record=
+    active_record=$("$DET/bin/session-select" 2>/dev/null) || active_record=
     if [ -n "$active_record" ]; then
         active_id=$(printf '%s\n' "$active_record" | sed -n 's/^id=//p' | head -n 1)
         active_compositor=$(printf '%s\n' "$active_record" | sed -n 's/^compositor=//p' | head -n 1)
@@ -69,17 +69,17 @@ comp_name=${active_compositor##*/}
 lc_state_write EXITING "$generation" compositor running
 if [ "$active_backend" = gralloc-minigbm ]; then
     # Stop the unit first or systemd respawns what we just killed.
-    "$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c \
+    "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c \
         'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; \
-         systemctl stop aurora-plasma.service 2>/dev/null; true' 2>/dev/null
+         systemctl stop det-plasma.service 2>/dev/null; true' 2>/dev/null
 fi
 if [ "${active_shell##*/}" = phosh ]; then
-    "$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c \
+    "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c \
         'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; \
-         [ "$(aurora-platform init 2>/dev/null)" != systemd ] || \
-             systemctl stop aurora-phosh.service 2>/dev/null || true' 2>/dev/null
+         [ "$(det-platform init 2>/dev/null)" != systemd ] || \
+             systemctl stop det-phosh.service 2>/dev/null || true' 2>/dev/null
 fi
-"$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c '
+"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
     export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     for client in "$1" squeekboard foot ${2:+plasmashell}; do
         [ -n "$client" ] && pkill -TERM "$client"
@@ -91,7 +91,7 @@ while pgrep -x "${active_shell##*/}" >/dev/null 2>&1 || pgrep -x foot >/dev/null
     i=$((i+1)); [ $i -gt 15 ] && { echo "WARN: clients still up after 1.5s --- proceeding"; break; }
     sleep 0.1
 done
-"$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /usr/bin/pkill -TERM "$comp_name" 2>/dev/null
+"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /usr/bin/pkill -TERM "$comp_name" 2>/dev/null
 lc_pid_signal compositor TERM "$signal_generation"
 lc_pid_signal client TERM "$signal_generation"
 # The compositor must be gone before SF binds the single-client HAL.
@@ -99,14 +99,14 @@ i=0
 while pgrep -x "$comp_name" >/dev/null 2>&1; do
     i=$((i+1)); [ $i -gt 30 ] && {
         echo "RECOVERY: $comp_name still owns resources after TERM; refusing SF start"
-        "$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /usr/bin/pkill -KILL "$comp_name" 2>/dev/null
+        "$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /usr/bin/pkill -KILL "$comp_name" 2>/dev/null
         sleep 0.5
         pgrep -x "$comp_name" >/dev/null 2>&1 && { lc_state_write RECOVERY "$generation" compositor ambiguous; exit 1; }
         break
     }
     sleep 0.1
 done
-rm -f "$AURORA/run/session.active"
+rm -f "$DET/run/session.active"
 sleep 0.5
 
 # Raw-KMS sessions stopped the composer HAL and wedge the color HALs; restore
@@ -128,8 +128,8 @@ fi
 # Restore journalled Android audio ownership without blocking display recovery.
 lc_state_write EXITING "$generation" audio running
 # Drain reparented PipeWire processes before probing ALSA ownership.
-"$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c '
-    lock=/run/user/1000/aurora-audio-session.lock/owner
+"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
+    lock=/run/user/1000/determination-audio-session.lock/owner
     owner=$(cat "$lock" 2>/dev/null || true)
     case "$owner" in *[!0-9]*|'') ;; *) kill -TERM "$owner" 2>/dev/null || true ;; esac
     pkill -TERM -x wireplumber 2>/dev/null || true
@@ -146,18 +146,18 @@ lc_state_write EXITING "$generation" audio running
     pkill -KILL -x pipewire-pulse 2>/dev/null || true
     pkill -KILL -x pipewire 2>/dev/null || true
 ' 2>/dev/null || true
-if [ -x "$AURORA/bin/aurora-audio-route" ] && \
-   [ -f "$AURORA/run/audio-route.state" ]; then
-    "$AURORA/bin/aurora-audio-route" restore ||
-        echo "WARN: direct audio route restore failed; run auroractl doctor"
-elif [ -x "$AURORA/bin/aurora-audio-owner" ] && \
-   [ -f "$AURORA/etc/audio-owner.conf" ] && \
-   [ -f "$AURORA/run/audio-owner.state" ]; then
-    audio_phase=$(sed -n 's/^phase=//p' "$AURORA/run/audio-owner.state" | tail -n 1)
+if [ -x "$DET/bin/det-audio-route" ] && \
+   [ -f "$DET/run/audio-route.state" ]; then
+    "$DET/bin/det-audio-route" restore ||
+        echo "WARN: direct audio route restore failed; run detctl doctor"
+elif [ -x "$DET/bin/det-audio-owner" ] && \
+   [ -f "$DET/etc/audio-owner.conf" ] && \
+   [ -f "$DET/run/audio-owner.state" ]; then
+    audio_phase=$(sed -n 's/^phase=//p' "$DET/run/audio-owner.state" | tail -n 1)
     case "$audio_phase" in
         claimed|restoring|restore-failed)
-            "$AURORA/bin/aurora-audio-owner" restore --apply ||
-                echo "WARN: direct audio restore failed; run auroractl doctor"
+            "$DET/bin/det-audio-owner" restore --apply ||
+                echo "WARN: direct audio restore failed; run detctl doctor"
             ;;
     esac
 fi
@@ -206,14 +206,14 @@ fi
 # Release any surviving host input grab only after Android UI returns.
 lc_state_write EXITING "$generation" input running
 lc_pid_signal evgrab TERM "$signal_generation"
-rm -f "$AURORA/run/evgrab.legacy.pid"
-"$AURORA/bin/desktop-memory" release "$generation" ||
+rm -f "$DET/run/evgrab.legacy.pid"
+"$DET/bin/desktop-memory" release "$generation" ||
     echo "WARN: desktop memory state release failed"
 lc_state_write PHONE "$generation" complete committed
 echo "phone mode restored"
 
 # Optional battery policy stops the idle guest in phone mode.
-if [ -f "$AURORA/etc/stop-guest-on-exit" ]; then
+if [ -f "$DET/etc/stop-guest-on-exit" ]; then
     echo "stop-guest-on-exit set --- stopping guest"
-    "$AURORA/lxc/bin/lxc-stop" -P "$AURORA" -n guest -t 10 2>/dev/null
+    "$DET/lxc/bin/lxc-stop" -P "$DET" -n guest -t 10 2>/dev/null
 fi

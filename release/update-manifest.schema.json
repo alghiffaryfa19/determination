@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aurora.invalid/schemas/update-manifest-v1.json",
-  "title": "Aurora online update manifest",
+  "$id": "https://determination.invalid/schemas/update-manifest-v1.json",
+  "title": "Determination online update manifest",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "version", "versionCode", "artifacts"],

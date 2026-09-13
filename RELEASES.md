@@ -1,6 +1,6 @@
-# Aurora releases
+# Determination releases
 
-Aurora release trains are named after **Deltarune characters**. The
+Determination release trains are named after **Deltarune characters**. The
 name belongs to the `major.minor` train, so patch releases keep it:
 
 - `0.5.0 "Aqua"`, `0.5.1 "Aqua"`, ...
@@ -8,7 +8,7 @@ name belongs to the `major.minor` train, so patch releases keep it:
 - `1.0.0 "Resolve"`, `1.0.1 "Resolve"`, ...
 
 Git tags stay machine-friendly (`v0.5.0`). Human-facing titles use
-`Aurora 0.5 "Aqua"`. New names are assigned only when a release train
+`Determination 0.5 "Aqua"`. New names are assigned only when a release train
 gets an actual engineering scope; we do not burn characters on arbitrary
 calendar bumps.
 
@@ -70,7 +70,7 @@ Before `v0.5.0` is tagged:
       package snapshot and record it in the build manifest.
 - [ ] Produce the boot image, Magisk module, companion release APK, installer,
       restore payload, checksums, and build manifest from that commit.
-- [ ] Sign the companion with the permanent Aurora release key and
+- [ ] Sign the companion with the permanent Determination release key and
       verify the APK signature; debug or unsigned APKs are not release assets.
 - [ ] Run at least 50 automated phone/desktop round trips with recovery
       verified after induced compositor failure.

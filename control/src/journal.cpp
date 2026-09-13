@@ -1,6 +1,6 @@
-#include "aurora/control/journal.hpp"
+#include "determination/control/journal.hpp"
 
-#include "aurora/control/system.hpp"
+#include "determination/control/system.hpp"
 
 #include <sys/stat.h>
 
@@ -9,7 +9,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace aurora::control {
+namespace determination::control {
 namespace {
 
 std::uint64_t number_field(const std::string &line, const std::string &key)
@@ -131,4 +131,4 @@ std::vector<JournalEntry> OperationJournal::query(
     return matches;
 }
 
-} // namespace aurora::control
+} // namespace determination::control

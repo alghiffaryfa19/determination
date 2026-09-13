@@ -1,0 +1,25 @@
+## SPDX-FileCopyrightText: 2026 Determination contributors
+## SPDX-License-Identifier: MIT
+##
+## Determination patch for BSD-3-Clause Hyprland. Retain Hyprland's copyright
+## and BSD-3-Clause notice with this patch and its output.
+
+diff --git a/src/Compositor.cpp b/src/Compositor.cpp
+index ece6691..7b628bc 100644
+--- a/src/Compositor.cpp
++++ b/src/Compositor.cpp
+@@ -321,12 +321,14 @@ void CCompositor::initServer(std::string socketName, int socketFd) {
+     option.backendType        = Aquamarine::eBackendType::AQ_BACKEND_HEADLESS;
+     option.backendRequestMode = Aquamarine::eBackendRequestMode::AQ_BACKEND_REQUEST_MANDATORY;
+     implementations.emplace_back(option);
++    if (!envEnabled("DET_HYBRIS")) {
+     option.backendType        = Aquamarine::eBackendType::AQ_BACKEND_DRM;
+     option.backendRequestMode = Aquamarine::eBackendRequestMode::AQ_BACKEND_REQUEST_IF_AVAILABLE;
+     implementations.emplace_back(option);
+     option.backendType        = Aquamarine::eBackendType::AQ_BACKEND_WAYLAND;
+     option.backendRequestMode = Aquamarine::eBackendRequestMode::AQ_BACKEND_REQUEST_FALLBACK;
+     implementations.emplace_back(option);
++    }
+ 
+     m_aqBackend = CBackend::create(implementations, options);
+ 

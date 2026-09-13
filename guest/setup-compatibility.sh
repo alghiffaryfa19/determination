@@ -3,18 +3,18 @@
 # GTK, Qt and sandboxed apps. Run as root inside a networked guest.
 set -eu
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-[ ! -f /usr/local/lib/aurora-pidfd-shim.so ] || \
-    export LD_PRELOAD=/usr/local/lib/aurora-pidfd-shim.so
+[ ! -f /usr/local/lib/det-pidfd-shim.so ] || \
+    export LD_PRELOAD=/usr/local/lib/det-pidfd-shim.so
 
 [ "$(id -u)" -eq 0 ] || { echo 'run setup-compatibility.sh as root' >&2; exit 1; }
-platform=$(aurora-platform id 2>/dev/null || echo debian)
+platform=$(det-platform id 2>/dev/null || echo debian)
 install_packages() {
     for package in "$@"; do
-        aurora-platform package-install "$package"
+        det-platform package-install "$package"
     done
 }
 
-aurora-platform package-refresh
+det-platform package-refresh
 case "$platform" in
     debian)
         install_packages \
@@ -49,9 +49,9 @@ org.freedesktop.impl.portal.ScreenCast=phosh;
 EOF
 
 install -d -m 0755 /etc/environment.d
-cat > /etc/environment.d/90-aurora-session.conf <<'EOF'
+cat > /etc/environment.d/90-determination-session.conf <<'EOF'
 # Static app-selection hints. Display addresses and renderer library paths are
-# injected by aurora-phosh-session because they are session-specific.
+# injected by det-phosh-session because they are session-specific.
 XDG_CURRENT_DESKTOP=Phosh:GNOME
 XDG_SESSION_DESKTOP=phosh
 DESKTOP_SESSION=phosh
@@ -62,13 +62,13 @@ GTK_USE_PORTAL=1
 EOF
 
 if [ "$platform" = debian ] || [ "$platform" = arch ]; then
-    install -D -m 0644 /usr/local/lib/aurora/aurora-phosh.service \
-        /etc/systemd/system/aurora-phosh.service
+    install -D -m 0644 /usr/local/lib/determination/det-phosh.service \
+        /etc/systemd/system/det-phosh.service
     systemctl daemon-reload
 fi
 
 # Create standard folders and MIME state as the actual desktop user.
-aurora-platform run-user aurora env HOME=/home/aurora USER=aurora LOGNAME=aurora \
+det-platform run-user detuser env HOME=/home/detuser USER=detuser LOGNAME=detuser \
     xdg-user-dirs-update
 update-desktop-database /usr/share/applications 2>/dev/null || true
 update-mime-database /usr/share/mime 2>/dev/null || true

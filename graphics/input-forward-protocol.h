@@ -2,18 +2,18 @@
 
 #include <stdint.h>
 
-#define AURORA_INPUT_FORWARD_MAGIC UINT32_C(0x44494631) /* "DIF1" */
-#define AURORA_INPUT_FORWARD_VERSION 1u
-#define AURORA_INPUT_MAX_SOURCES 64u
-#define AURORA_INPUT_ANDROID_TOUCH_SOURCE_ID AURORA_INPUT_MAX_SOURCES
+#define DET_INPUT_FORWARD_MAGIC UINT32_C(0x44494631) /* "DIF1" */
+#define DET_INPUT_FORWARD_VERSION 1u
+#define DET_INPUT_MAX_SOURCES 64u
+#define DET_INPUT_ANDROID_TOUCH_SOURCE_ID DET_INPUT_MAX_SOURCES
 
-enum aurora_input_source_flags {
-    AURORA_INPUT_SOURCE_ABSOLUTE = 1u << 0,
-    AURORA_INPUT_SOURCE_DIRECT = 1u << 1,
-    AURORA_INPUT_SOURCE_MULTITOUCH = 1u << 2,
+enum det_input_source_flags {
+    DET_INPUT_SOURCE_ABSOLUTE = 1u << 0,
+    DET_INPUT_SOURCE_DIRECT = 1u << 1,
+    DET_INPUT_SOURCE_MULTITOUCH = 1u << 2,
 };
 
-struct aurora_input_forward_packet {
+struct det_input_forward_packet {
     uint32_t magic;
     uint16_t version;
     uint16_t size;
@@ -28,9 +28,9 @@ struct aurora_input_forward_packet {
 };
 
 #ifdef __cplusplus
-static_assert(sizeof(aurora_input_forward_packet) == 48,
+static_assert(sizeof(det_input_forward_packet) == 48,
               "input forward protocol layout changed");
 #else
-_Static_assert(sizeof(struct aurora_input_forward_packet) == 48,
+_Static_assert(sizeof(struct det_input_forward_packet) == 48,
                "input forward protocol layout changed");
 #endif

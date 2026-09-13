@@ -9,7 +9,7 @@
 [9/10] Linking CXX static library src/launch/libquickshell-launch.a
 [10/10] Linking CXX executable src/quickshell
 -- Install configuration: "Release"
--- Installing: /work/build/opal-quickshell-cross/install/opt/aurorahyprland/bin/quickshell
--- Set non-toolchain portion of runtime path of "/work/build/opal-quickshell-cross/install/opt/aurorahyprland/bin/quickshell" to "$ORIGIN:$ORIGIN/../lib"
--- Up-to-date: /work/build/opal-quickshell-cross/install/opt/aurorahyprland/share/applications/org.quickshell.desktop
--- Up-to-date: /work/build/opal-quickshell-cross/install/opt/aurorahyprland/share/icons/hicolor/scalable/apps/org.quickshell.svg
+-- Installing: /work/build/opal-quickshell-cross/install/opt/dethyprland/bin/quickshell
+-- Set non-toolchain portion of runtime path of "/work/build/opal-quickshell-cross/install/opt/dethyprland/bin/quickshell" to "$ORIGIN:$ORIGIN/../lib"
+-- Up-to-date: /work/build/opal-quickshell-cross/install/opt/dethyprland/share/applications/org.quickshell.desktop
+-- Up-to-date: /work/build/opal-quickshell-cross/install/opt/dethyprland/share/icons/hicolor/scalable/apps/org.quickshell.svg

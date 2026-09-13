@@ -1,4 +1,4 @@
-# Aurora Repository Overhaul: After
+# Determination Repository Overhaul: After
 
 Status: implementation complete and draft pull request published
 
@@ -87,13 +87,13 @@ to reduce historical clone size.
 | L04 | Complete | Exit refuses ambiguous compositor ownership and uses recovery instead of restoring SurfaceFlinger blindly. |
 | L05 | Partial | Routine exit uses the capability control path and root-only operations are narrowed; the legacy fallback remains for emergency compatibility. |
 | L06 | Partial | Entry is bounded, locked, journalled, and rollback-aware; not every legacy shell sub-step emits a separately typed result. |
-| L07 | Complete | `desktop-off --emergency` provides a aurorad-independent phone restoration path with identity checks. |
+| L07 | Complete | `desktop-off --emergency` provides a detd-independent phone restoration path with identity checks. |
 | L08 | Complete | Device profiles use a typed key parser with unknown-key, path, enum, number, and injection rejection. |
 | L09 | Complete | Lifecycle fixtures cover valid and invalid profile parsing plus deterministic generated configuration. |
 | L10 | Complete | Generated configuration uses private temporary files, validation, and atomic rename. |
 | L11 | Complete | Configuration and manifest generation share serialization and cannot publish partial pairs. |
 | L12 | Complete | Zygisk framing has receive and send deadlines for partial or stalled clients. |
-| L13 | Partial | Routine boot apply uses aurorad and typed transition states; observe-only deployments fall back to the proven locked lifecycle path. |
+| L13 | Partial | Routine boot apply uses detd and typed transition states; observe-only deployments fall back to the proven locked lifecycle path. |
 | L14 | Complete | Magisk logging directories are created before output redirection. |
 | L15 | Complete | Boot-completion wait is bounded and records a degraded disposition on timeout. |
 | L16 | Complete | Module payload activation uses versioned complete sets and verifies required content before switching. |
@@ -101,9 +101,9 @@ to reduce historical clone size.
 | L18 | Partial | Host and action paths gained matching validation rules and reasons; one shared executable routine is still desirable. |
 | L19 | Complete | Restore validates boot magic, size, slot selection, and expected hash before write. |
 | L20 | Complete | The Linux-first profile records desired state, generation, known-good state, attempt, deadline, and result atomically. |
-| L21 | Hardware gate | Health-gated Linux-first activation is implemented through aurorad or the proven lifecycle fallback; live display and input readiness needs guacamoleb qualification. |
+| L21 | Hardware gate | Health-gated Linux-first activation is implemented through detd or the proven lifecycle fallback; live display and input readiness needs guacamoleb qualification. |
 | L22 | Complete | A failed automatic Linux-first attempt returns to phone mode and disables retry until re-enabled. |
-| L23 | Complete | Online apply, disable, and emergency phone recovery commands are exposed through `aurora linux-first` and lifecycle helpers. |
+| L23 | Complete | Online apply, disable, and emergency phone recovery commands are exposed through `det linux-first` and lifecycle helpers. |
 | L24 | Hardware gate | Typed minimum-Android capabilities retain critical init, vendor HAL, radio, power, thermal, binder, and networking dependencies; the exact service floor needs live qualification. |
 | L25 | Complete | Linux-first supervision no longer performs framework Wi-Fi repair unless the device capability requests it. |
 | L26 | Partial | Host-agent polling uses bounded adaptive backoff and records retries; remaining platform loops are not fully event-driven. |

@@ -1,0 +1,38 @@
+## SPDX-FileCopyrightText: 2026 Determination contributors
+## SPDX-License-Identifier: MIT
+##
+## Determination patch for BSD-3-Clause Hyprland. Retain Hyprland's copyright
+## and BSD-3-Clause notice with this patch and its output.
+
+diff --git a/src/helpers/Monitor.cpp b/src/helpers/Monitor.cpp
+index 4dc0942..3a1416c 100644
+--- a/src/helpers/Monitor.cpp
++++ b/src/helpers/Monitor.cpp
+@@ -567,7 +567,7 @@ bool CMonitor::applyMonitorRule(SMonitorRule* pMonitorRule, bool force) {
+ 
+     m_output->state->setFormat(DRM_FORMAT_XRGB8888);
+     m_prevDrmFormat = m_drmFormat;
+-    m_drmFormat     = DRM_FORMAT_XRGB8888;
++    m_drmFormat     = envEnabled("DET_HYBRIS") ? DRM_FORMAT_ABGR8888 : DRM_FORMAT_XRGB8888;
+     m_output->state->resetExplicitFences();
+ 
+     if (Debug::m_trace) {
+@@ -690,7 +690,9 @@ bool CMonitor::applyMonitorRule(SMonitorRule* pMonitorRule, bool force) {
+ 
+     bool set10bit = false;
+ 
+-    for (auto const& fmt : formats[(int)!RULE->enable10bit]) {
++    const auto& candidates = envEnabled("DET_HYBRIS") ?
++        std::vector<std::pair<std::string, uint32_t>>{{"DRM_FORMAT_ABGR8888", DRM_FORMAT_ABGR8888}} : formats[(int)!RULE->enable10bit];
++    for (auto const& fmt : candidates) {
+         m_output->state->setFormat(fmt.second);
+         m_prevDrmFormat = m_drmFormat;
+         m_drmFormat     = fmt.second;
+@@ -1583,6 +1585,7 @@ void CMonitorState::ensureBufferPresent() {
+     }
+ 
+     if (STATE.buffer) {
++        if (STATE.buffer->androidNativeBuffer() && m_owner->m_drmFormat == DRM_FORMAT_ABGR8888) return;
+         if (const auto params = STATE.buffer->dmabuf(); params.success && params.format == m_owner->m_drmFormat)
+             return;
+     }

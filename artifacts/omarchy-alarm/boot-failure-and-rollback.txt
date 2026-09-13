@@ -8,7 +8,7 @@ Failed to determine whether /sys/fs/cgroup is a mount point: Protocol driver not
 [[0;1;31m!!!!!![0m] Failed to mount API filesystems.
 Exiting PID 1...
 active=debian
-root=/data/aurora/guest
+root=/data/determination/guest
 ready=yes
 running=yes
 running

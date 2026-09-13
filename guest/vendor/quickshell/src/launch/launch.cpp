@@ -280,7 +280,7 @@ int launch(const LaunchArgs& args, char** argv, QCoreApplication* coreApplicatio
 
 	delete coreApplication;
 
-	if (qEnvironmentVariableIntValue("AURORA_OPAL_GLES") == 1) {
+	if (qEnvironmentVariableIntValue("DET_OPAL_GLES") == 1) {
 		// Android vendor EGL exposes GLES configs, not desktop OpenGL configs.
 		QCoreApplication::setAttribute(Qt::AA_UseOpenGLES);
 		auto format = QSurfaceFormat::defaultFormat();
