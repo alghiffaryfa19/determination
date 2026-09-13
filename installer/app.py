@@ -126,7 +126,8 @@ class Interview:
                 return
             if not self.verbose:
                 if text.startswith(('Using verified cache:', 'Verified recovery backup:',
-                                    'Built installable port:', 'Extracted host magiskboot:')):
+                                    'Built installable port:', 'Built local Aurora base bundle:',
+                                    'Extracted host magiskboot:')):
                     print(f'  {text}', flush=True)
                 return
             if text.startswith('$ '):
@@ -263,7 +264,7 @@ class Interview:
         return profile['source_url']
 
     def automatic_distro(self, manifest, preferred=None):
-        preferred = os.environ.get('AURORA_DISTRO') or preferred or self.settings.get('distro') or 'debian'
+        preferred = os.environ.get('AURORA_DISTRO') or preferred or self.settings.get('distro') or 'arch'
         if preferred not in ('debian', 'arch', 'alpine'):
             raise Failure('AURORA_DISTRO must be debian, arch, or alpine.')
         available = []
@@ -465,8 +466,12 @@ class Interview:
         jobs = jobs_value(os.environ.get('AURORA_BUILD_JOBS', str(min(os.cpu_count() or 2, 16))))
         overrides = compiler_value(os.environ.get('AURORA_KERNEL_MAKE_ARGS', ''))
         print(f'  Build settings: {jobs} jobs; ROM toolchain defaults', flush=True)
-        manifest = self.manifest(purpose='Base bundle for the Linux desktop and companion app')
-        distro = self.automatic_distro(manifest, 'debian')
+        distro = self.automatic_distro(None, 'arch')
+        override = os.environ.get('AURORA_BASE_MANIFEST')
+        if override:
+            manifest = self.manifest(override, purpose='Developer-supplied base bundle override')
+        else:
+            manifest = self.engine.build_local_base_bundle(self.repo, self.device, distro)
         result = self.engine.port(self.device, source, target, jobs, manifest, distro, overrides)
         print(f'\n{self.palette.good("Port built")}: {result}', flush=True)
         self.remember(manifest=result, distro=distro)

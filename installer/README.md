@@ -85,7 +85,13 @@ The resulting kernel image is repacked with the original boot metadata and
 ramdisk. The shared module gains a profile generated from actual
 display dimensions and unambiguous wireless, backlight, and DRM observations;
 unknown values are omitted. The complete inspection accompanies the bundle.
-shared runtime, rootfs, and companion artifacts are reused from the base release.
+For source-checkout ports, Arch is the default. The installer builds missing
+userspace artifacts and writes the base manifest automatically; it does not ask
+for a bundle path. Local module and companion outputs are refreshed when their
+inputs change. `AURORA_DISTRO` selects another distro, `AURORA_ROOTFS` supplies
+an existing rootfs, and `AURORA_BASE_MANIFEST` explicitly overrides the automatic
+base build. Arch currently uses the experimental base-rootfs recipe; creation
+of its archive does not establish desktop or boot qualification.
 The resulting local installation bundle has fresh checksums, the connected
 fingerprint, device IDs, and build provenance. The next question offers to continue
 with that bundle in the installation interview.

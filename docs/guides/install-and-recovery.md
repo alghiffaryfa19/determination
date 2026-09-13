@@ -22,7 +22,8 @@ triggers a restore attempt from the verified backup. Reboot is a separate action
 Existing guest slots are retained rather than replaced.
 
 Automatic port downloads a selected downstream source branch or uses a local
-source folder. It merges the running config with Aurora requirements,
+source folder. It defaults to Arch and generates its base bundle automatically,
+building missing userspace artifacts on the PC. It merges the running config with Aurora requirements,
 compiles the kernel, inserts the detected device profile into the shared module,
 and assembles a local schema 2 bundle pinned to the connected Android build.
 The interview offers to install that bundle when the build completes. New ports remain

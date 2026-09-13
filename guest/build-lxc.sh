@@ -50,7 +50,9 @@ if grep -q 'c->set_config_item(c, "lxc.seccomp", "")' src/lxc/attach.c; then
     patch -p1 < "$REPO/guest/lxc-4.0.12-no-legacy-seccomp.patch"
 fi
 
-[ -f Makefile ] || ./configure --host=aarch64-linux-gnu \
+if [ ! -f Makefile ] || ! grep -q '^prefix = /data/aurora/lxc$' Makefile; then
+    [ ! -f Makefile ] || make distclean
+    ./configure --host=aarch64-linux-gnu \
     --prefix=/data/aurora/lxc \
     --with-config-path=/data/aurora \
     --with-runtime-path=/data/aurora/run \
@@ -59,6 +61,7 @@ fi
     --disable-selinux --disable-openssl --disable-doc --disable-api-docs \
     --disable-examples --disable-tests --disable-pam --disable-memfd-rexec \
     CC=aarch64-linux-gnu-gcc
+fi
 
 make -j"$(nproc)" LDFLAGS="-all-static" \
     CFLAGS="-g -O2 -Wno-error=incompatible-pointer-types -Wno-error=implicit-function-declaration"

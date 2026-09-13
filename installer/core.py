@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import contextlib
+import gzip
 import hashlib
 import json
 import os
@@ -177,7 +178,7 @@ def validate_archive(path, kind, distro='debian'):
         links = set()
         for member in members:
             parts = PurePosixPath(member.name).parts
-            if member.name.startswith('/') or '..' in parts or '\\' in member.name:
+            if member.name.startswith('/') or '..' in parts:
                 raise Failure(f'Unsafe archive path: {member.name}')
             name = str(PurePosixPath(member.name))
             if name in names and name != '.':
@@ -190,7 +191,7 @@ def validate_archive(path, kind, distro='debian'):
                 raise Failure('Runtime archives must contain only regular LXC executables.')
             if member.issym() or member.islnk():
                 target = member.linkname
-                if (member.islnk() and target.startswith('/')) or '\\' in target:
+                if member.islnk() and target.startswith('/'):
                     raise Failure(f'Absolute archive link: {name}')
                 parent = PurePosixPath(name).parent if member.issym() else PurePosixPath('.')
                 if target.startswith('/'):
@@ -217,7 +218,30 @@ def validate_archive(path, kind, distro='debian'):
             identity_text = archive.extractfile(member).read().decode('utf-8')
             if not re.search(rf'^ID=["\']?{re.escape(distro)}["\']?\s*$', identity_text, re.M):
                 raise Failure('The rootfs does not match the selected distro.')
-            if not {'sbin/init', 'bin/init'} & set(names):
+            def resolve_member(name):
+                parts = list(PurePosixPath(name).parts)
+                for _ in range(40):
+                    for index in range(len(parts)):
+                        prefix = '/'.join(parts[:index + 1])
+                        entry = names.get(prefix)
+                        if entry and (entry.issym() or entry.islnk()):
+                            parent = parts[:index] if entry.issym() and not entry.linkname.startswith('/') else []
+                            combined = parent + list(PurePosixPath(entry.linkname.lstrip('/')).parts) + parts[index + 1:]
+                            parts = []
+                            for component in combined:
+                                if component == '..':
+                                    if not parts:
+                                        return None
+                                    parts.pop()
+                                elif component != '.':
+                                    parts.append(component)
+                            break
+                    else:
+                        return names.get('/'.join(parts))
+                return None
+
+            if not any((entry := resolve_member(name)) and entry.isfile()
+                       for name in ('sbin/init', 'bin/init')):
                 raise Failure('The rootfs contains no init.')
     return total
 
@@ -464,6 +488,194 @@ class Engine:
         else:
             raw = Path(source).expanduser().read_bytes()
         return validate_manifest(json.loads(raw))
+
+    def build_local_base_bundle(self, repo, device, distro='arch'):
+        """Build or reuse every non-kernel artifact needed by a local port."""
+        repo = Path(repo).expanduser().resolve()
+        if distro not in ('debian', 'arch', 'alpine'):
+            raise Failure('AURORA_DISTRO must be debian, arch, or alpine.')
+
+        properties = {}
+        for line in (repo / 'version.properties').read_text().splitlines():
+            if line and not line.lstrip().startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                properties[key.strip()] = value.strip()
+        version = checked_word(properties.get('version'), 'release version')
+        try:
+            version_code = int(properties.get('versionCode', ''))
+        except ValueError as exc:
+            raise Failure('version.properties has an invalid versionCode.') from exc
+        if version_code < 1:
+            raise Failure('version.properties has an invalid versionCode.')
+
+        def valid(path, kind):
+            path = Path(path)
+            if not path.is_file():
+                return False
+            try:
+                validate_archive(path, kind, distro)
+                return True
+            except (Failure, OSError, EOFError, tarfile.TarError, zipfile.BadZipFile):
+                return False
+
+        def fresh(path, inputs):
+            if not path.is_file():
+                return False
+            stamp = path.stat().st_mtime_ns
+            for relative in inputs:
+                source = repo / relative
+                if source.is_file() and source.stat().st_mtime_ns > stamp:
+                    return False
+                if source.is_dir():
+                    for directory, folders, files in os.walk(source):
+                        folders[:] = [name for name in folders if name not in
+                                      ('build', '.gradle', '.git', '__pycache__', 'obj', 'libs')]
+                        for name in files:
+                            item = Path(directory) / name
+                            if item.is_file() and item.stat().st_mtime_ns > stamp:
+                                return False
+            return True
+
+        self.phase('Preparing the Aurora userspace bundle automatically')
+        rootfs_override = os.environ.get('AURORA_ROOTFS')
+        if rootfs_override:
+            rootfs = Path(rootfs_override).expanduser().resolve()
+            if not valid(rootfs, 'rootfs'):
+                raise Failure(f'AURORA_ROOTFS is not a valid {distro} arm64 rootfs archive: {rootfs}')
+        elif distro == 'debian':
+            rootfs = repo / 'guest/rootfs.tar.gz'
+            if not valid(rootfs, 'rootfs'):
+                if not shutil.which('mmdebstrap') and not shutil.which('debootstrap'):
+                    hint = ('Install debootstrap, qemu-user-static, and qemu-user-static-binfmt.'
+                            if shutil.which('pacman') else
+                            'Install mmdebstrap (preferred), or debootstrap plus ARM64 QEMU binfmt support.')
+                    raise Failure('The Debian rootfs builder is missing. ' + hint)
+                self.phase('Building the Debian desktop rootfs')
+                self.run([repo / 'guest/build-rootfs.sh'], cwd=repo, timeout=14400)
+        else:
+            rootfs = repo / 'guest' / f'aurora-rootfs-{distro}.tar.gz'
+            if not valid(rootfs, 'rootfs'):
+                self.phase(f'Building the {distro.title()} base rootfs')
+                source = os.environ.get(f'AURORA_{distro.upper()}_SOURCE')
+                if not source and distro == 'arch':
+                    cached = repo / 'build/omarchy-alarm/cache/ArchLinuxARM-aarch64-latest.tar.gz'
+                    if cached.is_file() and cached.with_suffix(cached.suffix + '.sig').is_file():
+                        source = str(cached)
+                command = [repo / 'guest/build-portable-rootfs.sh', distro]
+                if source:
+                    command.append(str(Path(source).expanduser().resolve()))
+                if os.geteuid() != 0:
+                    if not shutil.which('podman'):
+                        raise Failure(f'Building the {distro} rootfs requires rootless Podman (podman unshare).')
+                    command = ['podman', 'unshare', *command]
+                env = dict(os.environ)
+                cached_keyring = repo / 'build/omarchy-alarm/gnupg/pubring.kbx'
+                if distro == 'arch' and 'GNUPGHOME' not in env and cached_keyring.is_file():
+                    env['GNUPGHOME'] = str(cached_keyring.parent)
+                self.run(command, cwd=repo, env=env, timeout=14400)
+        if not valid(rootfs, 'rootfs'):
+            raise Failure(f'The automatic build did not produce a valid {distro} rootfs: {rootfs}')
+
+        runtime_dir = repo / 'dist/lxc-bin'
+        runtime_sources = [runtime_dir / name for name in sorted(LXC_TOOLS)]
+        def runtime_current():
+            return all(path.is_file() and os.access(path, os.X_OK) and
+                       b'/data/determination' not in path.read_bytes()
+                       for path in runtime_sources)
+
+        if not runtime_current():
+            self.phase('Cross-building the static LXC runtime')
+            self.run([repo / 'guest/build-lxc.sh'], cwd=repo, timeout=14400)
+        if not runtime_current():
+            raise Failure('The LXC build is incomplete or still uses the old installation path.')
+
+        module = repo / 'magisk-module' / f'aurora-magisk-v{version}.zip'
+        module_inputs = ('version.properties', 'magisk-module', 'toggle', 'device-profiles',
+                         'guest', 'control/src', 'control/include', 'audio/src', 'audio/profiles',
+                         'zygisk/jni', 'tools/evgrab', 'tools/input-forwarder')
+        if not valid(module, 'module') or not fresh(module, module_inputs):
+            sdk = Path(os.environ.get('ANDROID_SDK_ROOT', Path.home() / 'android-sdk')).expanduser()
+            ndk = Path(os.environ.get('ANDROID_NDK_HOME', sdk / 'ndk/27.2.12479018')).expanduser()
+            ndk_build = ndk / 'ndk-build'
+            if not ndk_build.is_file():
+                raise Failure(f'Android NDK r27.2 is required to build the Aurora module: {ndk_build}')
+            self.phase('Cross-building the Aurora root integration')
+            self.run(['make', '-C', repo / 'tools/evgrab', f'NDK={ndk}'], timeout=600)
+            self.run(['make', '-C', repo / 'tools/input-forwarder', f'NDK={ndk}'], timeout=600)
+            env = dict(os.environ, NDK=str(ndk))
+            self.run([repo / 'control/build.sh', 'android'], cwd=repo, env=env, timeout=1800)
+            self.run([repo / 'control/build.sh', 'guest'], cwd=repo, env=env, timeout=1800)
+            self.run([repo / 'audio/build.sh', 'android'], cwd=repo, env=env, timeout=1800)
+            self.run([repo / 'audio/build.sh', 'guest'], cwd=repo, env=env, timeout=1800)
+            self.run([ndk_build, 'NDK_PROJECT_PATH=.', 'APP_BUILD_SCRIPT=jni/Android.mk',
+                      'NDK_APPLICATION_MK=jni/Application.mk'], cwd=repo / 'zygisk', timeout=1800)
+            self.run([repo / 'magisk-module/build-module.sh'], cwd=repo, timeout=1800)
+        if not valid(module, 'module'):
+            raise Failure(f'The automatic build did not produce a valid Aurora module: {module}')
+        with zipfile.ZipFile(module) as archive:
+            if not re.search(rf'^versionCode={version_code}\s*$',
+                             archive.read('module.prop').decode(), re.M):
+                raise Failure('The built module versionCode does not match version.properties.')
+
+        companion = repo / 'companion/app/build/outputs/apk/debug/app-debug.apk'
+        if not valid(companion, 'companion') or not fresh(companion, ('companion', 'version.properties')):
+            sdk = Path(os.environ.get('ANDROID_SDK_ROOT', Path.home() / 'android-sdk')).expanduser()
+            gradle = sdk / 'gradle-8.7/bin/gradle'
+            java_home = Path(os.environ.get('JAVA_HOME', sdk / 'jdk-17')).expanduser()
+            if not gradle.is_file() or not (java_home / 'bin/java').is_file():
+                raise Failure(f'Android SDK Gradle 8.7 and JDK 17 are required under {sdk}.')
+            self.phase('Building the Aurora companion app')
+            self.run([gradle, '--no-daemon', '-p', repo / 'companion', 'assembleDebug'],
+                     cwd=repo, env=dict(os.environ, JAVA_HOME=str(java_home)), timeout=3600)
+        if not valid(companion, 'companion'):
+            raise Failure(f'The automatic build did not produce a valid companion APK: {companion}')
+
+        bundle = self.workspace / 'local-base' / version / distro
+        bundle.mkdir(parents=True, exist_ok=True)
+        runtime = bundle / f'aurora-runtime-aarch64-v{version}.tar.gz'
+        with runtime.open('wb') as raw, gzip.GzipFile(fileobj=raw, mode='wb', filename='', mtime=0) as compressed:
+            with tarfile.open(fileobj=compressed, mode='w') as archive:
+                for source in runtime_sources:
+                    if not source.is_file():
+                        raise Failure(f'The static LXC build is missing {source.name}.')
+                    info = archive.gettarinfo(str(source), arcname=source.name)
+                    info.uid = info.gid = 0
+                    info.uname = info.gname = ''
+                    info.mtime = 0
+                    with source.open('rb') as stream:
+                        archive.addfile(info, stream)
+        validate_archive(runtime, 'runtime')
+
+        sources = (
+            ('module', module, f'aurora-magisk-v{version}.zip'),
+            ('runtime', runtime, runtime.name),
+            ('rootfs', rootfs, f'aurora-rootfs-{distro}-v{version}.tar.gz'),
+            ('companion', companion, f'aurora-companion-v{version}.apk'),
+        )
+        artifacts = []
+        for kind, source, name in sources:
+            destination = bundle / name
+            if source.resolve() != destination.resolve():
+                temporary = destination.with_suffix(destination.suffix + '.new')
+                shutil.copyfile(source, temporary)
+                temporary.replace(destination)
+            validate_archive(destination, kind, distro)
+            artifact = dict(type=kind, name=name, url='https://localhost/' + name,
+                            sha256=digest(destination), size=destination.stat().st_size,
+                            abis=['arm64-v8a'], support='experimental')
+            if kind == 'module':
+                artifact['devices'] = device['devices']
+            if kind == 'rootfs':
+                artifact['distro'] = distro
+                artifact['description'] = 'Local guest base; desktop and device qualification pending'
+            artifacts.append(artifact)
+        manifest = validate_manifest(dict(schema=2, version=version, versionCode=version_code,
+                                          codename=properties.get('codename', ''), channel='local',
+                                          artifacts=artifacts))
+        path = bundle / 'aurora-update.json'
+        save_json(path, manifest)
+        self.log('Built local Aurora base bundle: ' + str(path))
+        return str(path)
 
     def download(self, item, local_dir=None):
         self.checkpoint()

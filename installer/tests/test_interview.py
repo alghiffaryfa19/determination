@@ -76,7 +76,7 @@ class InterviewTests(unittest.TestCase):
              patch.object(self.engine, 'install', return_value={'status': 'prepared'}) as install:
             self.interview.install()
         install.assert_called_once_with(
-            device(), manifest, 'debian', 'workstation', True, True,
+            device(), manifest, 'arch', 'workstation', True, True,
             display_name='Aurora User',
         )
         saved = json.loads(self.interview.settings_path.read_text())
@@ -126,6 +126,30 @@ class InterviewTests(unittest.TestCase):
         with patch('builtins.input') as read, contextlib.redirect_stdout(io.StringIO()):
             self.assertEqual(self.interview.automatic_distro(str(path)), 'debian')
         read.assert_not_called()
+
+    def test_port_builds_its_base_bundle_without_a_manifest_prompt(self):
+        source = Path(self.directory.name) / 'kernel'
+        (source / 'scripts/kconfig').mkdir(parents=True)
+        (source / 'Makefile').write_text('fixture')
+        (source / 'scripts/kconfig/merge_config.sh').write_text('fixture')
+        self.interview.device = dict(
+            device(), devices=['OnePlus7'], kernel='4.14.357-test',
+            properties={'ro.build.version.sdk': '36', 'ro.crdroid.version': '16.0',
+                        'ro.boot.project_codename': 'guacamoleb', 'ro.board.platform': 'msmnile'},
+        )
+        generated = str(Path(self.directory.name) / 'generated/aurora-update.json')
+        result = str(Path(self.directory.name) / 'port/aurora-update.json')
+        with patch.object(self.interview, 'automatic_kernel_source', return_value=str(source)), \
+             patch.object(self.interview, 'manifest') as manifest_prompt, \
+             patch.object(self.interview, 'yes_no', return_value=False), \
+             patch.object(self.engine, 'build_local_base_bundle', return_value=generated) as base, \
+             patch.object(self.engine, 'port', return_value=result) as port, \
+             contextlib.redirect_stdout(io.StringIO()):
+            self.interview.port()
+        manifest_prompt.assert_not_called()
+        base.assert_called_once_with(self.interview.repo, self.interview.device, 'arch')
+        port.assert_called_once_with(self.interview.device, str(source), 'Image.gz-dtb',
+                                     unittest.mock.ANY, generated, 'arch', '')
 
     def test_multiple_devices_require_an_explicit_serial(self):
         rows = [{'serial': serial, 'state': 'device', 'details': ''} for serial in ('phone1', 'phone2')]

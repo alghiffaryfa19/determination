@@ -70,7 +70,8 @@ tar --delay-directory-restore -xzf "$SOURCE" -C "$ROOT"
 source_hash=$(sha256sum "$SOURCE" | awk '{print $1}')
 printf '%s\n' "$source_hash" > "$ROOT/etc/aurora-source-sha256"
 
-tar --numeric-owner -C "$ROOT" -czf "$OUT" .
+tar --numeric-owner -C "$ROOT" -czf "$WORK/rootfs.tar.gz" .
+mv -f "$WORK/rootfs.tar.gz" "$OUT"
 echo "Rootfs: $OUT"
 echo "Install: aurora distro install $PROFILE $OUT"
 echo "Then:    aurora distro select $PROFILE && aurora distro provision"

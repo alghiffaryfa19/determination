@@ -2,6 +2,7 @@ import copy
 import io
 import json
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -141,6 +142,29 @@ class CoreTests(unittest.TestCase):
         with self.assertRaises(Failure):
             validate_archive(self.bad_tar([('lxc-start', 'other')]), 'runtime')
 
+    def test_arch_init_resolves_through_usrmerge_and_rejects_dangling_link(self):
+        path = self.root / 'arch.tar.gz'
+        for with_binary in (True, False):
+            with tarfile.open(path, 'w:gz') as archive:
+                for name, target in [('sbin', 'usr/bin'), ('usr/bin/init', '../lib/systemd/systemd')]:
+                    entry = tarfile.TarInfo(name)
+                    entry.type = tarfile.SYMTYPE
+                    entry.linkname = target
+                    archive.addfile(entry)
+                files = {'etc/aurora-profile': b'ID=arch\n',
+                         r'usr/lib/systemd/system/system-systemd\x2dveritysetup.slice': b'[Unit]\n'}
+                if with_binary:
+                    files['usr/lib/systemd/systemd'] = b'init fixture'
+                for name, data in files.items():
+                    entry = tarfile.TarInfo(name)
+                    entry.size = len(data)
+                    archive.addfile(entry, io.BytesIO(data))
+            if with_binary:
+                validate_archive(path, 'rootfs', 'arch')
+            else:
+                with self.assertRaisesRegex(Failure, 'no init'):
+                    validate_archive(path, 'rootfs', 'arch')
+
     def test_subprocess_output_and_nonzero_status(self):
         output, status = self.engine.run([sys.executable, '-c', 'print("first"); print("second")'])
         self.assertEqual(output, 'first\nsecond')
@@ -279,6 +303,33 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(digest(Path(path).parent / artifact['name']), artifact['sha256'])
         self.assertTrue(any(call.args[0][-1] == 'olddefconfig' for call in runner.call_args_list))
         self.assertTrue(any(call.args[0][-1] == 'Image.gz-dtb' for call in runner.call_args_list))
+
+    def test_local_base_bundle_is_generated_from_verified_build_outputs(self):
+        repo = self.root / 'repo'
+        (repo / 'magisk-module').mkdir(parents=True)
+        (repo / 'companion/app/build/outputs/apk/debug').mkdir(parents=True)
+        (repo / 'guest').mkdir()
+        (repo / 'dist/lxc-bin').mkdir(parents=True)
+        (repo / 'version.properties').write_text('version=1.2.3\nversionCode=12\ncodename=Test\n')
+        shutil.copyfile(self.files['module'], repo / 'magisk-module/aurora-magisk-v1.2.3.zip')
+        shutil.copyfile(self.files['companion'], repo / 'companion/app/build/outputs/apk/debug/app-debug.apk')
+        shutil.copyfile(self.files['rootfs'], repo / 'guest/rootfs.tar.gz')
+        with tarfile.open(self.files['runtime'], 'r:gz') as archive:
+            archive.extractall(repo / 'dist/lxc-bin', filter='data')
+        for path in (repo / 'dist/lxc-bin').iterdir():
+            path.chmod(0o755)
+        (repo / 'magisk-module/aurora-magisk-v1.2.3.zip').touch()
+        (repo / 'companion/app/build/outputs/apk/debug/app-debug.apk').touch()
+        with patch.object(self.engine, 'run') as run:
+            path = self.engine.build_local_base_bundle(repo, device(), 'debian')
+        run.assert_not_called()
+        manifest = validate_manifest(json.loads(Path(path).read_text()))
+        self.assertEqual({item['type'] for item in manifest['artifacts']},
+                         {'module', 'runtime', 'rootfs', 'companion'})
+        for item in manifest['artifacts']:
+            artifact = Path(path).parent / item['name']
+            self.assertEqual(digest(artifact), item['sha256'])
+            validate_archive(artifact, item['type'], 'debian')
 
 
 if __name__ == '__main__':
