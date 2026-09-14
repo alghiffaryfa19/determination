@@ -41,7 +41,11 @@ def vector(source, *, launcher=False, monochrome=False):
             lines.append(f'                    android:{android}={quoteattr(g.attrib[svg])}')
         lines.append('                    >')
         for stop in g:
-            lines.append(f'                    <item android:offset={quoteattr(stop.attrib["offset"])} android:color={quoteattr(stop.attrib["stop-color"])} />')
+            color = stop.attrib["stop-color"]
+            if "stop-opacity" in stop.attrib:
+                alpha = round(float(stop.attrib["stop-opacity"]) * 255)
+                color = f"#{alpha:02X}{color[1:]}"
+            lines.append(f'                    <item android:offset={quoteattr(stop.attrib["offset"])} android:color={quoteattr(color)} />')
         lines += ['                </gradient>', '            </aapt:attr>', '        </path>']
     if launcher:
         lines.append('    </group>')

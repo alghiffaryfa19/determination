@@ -33,28 +33,20 @@
                 </gradient>
             </aapt:attr>
         </path>
-        <path android:pathData="M11.3,20.8C14.9,19.6 17.3,17.9 20.6,17.2C23.7,16.6 25.2,18.1 25.2,20C25.2,21.8 23.5,22.6 21.7,23C18.8,23.6 16.3,25.4 13.2,26C11.2,26.4 9.8,25.6 9.4,24C9,22.5 10,21.3 11.3,20.8Z"
-            android:fillAlpha="0.035"
-            android:strokeColor="#245EA6"
-            android:strokeWidth="2"
-            android:strokeLineJoin="round"
-            android:strokeAlpha="0.035"
-            android:fillColor="#245EA6" />
-        <path android:pathData="M11.3,20.8C14.9,19.6 17.3,17.9 20.6,17.2C23.7,16.6 25.2,18.1 25.2,20C25.2,21.8 23.5,22.6 21.7,23C18.8,23.6 16.3,25.4 13.2,26C11.2,26.4 9.8,25.6 9.4,24C9,22.5 10,21.3 11.3,20.8Z"
-            android:fillAlpha="0.06"
-            android:fillColor="#245EA6" />
         <path android:pathData="M11.3,20.2C14.9,19 17.3,17.3 20.6,16.6C23.7,16 25.2,17.5 25.2,19.4C25.2,21.2 23.5,22 21.7,22.4C18.8,23 16.3,24.8 13.2,25.4C11.2,25.8 9.8,25 9.4,23.4C9,21.9 10,20.7 11.3,20.2Z"
             >
             <aapt:attr name="android:fillColor">
                 <gradient android:type="linear"
-                    android:startX="10"
+                    android:startX="9"
                     android:startY="23"
                     android:endX="25"
-                    android:endY="20"
+                    android:endY="19"
                     >
-                    <item android:offset="0" android:color="#A9F0E1" />
-                    <item android:offset="0.48" android:color="#81D8EB" />
-                    <item android:offset="1" android:color="#649CEB" />
+                    <item android:offset="0" android:color="#0057D3BC" />
+                    <item android:offset="0.25" android:color="#E69BE6DD" />
+                    <item android:offset="0.5" android:color="#81D8EB" />
+                    <item android:offset="0.78" android:color="#A668B9EA" />
+                    <item android:offset="1" android:color="#00529CEB" />
                 </gradient>
             </aapt:attr>
         </path>
