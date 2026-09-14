@@ -25,6 +25,8 @@ def vector(source, *, launcher=False, monochrome=False):
             continue
         fill = "#FFFFFF" if monochrome else attrs["fill"]
         lines.append(f'        <path android:pathData={quoteattr(attrs["d"])}')
+        if attrs.get("fill-rule") == "evenodd":
+            lines.append('            android:fillType="evenOdd"')
         for svg, android in (("opacity", "fillAlpha"), ("stroke", "strokeColor"),
                              ("stroke-width", "strokeWidth"), ("stroke-linejoin", "strokeLineJoin")):
             if svg in attrs and not monochrome:
