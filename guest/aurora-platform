@@ -1,9 +1,9 @@
 #!/bin/sh
-# Stable guest-userspace adapter for Determination.
+# Stable guest-userspace adapter for Aurora.
 #
 # Host-side lifecycle code must not know whether the active rootfs uses apt,
 # pacman, or apk; systemd or OpenRC; /usr/sbin/runuser or /usr/bin/runuser.
-# Every supported rootfs installs this file at /usr/local/bin/det-platform.
+# Every supported rootfs installs this file at /usr/local/bin/aurora-platform.
 
 set -eu
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
@@ -89,7 +89,24 @@ package_install_raw() {
         debian)
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
             ;;
-        arch) pacman -S --needed --noconfirm "$@" ;;
+        arch)
+            count=$#
+            while [ "$count" -gt 0 ]; do
+                pkg=$1
+                shift
+                count=$((count - 1))
+                # Explicit targets bypass IgnorePkg and can replace the kernel-compatible init.
+                case "$pkg" in
+                    systemd|systemd-libs|systemd-sysvcompat|systemd-resolvconf)
+                        if pacman -Q "$pkg" >/dev/null 2>&1; then
+                            continue
+                        fi
+                        ;;
+                esac
+                set -- "$@" "$pkg"
+            done
+            [ "$#" -eq 0 ] || pacman -S --needed --noconfirm "$@"
+            ;;
         alpine) apk add "$@" ;;
         *) echo "unsupported package manager" >&2; return 1 ;;
     esac
@@ -188,7 +205,7 @@ install_deps() {
                 wl-clipboard xdg-desktop-portal xdg-desktop-portal-wlr
             ;;
         arch:runtime)
-            package_install_raw sudo dbus systemd seatd pipewire pipewire-pulse wireplumber \
+            package_install_raw systemd sudo dbus seatd pipewire pipewire-pulse wireplumber \
                 alsa-utils openssh wayland-protocols util-linux shadow \
                 wl-clipboard xdg-desktop-portal xdg-desktop-portal-wlr
             ;;
@@ -257,7 +274,7 @@ install_deps() {
                 json-glib-dev xwayland xwayland-dev libxcb-dev xcb-util-wm-dev libdisplay-info-dev \
                 libliftoff-dev foot font-dejavu dbus grim
             ;;
-        arch:dethyprland)
+        arch:hyprland)
             package_install_raw base-devel clang cmake ninja meson git pkgconf curl binutils \
                 pugixml pixman wayland wayland-protocols libinput libdrm mesa \
                 systemd libdisplay-info hwdata libglvnd cairo pango libjpeg-turbo \
@@ -305,7 +322,7 @@ case "$cmd" in
         ;;
     deps) install_deps "$@" ;;
     *)
-        echo "usage: det-platform info|id|libc|init|run-user|service-*|package-*|deps" >&2
+        echo "usage: aurora-platform info|id|libc|init|run-user|service-*|package-*|deps" >&2
         exit 2
         ;;
 esac
