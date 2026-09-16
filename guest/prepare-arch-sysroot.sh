@@ -34,6 +34,7 @@ Server = https://de3.mirror.archlinuxarm.org/aarch64/alarm
 EOF
 set -- \
     wayland wayland-protocols libdrm libglvnd libinput libxkbcommon pixman seatd \
+    glm lua \
     libevdev glib2 gobject-introspection-runtime gnome-desktop \
     gsettings-desktop-schemas json-glib xorg-xwayland libxcb libdisplay-info \
     libliftoff foot ttf-dejavu dbus phosh squeekboard gtk3 gtk4 libadwaita \

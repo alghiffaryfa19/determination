@@ -19,3 +19,7 @@ WAYLAND_PROTOCOLS_REPO=https://gitlab.freedesktop.org/wayland/wayland-protocols.
 WAYLAND_PROTOCOLS_COMMIT=afb614d5fcbd02d261a6ae91920aa91cf3915a8a
 OMARCHY_REPO=https://github.com/omacom/omarchy.git
 OMARCHY_COMMIT=5ead870507dfb68db696b3ddb948cc3d178e8d62
+# Touch-gesture plugin, pinned to the Hyprland v0.49.0 revision
+# (9958d297) by the plugin author's hyprpm commit table.
+HYPRGRASS_REPO=https://github.com/horriblename/hyprgrass.git
+HYPRGRASS_COMMIT=51da8d137e042c117fe46a5c019ec38c0de0342a
