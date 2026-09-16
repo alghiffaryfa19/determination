@@ -57,7 +57,7 @@ and shared selection-aware OSK remain pending.
 
 ### Aurora repository
 
-`/home/melissa/decemberos`
+`/home/melissa/aurora`
 
 Read `AGENTS.md`, `docs/design-spec.md`, `docs/recon-findings.md`,
 `docs/graphics-architecture.md`, and `docs/arch-opal-bringup.md`.
@@ -108,7 +108,7 @@ Do not open keyboard-exclusive overlays on startup, reload, or preference load.
 
 ### Aurora's vendored Opal copy
 
-`/home/melissa/decemberos/guest/opal/`
+`/home/melissa/aurora/guest/opal/`
 
 This is a deployment snapshot, not the requested workspace for the OSK redesign.
 Do not assume it is synchronized with staging. After tested upstream changes,
@@ -494,7 +494,7 @@ restart framework components.
 
 ## 8. Evidence and artifact map
 
-Directory: `/home/melissa/decemberos/artifacts/opal-arch-bringup/`
+Directory: `/home/melissa/aurora/artifacts/opal-arch-bringup/`
 
 - `buffer-smoke.log`, `preflight.log`: native-buffer tests and compositor version.
 - `udev-comparison.log`: zero nodes with system libudev versus 13 with 257.13.
