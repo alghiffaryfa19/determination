@@ -133,6 +133,12 @@
       "size": 4346
     },
     {
+      "path": "artifacts/hwc-external-hotplug-20260916.txt",
+      "retention": "tracked-evidence",
+      "sha256": "c50464639b88cf507387ab39db52289d14e0853d5b9c37e1a9ae5819ed61fc83",
+      "size": 1071
+    },
+    {
       "path": "artifacts/hybris-minigbm-20260719.txt",
       "retention": "tracked-evidence",
       "sha256": "da0427aa5d757278a8669be6074279ccbd995a9acbc6101fd86194dfc64b19c6",
