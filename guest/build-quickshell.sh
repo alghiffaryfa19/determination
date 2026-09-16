@@ -47,7 +47,7 @@ cmake -S "$SRC" -B "$SRC/build-aurora" -G Ninja \
     -DCMAKE_INSTALL_PREFIX="$PREFIX" \
     -DDISTRIBUTOR=Aurora \
     -DCRASH_HANDLER=OFF -DUSE_JEMALLOC=OFF -DX11=OFF \
-    -DSERVICE_PAM=OFF -DSERVICE_POLKIT=OFF -DSERVICE_PIPEWIRE=OFF
+    -DSERVICE_PAM=ON -DSERVICE_POLKIT=ON -DSERVICE_PIPEWIRE=OFF
 cmake --build "$SRC/build-aurora" -j"$JOBS"
 cmake --install "$SRC/build-aurora"
 "$PREFIX/bin/quickshell" --version

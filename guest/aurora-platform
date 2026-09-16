@@ -285,7 +285,7 @@ install_deps() {
         arch:quickshell)
             package_install_raw qt6-base qt6-declarative qt6-shadertools qt6-wayland \
                 cli11 libdrm mesa vulkan-headers spirv-tools dbus glib2 wayland \
-                wayland-protocols systemd
+                wayland-protocols systemd pam polkit
             ;;
         *)
             echo "unsupported dependency set: $distro/$component" >&2
