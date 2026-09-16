@@ -10,6 +10,7 @@ compositor=/usr/local/bin/phoc|/usr/bin/phoc
 shell=/usr/libexec/phosh|/usr/bin/phosh
 required_binaries=/usr/libexec/phosh|/usr/bin/phosh,/usr/bin/squeekboard
 packages=phosh
+build_deps=wlroots-phoc
 build=/root/aurora-build/build-wlroots-phoc.sh
 glue=aurora-phosh-session
 services=seatd,pipewire,wireplumber

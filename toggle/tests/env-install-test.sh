@@ -53,12 +53,8 @@ case "\$1" in
             id) echo debian ;;
             deps-packages)
                 shift
-                case "\$1" in
-                    plasma-mobile) cat "$WORK/pkgs-plasma" ;;
-                    phosh) cat "$WORK/pkgs-phosh" ;;
-                    hyprland|quickshell) echo "unsupported dependency set" >&2; exit 2 ;;
-                    *) exit 2 ;;
-                esac
+                [ -f "$WORK/pkgs-\$1" ] || exit 2
+                cat "$WORK/pkgs-\$1"
                 ;;
             package-status)
                 shift
@@ -70,13 +66,9 @@ case "\$1" in
             package-refresh) [ ! -e "$WORK/fail-refresh" ] ;;
             deps)
                 shift
+                [ -f "$WORK/pkgs-\$1" ] || exit 2
                 [ ! -e "$WORK/fail-deps" ] || exit 1
-                case "\$1" in
-                    plasma-mobile) group_pkgs="\$(cat "$WORK/pkgs-plasma")" ;;
-                    phosh) group_pkgs="\$(cat "$WORK/pkgs-phosh")" ;;
-                    *) exit 2 ;;
-                esac
-                for installed_pkg in \$group_pkgs; do
+                for installed_pkg in \$(cat "$WORK/pkgs-\$1"); do
                     touch "$A/run/installed-\$installed_pkg"
                 done
                 ;;
@@ -143,8 +135,11 @@ for provisioner in build-wlroots-phoc.sh build-hyprland.sh; do
     chmod 0755 "$A/guest/root/aurora-build/$provisioner"
 done
 
-printf 'plasma-workspace\nplasma-desktop\nkwin-wayland\n' > "$WORK/pkgs-plasma"
+printf 'plasma-workspace\nplasma-desktop\nkwin-wayland\n' > "$WORK/pkgs-plasma-mobile"
 printf 'phoc\nphosh\nsqueekboard\n' > "$WORK/pkgs-phosh"
+printf 'meson\nninja-build\nlibwayland-dev\n' > "$WORK/pkgs-wlroots-phoc"
+printf 'base-devel\ncmake\n' > "$WORK/pkgs-hyprland"
+printf 'qt6-base\nqt6-declarative\n' > "$WORK/pkgs-quickshell"
 
 cat > "$A/etc/sessions/plasma-mobile.session" <<'EOF'
 id=plasma-mobile
@@ -169,6 +164,7 @@ compositor=/usr/local/bin/phoc|/usr/bin/phoc
 required_binaries=/usr/libexec/phosh|/usr/bin/phosh,/usr/bin/squeekboard
 qualification=qualified
 packages=phosh
+build_deps=wlroots-phoc
 build=/root/aurora-build/build-wlroots-phoc.sh
 glue=aurora-phosh-session
 EOF
@@ -181,7 +177,7 @@ compositor=/opt/hyprland/bin/Hyprland
 shell=hyprland-config
 required_binaries=/opt/hyprland/bin/Hyprland
 qualification=experimental
-packages=hyprland
+build_deps=hyprland
 build=/root/aurora-build/build-hyprland.sh
 glue=aurora-hyprland
 EOF
@@ -206,8 +202,8 @@ for section in meta environment step; do
         exit 1
     }
 done
-for key in id title backend qualification reason limitations packages build glue \
-           required_binaries runtime_ready missing_binaries installed packages_state \
+for key in id title backend qualification reason limitations packages build_deps build \
+           glue required_binaries runtime_ready missing_binaries installed packages_state \
            package_set installable recipe build_present; do
     grep -q "^$key=" "$WORK/catalog.txt" || {
         echo "catalog environments are missing $key" >&2
@@ -285,9 +281,12 @@ grep -qx "name=phosh" "$WORK/plan-phosh.txt"
 grep -qx "name=phoc" "$WORK/plan-phosh.txt"
 
 # --- an environment with no package set on this distro is not installable ---
-grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -qx "package_set=unsupported"
-grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -qx "installable=no"
-grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -q "^installable_reason=.*hyprland"
+grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -qx "package_set=none"
+grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -qx "recipe=build"
+grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -qx "build_deps=hyprland"
+# A build-only environment is installable only where its provisioner exists.
+grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -qx "installable=yes"
+grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -q "^installable_reason=built from source"
 
 # --- plan lists the packages the adapter would install ----------------------
 run plan plasma-mobile > "$WORK/plan.txt"
@@ -434,10 +433,27 @@ if run plan ../../etc/passwd >/dev/null 2>&1; then
     echo "plan must reject a traversal id" >&2
     exit 1
 fi
-if run install hyprland --foreground > "$WORK/hypr.txt" 2>&1; then
-    echo "install must fail when no package set exists for this distro" >&2
+rm -f "$A/guest/root/aurora-build/build-hyprland.sh"
+run reset >/dev/null
+run catalog > "$WORK/hypr-nobuild.txt"
+grep -A30 '^id=hyprland$' "$WORK/hypr-nobuild.txt" | grep -qx "installable=no"
+grep -A30 '^id=hyprland$' "$WORK/hypr-nobuild.txt" | grep -q 'build pipeline runs it on the PC'
+printf '#!/bin/sh\nexit 0\n' > "$A/guest/root/aurora-build/build-hyprland.sh"
+chmod 0755 "$A/guest/root/aurora-build/build-hyprland.sh"
+
+# A distro with no set for a declared group fails with that set named.
+cat > "$A/etc/sessions/missing-group.session" <<'EOF'
+id=missing-group
+title=Missing group
+qualification=experimental
+packages=not-packaged-here
+EOF
+run reset >/dev/null
+if run install missing-group --foreground > "$WORK/nogroup.txt" 2>&1; then
+    echo "install must fail when the distro adapter has no such set" >&2
     exit 1
 fi
 grep -q "no package set" "$A/run/env/packages.state"
+rm -f "$A/etc/sessions/missing-group.session"
 
 echo "env install tests passed"

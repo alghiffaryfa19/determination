@@ -43,9 +43,17 @@ A manifest declares what installing its environment means:
 
 ```text
 packages=plasma-mobile                    # aurora-platform deps group, per distro
-build=/root/aurora-build/build-hyprland.sh  # only components no package ships
-glue=aurora-plasma-client                 # Aurora files the module delivers
+build_deps=wlroots-phoc                   # toolchain, installed only when building
+build=/root/aurora-build/build-wlroots-phoc.sh
+glue=aurora-phosh-session                 # Aurora files the module delivers
 ```
+
+`packages` and `build_deps` are different promises: the first is the
+environment itself, the second is a compiler toolchain installed only when a
+build actually runs, and removal never deletes it. An environment that declares
+only `build_deps` plus a provisioner is installed from source, and one whose
+provisioner is absent from the guest reports that Aurora's build pipeline has to
+run on the PC instead of pretending a package install would finish the job.
 
 Package sets are resolved through `aurora-platform deps-packages <group>`, so a
 group that does not exist for the active distro is reported as unsupported

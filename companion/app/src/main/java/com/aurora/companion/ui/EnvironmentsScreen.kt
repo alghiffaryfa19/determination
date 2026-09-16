@@ -222,8 +222,10 @@ private fun InstallEnvironmentDialog(
     onDismiss: () -> Unit,
     onConfirm: (withBuild: Boolean) -> Unit,
 ) {
-    var withBuild by remember { mutableStateOf(false) }
-    val needsBuild = environment.missingBinaries.isNotEmpty() && environment.build.isNotBlank()
+    // An environment with no package set can only arrive by building it here.
+    var withBuild by remember { mutableStateOf(environment.packages.isEmpty()) }
+    val needsBuild = environment.build.isNotBlank() &&
+        (environment.missingBinaries.isNotEmpty() || environment.packages.isEmpty())
     LaunchedEffect(environment.id) { vm.loadEnvironmentPlan(environment.id) }
     val packages = vm.envPackages
     AlertDialog(
@@ -233,7 +235,8 @@ private fun InstallEnvironmentDialog(
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     when {
-                        environment.packages.isEmpty() -> "No package set is declared for this guest."
+                        environment.packages.isEmpty() -> "No package set is declared for this guest; " +
+                            "this environment is built in place."
                         packages.isNotEmpty() -> "${packages.size} packages to install"
                         else -> "Package set ${environment.packages.joinToString(", ")}"
                     },

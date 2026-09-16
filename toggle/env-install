@@ -100,6 +100,10 @@ env_packages() { # env
 
 env_package_groups() { manifest_list "$1" packages; }
 
+# Dependency sets for a source build, installed only when building: they are a
+# compiler toolchain, not the environment.
+env_build_groups() { manifest_list "$1" build_deps; }
+
 packages_missing() { # env -> package names that are not installed
     guest_running || return 0
     pkgs=$(env_packages "$1")
@@ -216,9 +220,12 @@ emit_recipe() { # env
     elif [ -n "$groups" ]; then
         echo "installable=yes"
         echo "installable_reason="
-    elif [ "$build_present" = yes ]; then
+    elif [ "$build_present" = yes ] && [ -n "$build" ]; then
         echo "installable=yes"
-        echo "installable_reason=builds from source in the guest"
+        echo "installable_reason=built from source in the guest by $(basename "$build")"
+    elif [ -n "$build" ]; then
+        echo "installable=no"
+        echo "installable_reason=needs $(basename "$build"), which is not in this guest (Aurora's build pipeline runs it on the PC)"
     else
         echo "installable=no"
         echo "installable_reason=no package set or in-guest provisioner for this environment"
@@ -445,6 +452,7 @@ emit_environment() { # env
     echo "reason=$(manifest_field "$id" reason)"
     echo "limitations=$(manifest_field "$id" limitations)"
     echo "packages=$(env_package_groups "$id" | tr '\n' ',' | sed 's/,$//')"
+    echo "build_deps=$(env_build_groups "$id" | tr '\n' ',' | sed 's/,$//')"
     echo "build=$(manifest_field "$id" build)"
     echo "glue=$(manifest_list "$id" glue | tr '\n' ',' | sed 's/,$//')"
     echo "required_binaries=$(manifest_field "$id" required_binaries)"
@@ -673,11 +681,23 @@ run_install() {
     elif [ ! -x "$(guest_path)$build_script" ]; then
         step_state build warn "needs $missing; $(basename "$build_script") is not in this guest (build it on the PC)"
     else
-        log "running $build_script for $missing"
-        if in_guest /bin/sh "$build_script"; then
-            step_state build ok "$(basename "$build_script") completed"
+        build_rc=0
+        for group in $(env_build_groups "$env"); do
+            log "installing build dependencies for $env: $group"
+            guest_platform package-refresh || build_rc=1
+            [ "$build_rc" -eq 0 ] || break
+            guest_platform deps "$group" || build_rc=1
+            [ "$build_rc" -eq 0 ] || break
+        done
+        if [ "$build_rc" -ne 0 ]; then
+            step_state build warn "build dependencies failed to install; see the log"
         else
-            step_state build warn "$(basename "$build_script") failed; see the log"
+            log "running $build_script for $missing"
+            if in_guest /bin/sh "$build_script"; then
+                step_state build ok "$(basename "$build_script") completed"
+            else
+                step_state build warn "$(basename "$build_script") failed; see the log"
+            fi
         fi
     fi
     [ -f "$CANCEL" ] && { cancelled build; return; }
@@ -719,7 +739,7 @@ run_remove() {
     pkgs=$(env_packages "$env")
     ST_PACKAGE_COUNT=$(printf '%s\n' $pkgs | grep -c . )
     if [ -z "$pkgs" ]; then
-        step_state remove skip "no package set to remove on $ST_DISTRO"
+        step_state remove skip "no package set to remove on $ST_DISTRO (build dependencies are kept)"
     else
         # shellcheck disable=SC2086
         if guest_platform package-remove $pkgs; then
