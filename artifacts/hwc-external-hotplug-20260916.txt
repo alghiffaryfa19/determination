@@ -1,0 +1,33 @@
+# HWC external-display hotplug (DP-alt monitor)
+
+Device: OnePlus 7 (guacamoleb) / SM8150, crDroid 12.11 / Android 16, ALARM guest
+Session: omarchy (Hyprland 0.49.0 port, aquamarine HWC backend)
+Date: 2026-09-16
+
+## Connector
+
+/sys/class/drm/card0-DP-1/status -> connected (23:19:48)
+
+## Compositor stderr (aquamarine multi-display session)
+
+HWC connected HWC-1: 1080x2340@60000
+HWC connected HWC-EXT-1: 1920x1080@60000
+
+## hyprctl monitors
+
+HWC-1: 1080x2340@60 scale=2.5 pos=0,0 ws=1 disabled=False
+HWC-EXT-1: 1920x1080@60 scale=1.0 pos=432,0 ws=2 disabled=False
+
+## hyprctl workspaces
+
+ws 1 name=1 monitor=HWC-1 windows=0
+ws 2 name=2 monitor=HWC-EXT-1 windows=0
+
+## Notes
+
+The backend before this build created HWC-1 once and ignored later HWC
+displays. graphics/hyprland/HwcSession.hpp adds the hotplug callback,
+connects extra displays as HWC-EXT-<id>, and removes them on disconnect;
+graphics/hyprland/patches/aquamarine-port.patch wires it into Headless.cpp.
+Not yet exercised: unplug/removal, repeated cycles, external input, and
+per-output wallpaper/scale policy.
