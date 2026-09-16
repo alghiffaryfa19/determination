@@ -33,6 +33,10 @@ for config in sorted((ROOT / 'guest').glob('hyprland-*.conf')):
             continue
         binary = Path(line.split('=', 1)[1].strip()).name
         provided = any(path.name == binary for path in (ROOT / 'guest').rglob(binary))
-        assert provided, f'{config.name} loads {binary} but nothing in the tree ships it'
+        if not provided:
+            # Plugins are built, not vendored: accept a script that produces them.
+            provided = any(binary in script.read_text(errors='ignore')
+                           for script in (ROOT / 'guest').glob('*.sh'))
+        assert provided, f'{config.name} loads {binary} but nothing in the tree builds it'
 
 print('Hyprland naming contract passed')

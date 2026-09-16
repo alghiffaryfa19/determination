@@ -25,9 +25,9 @@ wayland-scanner client-header "$VIRTUAL_KEYBOARD" \
 wayland-scanner private-code "$VIRTUAL_KEYBOARD" \
     "$BUILD/virtual-keyboard-protocol.c"
 
-cc -std=c11 -O2 -Wall -Wextra -Werror \
+${CC:-cc} -std=c11 -O2 -Wall -Wextra -Werror \
     -I"$BUILD" -I"$HEADERS" \
     "$SRC" "$BUILD/fake-input-protocol.c" \
     "$BUILD/wlr-virtual-pointer-protocol.c" \
     "$BUILD/virtual-keyboard-protocol.c" -o "$OUT" \
-    $(pkg-config --cflags --libs wayland-client)
+    $(${PKG_CONFIG:-pkg-config} --cflags --libs wayland-client)

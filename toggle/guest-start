@@ -93,7 +93,8 @@ for aurora_guest_tool in aurora-guest-agent aurora-audio-probe aurora-audio-sess
                       aurora-platform aurora-apps aurora-phosh-session aurora-compat-check aurora-osk \
                       aurora-firefox-content-defaults aurora-session-launch aurora-hyprland \
                       aurora-plasma-session aurora-plasma-client aurora-hyprland-opal \
-                      aurora-hyprland-omarchy aurora-omarchy aurora-opal opal; do
+                      aurora-hyprland-omarchy aurora-omarchy aurora-opal opal \
+                      aurora-input-proxy aurora-input-proxy-session; do
     if [ -f "$AURORA/guest-tools/$aurora_guest_tool" ]; then
         mkdir -p "$GUEST_ROOT/usr/local/bin"
         cp -f "$AURORA/guest-tools/$aurora_guest_tool" \
@@ -143,6 +144,14 @@ if [ -f "$AURORA/guest-tools/aurora-plasma.service" ] && [ -d "$GUEST_ROOT/etc/s
     cp -f "$AURORA/guest-tools/aurora-plasma.service" \
         "$GUEST_ROOT/etc/systemd/system/aurora-plasma.service"
     chmod 0644 "$GUEST_ROOT/etc/systemd/system/aurora-plasma.service"
+fi
+if [ -f "$AURORA/guest-tools/aurora-input-proxy.service" ] && [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
+    cp -f "$AURORA/guest-tools/aurora-input-proxy.service" \
+        "$GUEST_ROOT/etc/systemd/system/aurora-input-proxy.service"
+    chmod 0644 "$GUEST_ROOT/etc/systemd/system/aurora-input-proxy.service"
+    mkdir -p "$GUEST_ROOT/etc/systemd/system/multi-user.target.wants"
+    ln -sf ../aurora-input-proxy.service \
+        "$GUEST_ROOT/etc/systemd/system/multi-user.target.wants/aurora-input-proxy.service"
 fi
 if [ -f "$AURORA/guest-tools/aurora-input-udevdb" ]; then
     mkdir -p "$GUEST_ROOT/usr/local/sbin"

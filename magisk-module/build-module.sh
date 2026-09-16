@@ -14,6 +14,9 @@ file ../tools/evgrab/evgrab | grep -q aarch64 || { echo "evgrab is not an aarch6
 INPUT_FORWARDER="../tools/input-forwarder/aurora-input-forwarder"
 [ -f "$INPUT_FORWARDER" ] || { echo "build aurora-input-forwarder with the Android NDK first" >&2; exit 1; }
 file "$INPUT_FORWARDER" | grep -q 'ARM aarch64' || { echo "aurora-input-forwarder is not an Android aarch64 build" >&2; exit 1; }
+INPUT_PROXY="../build/aurora-input-proxy/aurora-input-proxy"
+[ -f "$INPUT_PROXY" ] || { echo "build the guest input proxy first (./guest/build-aurora-input-proxy-cross.sh)" >&2; exit 1; }
+file "$INPUT_PROXY" | grep -q 'ARM aarch64' || { echo "aurora-input-proxy is not an aarch64 build" >&2; exit 1; }
 
 AURORAD="../control/build/android-arm64/aurorad"
 AURORACTL="../control/build/android-arm64/auroractl"
@@ -74,6 +77,7 @@ cp ../tools/evgrab/evgrab "$INPUT_FORWARDER" \
    "$AURORAD" "$AURORACTL" "$AURORA_AUDIO_HOST" "$AURORA_AUDIO_OWNER" \
    ../toggle/device-config ../toggle/generate-lxc-config ../toggle/generate-guest-config \
    ../toggle/lifecycle-lib ../toggle/boot-profile ../toggle/guest-distro \
+   ../toggle/env-install \
    ../toggle/guest-start ../toggle/desktop-on ../toggle/desktop-off \
    ../toggle/desktop-memory \
     ../toggle/session-catalog ../toggle/session-select ../toggle/session-set \
@@ -120,6 +124,9 @@ cp ../guest/aurora-phosh.service "$WORK/guest-tools/aurora-phosh.service"
 cp ../guest/aurora-plasma.service "$WORK/guest-tools/aurora-plasma.service"
 cp ../guest/aurora-connectivity.desktop "$WORK/guest-tools/aurora-connectivity.desktop"
 cp ../guest/aurora-input-proxy.desktop "$WORK/guest-tools/aurora-input-proxy.desktop"
+cp "$INPUT_PROXY" "$WORK/guest-tools/aurora-input-proxy"
+cp ../guest/aurora-input-proxy-session "$WORK/guest-tools/aurora-input-proxy-session"
+cp ../guest/aurora-input-proxy.service "$WORK/guest-tools/aurora-input-proxy.service"
 cp ../guest/aurora-input-udevdb "$WORK/guest-tools/aurora-input-udevdb"
 cp ../guest/90-aurora-direct.conf "$WORK/guest-tools/90-aurora-direct.conf"
 cp ../guest/lxc/config "$WORK/tools/lxc-config-base"

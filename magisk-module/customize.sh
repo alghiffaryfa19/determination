@@ -34,7 +34,7 @@ for f in cage gamescope-headless labwc mutter sway weston; do
     rm -f "$STAGE/sessions/$f.session" "$AURORA/etc/sessions/$f.session"
 done
 
-for f in evgrab aurora-input-forwarder aurorad auroractl aurora-audio-probe aurora-audio-owner aurora-audio-route aurora-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro desktop-setup guest-start desktop-on desktop-off desktop-memory session-catalog session-select session-set run-transition external-presenter external-input native-plasma native-kms-gate native-restore aurora-hostagent aurora-color-compat cycle-stress.sh; do
+for f in evgrab aurora-input-forwarder aurorad auroractl aurora-audio-probe aurora-audio-owner aurora-audio-route aurora-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro env-install guest-start desktop-on desktop-off desktop-memory session-catalog session-select session-set run-transition external-presenter external-input native-plasma native-kms-gate native-restore aurora-hostagent aurora-color-compat cycle-stress.sh; do
     [ -f "$MODPATH/tools/$f" ] || abort "! missing $f in zip"
     cp -f "$MODPATH/tools/$f" "$STAGE/bin/$f"
     chmod 0755 "$STAGE/bin/$f"
@@ -120,6 +120,30 @@ if [ -f "$MODPATH/guest-tools/aurora-plasma.service" ]; then
             "$GUEST_ROOT/etc/systemd/system/aurora-plasma.service"
         chmod 0644 "$GUEST_ROOT/etc/systemd/system/aurora-plasma.service"
     fi
+fi
+if [ -f "$MODPATH/guest-tools/aurora-input-proxy" ]; then
+    cp -f "$MODPATH/guest-tools/aurora-input-proxy" "$STAGE/guest-tools/aurora-input-proxy"
+    chmod 0755 "$STAGE/guest-tools/aurora-input-proxy"
+    if [ -d "$GUEST_ROOT/usr/local/bin" ]; then
+        cp -f "$MODPATH/guest-tools/aurora-input-proxy" "$GUEST_ROOT/usr/local/bin/aurora-input-proxy"
+        chmod 0755 "$GUEST_ROOT/usr/local/bin/aurora-input-proxy"
+    fi
+fi
+if [ -f "$MODPATH/guest-tools/aurora-input-proxy-session" ]; then
+    cp -f "$MODPATH/guest-tools/aurora-input-proxy-session" "$STAGE/guest-tools/aurora-input-proxy-session"
+    chmod 0755 "$STAGE/guest-tools/aurora-input-proxy-session"
+    if [ -d "$GUEST_ROOT/usr/local/bin" ]; then
+        cp -f "$MODPATH/guest-tools/aurora-input-proxy-session" "$GUEST_ROOT/usr/local/bin/aurora-input-proxy-session"
+        chmod 0755 "$GUEST_ROOT/usr/local/bin/aurora-input-proxy-session"
+    fi
+fi
+if [ -f "$MODPATH/guest-tools/aurora-input-proxy.service" ] && [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
+    cp -f "$MODPATH/guest-tools/aurora-input-proxy.service" "$STAGE/guest-tools/aurora-input-proxy.service"
+    chmod 0644 "$STAGE/guest-tools/aurora-input-proxy.service"
+    cp -f "$MODPATH/guest-tools/aurora-input-proxy.service" "$GUEST_ROOT/etc/systemd/system/aurora-input-proxy.service"
+    chmod 0644 "$GUEST_ROOT/etc/systemd/system/aurora-input-proxy.service"
+    mkdir -p "$GUEST_ROOT/etc/systemd/system/multi-user.target.wants"
+    ln -sf ../aurora-input-proxy.service         "$GUEST_ROOT/etc/systemd/system/multi-user.target.wants/aurora-input-proxy.service"
 fi
 if [ -f "$MODPATH/guest-tools/aurora-input-udevdb" ]; then
     cp -f "$MODPATH/guest-tools/aurora-input-udevdb" "$STAGE/guest-tools/aurora-input-udevdb"

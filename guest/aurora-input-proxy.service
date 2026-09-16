@@ -13,3 +13,6 @@ RestartSec=2
 TimeoutStopSec=3
 StandardOutput=journal
 StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
