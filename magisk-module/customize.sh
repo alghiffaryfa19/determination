@@ -34,7 +34,7 @@ for f in cage gamescope-headless labwc mutter sway weston; do
     rm -f "$STAGE/sessions/$f.session" "$AURORA/etc/sessions/$f.session"
 done
 
-for f in evgrab aurora-input-forwarder aurorad auroractl aurora-audio-probe aurora-audio-owner aurora-audio-route aurora-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro guest-start desktop-on desktop-off desktop-memory session-catalog session-select session-set run-transition external-presenter external-input native-plasma native-kms-gate native-restore aurora-hostagent aurora-color-compat cycle-stress.sh; do
+for f in evgrab aurora-input-forwarder aurorad auroractl aurora-audio-probe aurora-audio-owner aurora-audio-route aurora-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro desktop-setup guest-start desktop-on desktop-off desktop-memory session-catalog session-select session-set run-transition external-presenter external-input native-plasma native-kms-gate native-restore aurora-hostagent aurora-color-compat cycle-stress.sh; do
     [ -f "$MODPATH/tools/$f" ] || abort "! missing $f in zip"
     cp -f "$MODPATH/tools/$f" "$STAGE/bin/$f"
     chmod 0755 "$STAGE/bin/$f"
@@ -217,14 +217,30 @@ fi
 # guess service names or codec topology. Install only the exact hardware profile
 # selected by the exact-match device config, and preserve local qualification.
 AUDIO_PROFILE_ID=$(sed -n 's/^AURORA_PROFILE_ID=//p' "$AURORA/etc/device.conf" 2>/dev/null | head -n 1)
-if [ -n "$AUDIO_PROFILE_ID" ] && \
-   [ -f "$MODPATH/audio-profiles/$AUDIO_PROFILE_ID.conf" ] && \
-   [ ! -f "$AURORA/etc/audio-owner.conf" ]; then
-    cp -f "$MODPATH/audio-profiles/$AUDIO_PROFILE_ID.conf" "$AURORA/etc/audio-owner.conf"
-    chmod 0640 "$AURORA/etc/audio-owner.conf"
-    ui_print "- Direct audio ownership profile: $AUDIO_PROFILE_ID (manual gate only)"
+AUDIO_PROFILE=
+if [ -n "$AUDIO_PROFILE_ID" ] && [ -f "$MODPATH/audio-profiles/$AUDIO_PROFILE_ID.conf" ]; then
+    AUDIO_PROFILE="$MODPATH/audio-profiles/$AUDIO_PROFILE_ID.conf"
+else
+    # Profile ids are renamed as device profiles evolve; match the ALSA card
+    # instead of guessing a service topology for an unmatched id.
+    for audio_candidate in "$MODPATH"/audio-profiles/*.conf; do
+        [ -f "$audio_candidate" ] || continue
+        audio_card=$(sed -n 's/^card_contains=//p' "$audio_candidate" | head -n 1)
+        [ -n "$audio_card" ] || continue
+        if grep -q "$audio_card" /proc/asound/cards 2>/dev/null; then
+            AUDIO_PROFILE="$audio_candidate"
+            break
+        fi
+    done
 fi
-if [ "$AUDIO_PROFILE_ID" = guacamoleb ] && \
+AUDIO_PROFILE_NAME=
+[ -z "$AUDIO_PROFILE" ] || AUDIO_PROFILE_NAME=$(basename "$AUDIO_PROFILE" .conf)
+if [ -n "$AUDIO_PROFILE_NAME" ] && [ ! -f "$AURORA/etc/audio-owner.conf" ]; then
+    cp -f "$AUDIO_PROFILE" "$AURORA/etc/audio-owner.conf"
+    chmod 0640 "$AURORA/etc/audio-owner.conf"
+    ui_print "- Direct audio ownership profile: $AUDIO_PROFILE_NAME (manual gate only)"
+fi
+if [ "$AUDIO_PROFILE_NAME" = guacamoleb ] && \
    [ -f "$AURORA/guest-tools/90-aurora-direct.conf" ] && \
    [ -d "$GUEST_ROOT/etc/pipewire/pipewire.conf.d" ]; then
     cp -f "$AURORA/guest-tools/90-aurora-direct.conf" \

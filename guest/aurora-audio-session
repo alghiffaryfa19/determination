@@ -8,6 +8,16 @@ set -u
 # falling back. PipeWire documents DISABLE_RTKIT for exactly this case.
 export DISABLE_RTKIT=1
 
+# Socket-activated systemd user units would raise PipeWire outside the audio
+# ownership contract; this session is the only component allowed to own the
+# graph, and only while the host publishes audio-claimed.
+if command -v systemctl >/dev/null 2>&1; then
+    systemctl --user stop pipewire.socket pipewire.service pipewire-pulse.socket \
+        pipewire-pulse.service wireplumber.service >/dev/null 2>&1 || true
+    systemctl --user mask pipewire.socket pipewire.service pipewire-pulse.socket \
+        pipewire-pulse.service wireplumber.service >/dev/null 2>&1 || true
+fi
+
 MARKER=${AURORA_AUDIO_MARKER:-/mnt/aurora-control/audio-claimed}
 RUNTIME=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 LOG="$RUNTIME/aurora-audio.log"

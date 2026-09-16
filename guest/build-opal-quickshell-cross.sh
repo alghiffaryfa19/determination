@@ -56,10 +56,10 @@ exec podman run --rm \
             -DCMAKE_INSTALL_PREFIX=/opt/hyprland \
             -DDISTRIBUTOR=Aurora \
             -DCRASH_HANDLER=OFF -DUSE_JEMALLOC=OFF -DX11=OFF \
-            -DSERVICE_PAM=OFF -DSERVICE_POLKIT=OFF -DSERVICE_PIPEWIRE=OFF \
+            -DSERVICE_PAM=ON -DSERVICE_POLKIT=ON -DSERVICE_PIPEWIRE=OFF \
             -DWAYLAND_PROTOCOLS=/work/guest/vendor/wayland-protocols \
             2>&1 | tee "$build/configure.log"
-        cmake --build "$build/build" -j"$(nproc)" 2>&1 | tee "$build/build.log"
+        cmake --build "$build/build" -j"${AURORA_BUILD_JOBS:-$(nproc)}" 2>&1 | tee "$build/build.log"
         DESTDIR="$build/install" cmake --install "$build/build" 2>&1 | tee "$build/install.log"
         # Qt private APIs require the same libraries and plugins used for this build.
         runtime="$build/install/opt/hyprland"
