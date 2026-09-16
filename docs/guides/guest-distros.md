@@ -27,6 +27,33 @@ aurora distro status
 aurora distro select debian|arch|alpine
 ```
 
+Rootfs slots stay PC-owned: `aurora distro install` and the workbench install
+them. The desktop *environment* inside an installed guest is the companion's
+lane, and the installer reads the session manifests rather than a second list:
+
+```sh
+env-install catalog                # environments, recipes, current state
+env-install plan plasma-mobile     # recipe + resolved package list
+env-install install plasma-mobile  # detached; follows run/env.state
+env-install status                 # per-step state + log tail
+env-install remove plasma-mobile   # removes that environment's packages only
+```
+
+A manifest declares what installing its environment means:
+
+```text
+packages=plasma-mobile                    # aurora-platform deps group, per distro
+build=/root/aurora-build/build-hyprland.sh  # only components no package ships
+glue=aurora-plasma-client                 # Aurora files the module delivers
+```
+
+Package sets are resolved through `aurora-platform deps-packages <group>`, so a
+group that does not exist for the active distro is reported as unsupported
+rather than failing halfway. Afterwards the installer re-checks the manifest's
+`required_binaries` through `session-catalog`: an environment whose compositor
+still has to be compiled finishes as a warning naming the missing binary and
+the provisioner that produces it, and never as a success.
+
 ## Build and install Arch Linux ARM
 
 Import and independently verify Arch Linux ARM's official signing key

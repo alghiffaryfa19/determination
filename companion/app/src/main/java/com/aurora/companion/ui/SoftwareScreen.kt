@@ -47,12 +47,14 @@ fun SoftwareScreen(
             GlassCard {
                 Text(
                     "Guest container is not running : package status and installs need it up. " +
-                        "Start it from the Control tab.",
+                        "Installing an environment starts it automatically.",
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(20.dp),
                 )
             }
         }
+
+        EnvironmentSection(vm)
 
         DistroSection(vm)
 

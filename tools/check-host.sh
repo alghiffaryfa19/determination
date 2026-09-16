@@ -14,6 +14,7 @@ python3 -m unittest discover -s installer/tests
 sh recon/tests/test-classify.sh
 sh toggle/tests/lifecycle-test.sh
 sh toggle/tests/guest-distro-test.sh
+sh toggle/tests/env-install-test.sh
 sh toggle/tests/session-set-test.sh
 sh toggle/tests/session-select-test.sh
 sh toggle/tests/desktop-memory-test.sh

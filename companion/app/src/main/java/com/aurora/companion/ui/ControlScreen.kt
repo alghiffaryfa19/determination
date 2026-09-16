@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.Healing
 import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.PowerSettingsNew
 import androidx.compose.material.icons.rounded.RestartAlt
+import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Smartphone
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
@@ -86,6 +87,7 @@ fun ControlScreen(
     wide: Boolean,
     modifier: Modifier = Modifier,
     bottomPad: Dp = 0.dp,
+    onOpenEnvironments: () -> Unit = {},
 ) {
     var confirmEnter by remember { mutableStateOf(false) }
     val haptics = LocalHapticFeedback.current
@@ -153,6 +155,8 @@ fun ControlScreen(
                     confirmEnter = true
                 }
             }
+
+            EnvironmentPrompt(vm, onOpenEnvironments)
 
             SessionSelector(vm)
 
@@ -250,7 +254,7 @@ private fun SessionSelector(vm: AuroraViewModel) {
     }
 }
 
-private val SELECTABLE_QUALIFICATIONS = setOf("qualified", "proven", "experimental", "diagnostic")
+internal val SELECTABLE_QUALIFICATIONS = setOf("qualified", "proven", "experimental", "diagnostic")
 
 @Composable
 private fun ModeBadge(desktop: Boolean) {
@@ -300,7 +304,7 @@ private fun StatusCard(vm: AuroraViewModel, desktop: Boolean) {
                     )
                     Text(
                         if (s["installed"] == "yes") "Aurora installed"
-                        else "Not installed : see the Install tab",
+                        else "Not installed : run the PC workbench installer",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

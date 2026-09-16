@@ -39,4 +39,10 @@ SYSTEMD_INSTALLED=no
 package_install systemd systemd-libs systemd-sysvcompat systemd-resolvconf
 printf '%s\n' --needed --noconfirm systemd systemd-libs systemd-sysvcompat systemd-resolvconf > "$WORK/expected"
 cmp "$WORK/expected" "$WORK/targets"
+# Resolving a dependency set must never reach the package manager: the
+# installer lists groups to show and to remove.
+: > "$WORK/targets"
+listed=$(AURORA_DEPS_DRYRUN=1 install_deps runtime)
+[ -s "$WORK/targets" ] && { echo 'a dependency listing installed packages' >&2; exit 1; }
+printf '%s' "$listed" | grep -q 'seatd' || { echo 'a dependency listing lost a package' >&2; exit 1; }
 echo 'All Arch dependency groups and package installs preserve installed init packages'

@@ -188,7 +188,13 @@ fun AuroraApp(vm: AuroraViewModel, windowSize: WindowSizeClass) {
                 Box(Modifier.fillMaxSize().hazeSource(hazeState), contentAlignment = Alignment.TopCenter) {
                     // Intentional hard cut: keep the pill, lose the page carousel.
                     when (dest) {
-                        Dest.Control -> ControlScreen(vm, expanded, content, 82.dp)
+                        Dest.Control -> ControlScreen(
+                            vm,
+                            expanded,
+                            content,
+                            82.dp,
+                            onOpenEnvironments = { dest = Dest.Software },
+                        )
                         Dest.Software -> SoftwareScreen(vm, expanded, content, 82.dp)
                         Dest.Settings -> SettingsScreen(
                             vm,

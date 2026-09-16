@@ -22,6 +22,14 @@ different and are recorded in the release manifest.
   artifact, replacing the unrelated bring-up-era component versions.
 - Internal phone-to-desktop handoff with SurfaceFlinger release, exclusive
   input transfer, and restoration to Android.
+- In-app desktop environment installation: the companion's Apps tab drives
+  `toggle/env-install`, which reads the session manifests as its catalog and
+  installs an environment's distro packages through the guest adapter
+  (`aurora-platform deps`), checks Aurora's own integration files, and verifies
+  the result against the manifest's `required_binaries`. Components no package
+  ships (Phoc, Hyprland, Quickshell) are reported as needing the build pipeline
+  instead of being silently skipped, and an environment that is installed but
+  not yet runnable finishes as a warning rather than a success.
 - Manifest-driven session selection for internal desktop mode: the companion
   picker (or `$AURORA/etc/compositor`) chooses among deployed
   `$AURORA/etc/sessions/*.session` manifests, `toggle/session-select` enforces

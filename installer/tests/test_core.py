@@ -32,7 +32,8 @@ def bundle(directory):
         with zipfile.ZipFile(files[kind], 'w') as archive:
             if kind == 'module':
                 archive.writestr('module.prop', 'id=aurora\nversionCode=12\n')
-                for name in ('customize.sh', 'tools/guest-distro', 'tools/desktop-on', 'zygisk/arm64-v8a.so', 'zygisk/armeabi-v7a.so'):
+                for name in ('customize.sh', 'tools/guest-distro', 'tools/desktop-on',
+                             'tools/env-install', 'zygisk/arm64-v8a.so', 'zygisk/armeabi-v7a.so'):
                     archive.writestr(name, 'fixture')
             else:
                 archive.writestr('AndroidManifest.xml', 'fixture')

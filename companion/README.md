@@ -6,6 +6,17 @@ and labels the direct Magisk `su` path as an emergency compatibility fallback.
 
 ## What it does
 
+- **Desktop environments** : install and remove the environments desktop mode
+  can run. The catalog is the device's own session manifests, so the installed
+  packages, the Aurora integration files, the required binaries and the
+  qualification labels all come from one authority rather than an app-side
+  list. Installing pulls the packages the guest's package manager provides
+  (`aurora-platform deps`); components Aurora builds from source (Phoc,
+  Hyprland, Quickshell) are shown as a separate, explicit step and are never
+  implied by a successful package install. The work runs detached on the
+  device, so closing the app or locking the phone does not interrupt it, and an
+  environment that is installed but still not runnable finishes as a warning
+  that names what is missing.
 - **Live status** : mode (phone/desktop), guest container state, SurfaceFlinger
   state, host-agent state, kernel.
 - **Enter Desktop Mode** : one tap: ensures the guest is up, then launches
@@ -47,7 +58,13 @@ is a state to resolve, not a successful transition. See the
 ## Installation ownership
 
 System installation, updates, porting, and boot recovery are owned by the
-[PC workbench](../installer/README.md). The companion retains mode control,
-Linux package management, session selection, diagnostics, and power controls.
-The installation wizard, release downloader, local updater, and boot writer
-have been removed from the APK.
+[PC workbench](../installer/README.md): kernel, Magisk module, boot image,
+guest rootfs slots, and the verified release artifacts. The companion owns
+Linux package management, desktop environment installation, session selection,
+mode control, diagnostics, and power controls. There is no in-app boot writer,
+rootfs installer, or updater.
+
+Environment installation drives `bin/env-install` (see
+[guest distros](../docs/guides/guest-distros.md)); every prerequisite it shows
+is the same check the device enforces, and every result it shows is read back
+from the device state files.

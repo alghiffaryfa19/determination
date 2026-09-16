@@ -85,6 +85,11 @@ package_refresh() {
 package_install_raw() {
     [ "$#" -gt 0 ] || return 0
     for pkg in "$@"; do safe_name "$pkg" || { echo "invalid package name: $pkg" >&2; return 2; }; done
+    # deps-list/deps-packages resolve a set without touching the system.
+    if [ -n "${AURORA_DEPS_DRYRUN:-}" ]; then
+        echo "$*"
+        return 0
+    fi
     case "$(platform_id)" in
         debian)
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
@@ -282,6 +287,14 @@ install_deps() {
                 libxcursor re2 libxcb xcb-util-wm xcb-util-renderutil xcb-util-errors \
                 xorg-xwayland seatd squeekboard gtk3 gsettings-desktop-schemas adwaita-icon-theme
             ;;
+        debian:plasma-mobile)
+            package_install_raw kwin-wayland plasma-workspace plasma-mobile \
+                plasma-nm plasma-pa plasma-settings
+            ;;
+        arch:plasma-mobile)
+            package_install_raw kwin plasma-workspace plasma-mobile \
+                plasma-nm plasma-pa plasma-settings
+            ;;
         arch:quickshell)
             package_install_raw qt6-base qt6-declarative qt6-shadertools qt6-wayland \
                 cli11 libdrm mesa vulkan-headers spirv-tools dbus glib2 wayland \
@@ -321,8 +334,16 @@ case "$cmd" in
         done
         ;;
     deps) install_deps "$@" ;;
+    deps-list)
+        [ "$#" -ge 1 ] || { echo "deps-list needs a dependency set" >&2; exit 2; }
+        AURORA_DEPS_DRYRUN=1 install_deps "$1"
+        ;;
+    deps-packages)
+        [ "$#" -ge 1 ] || { echo "deps-packages needs a dependency set" >&2; exit 2; }
+        AURORA_DEPS_DRYRUN=1 install_deps "$1" | tr ' ' '\n' | grep -v '^$'
+        ;;
     *)
-        echo "usage: aurora-platform info|id|libc|init|run-user|service-*|package-*|deps" >&2
+        echo "usage: aurora-platform info|id|libc|init|run-user|service-*|package-*|deps|deps-list|deps-packages" >&2
         exit 2
         ;;
 esac

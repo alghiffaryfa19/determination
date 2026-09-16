@@ -155,6 +155,10 @@ object Root {
             echo "tstate=${'$'}(sed -n 's/^state=//p' $AURORA/run/transition.state 2>/dev/null | tail -n 1)"
             echo "tstep=${'$'}(sed -n 's/^step=//p' $AURORA/run/transition.state 2>/dev/null | tail -n 1)"
             echo "session=${'$'}(cat $AURORA/etc/compositor 2>/dev/null || echo phosh)"
+            # Readiness rides along with the status poll, so the Control tab can
+            # offer the environment installer when the selected session is not
+            # runnable yet.
+            $BIN/env-install readiness 2>/dev/null
         """.trimIndent()
         val r = run(script, 12)
         return parseKv(r.out)
@@ -232,7 +236,7 @@ object Root {
         )
     }
 
-    private fun shellQuote(value: String): String =
+    internal fun shellQuote(value: String): String =
         "'" + value.replace("'", "'\"'\"'") + "'"
 
     /**

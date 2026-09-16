@@ -83,6 +83,105 @@ class AuroraViewModel(app: Application) : AndroidViewModel(app) {
     // Dock auto-summon (§8.3): enter desktop when the phone docks.
     var dock by mutableStateOf<Map<String, String>>(emptyMap()); private set
 
+    // Desktop environments: the device script owns the catalog and the work.
+    var envCatalog by mutableStateOf<EnvInstall.Catalog?>(null); private set
+    var envRun by mutableStateOf<EnvInstall.Run?>(null); private set
+    var envBusy by mutableStateOf<String?>(null); private set
+    var envPackages by mutableStateOf<List<EnvInstall.Package>>(emptyList()); private set
+    var envError by mutableStateOf<String?>(null); private set
+
+    /** Catalog + run state in two root round trips. */
+    fun refreshEnvironments() {
+        if (rootState != RootState.GRANTED) {
+            busy = "status"
+            viewModelScope.launch(Dispatchers.IO) {
+                val s = Root.status()
+                rootState = if (s["uid"] == "0") RootState.GRANTED else RootState.DENIED
+                status = if (rootState == RootState.GRANTED) s else emptyMap()
+                busy = null
+                if (rootState == RootState.GRANTED) refreshEnvironments()
+            }
+            return
+        }
+        envBusy = "env"
+        viewModelScope.launch(Dispatchers.IO) {
+            envRun = EnvInstall.status()
+            val catalog = EnvInstall.catalog()
+            envCatalog = catalog
+            envError = if (catalog == null) {
+                "The device did not return an environment catalog. This phone's Aurora " +
+                    "module may predate the environment installer."
+            } else {
+                null
+            }
+            envBusy = null
+        }
+    }
+
+    /** Cheap follow-up while an install or removal runs. */
+    fun pollEnvironments() {
+        if (rootState != RootState.GRANTED) return
+        val previous = envRun
+        viewModelScope.launch(Dispatchers.IO) {
+            val run = EnvInstall.status()
+            envRun = run
+            if (previous?.active == true && run.finished) refreshEnvironments()
+            else if (envCatalog == null) refreshEnvironments()
+        }
+    }
+
+    fun installEnvironment(id: String, withBuild: Boolean) {
+        if (envBusy != null || envRun?.active == true) return
+        envBusy = "env-install"
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = EnvInstall.install(id, withBuild)
+            message = if (result.ok) "Installing $id" else {
+                result.err.ifBlank { result.out }.ifBlank { "Could not start the install" }
+            }
+            envRun = EnvInstall.status()
+            envBusy = null
+        }
+    }
+
+    fun removeEnvironment(id: String) {
+        if (envBusy != null || envRun?.active == true) return
+        envBusy = "env-remove"
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = EnvInstall.remove(id)
+            message = if (result.ok) "Removing $id" else {
+                result.err.ifBlank { result.out }.ifBlank { "Could not start the removal" }
+            }
+            envRun = EnvInstall.status()
+            envBusy = null
+        }
+    }
+
+    /** Package recipe for one environment, shown before an install. */
+    fun loadEnvironmentPlan(id: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val (_, packages) = EnvInstall.plan(id)
+            envPackages = packages
+        }
+    }
+
+    fun cancelEnvironment() {
+        envBusy = "env-cancel"
+        viewModelScope.launch(Dispatchers.IO) {
+            EnvInstall.cancel()
+            envRun = EnvInstall.status()
+            envBusy = null
+        }
+    }
+
+    fun resetEnvironment() {
+        envBusy = "env-reset"
+        viewModelScope.launch(Dispatchers.IO) {
+            EnvInstall.reset()
+            envRun = EnvInstall.status()
+            envBusy = null
+        }
+    }
+
     fun setDockPolicy(trigger: String, autoExit: Boolean) {
         if (busy != null) return
         busy = "dock"
@@ -230,6 +329,9 @@ class AuroraViewModel(app: Application) : AndroidViewModel(app) {
         busy = "software"
         viewModelScope.launch(Dispatchers.IO) {
             val info = Root.sessionInfo()
+            val catalog = EnvInstall.catalog()
+            if (catalog != null) envCatalog = catalog
+            envRun = EnvInstall.status()
             guestDistros = Root.guestDistros()
             sessions = Root.sessions()
             compositor = (info["compositor"] ?: "").ifBlank { "phosh" }

@@ -164,6 +164,7 @@ def validate_archive(path, kind, distro='debian'):
                     raise Failure('The ZIP contains an unsafe path.')
             if kind == 'module':
                 required = {'module.prop', 'customize.sh', 'tools/guest-distro', 'tools/desktop-on',
+                            'tools/env-install',
                             'zygisk/arm64-v8a.so', 'zygisk/armeabi-v7a.so'}
                 if not required <= names or b'id=aurora' not in archive.read('module.prop').splitlines():
                     raise Failure('The module is incomplete or has the wrong module ID.')

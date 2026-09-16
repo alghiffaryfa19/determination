@@ -27,5 +27,4 @@ object Prefs {
     var stopGuestOnExit: Boolean
         get() = sp.getBoolean("stop_guest_on_exit", false)
         set(v) { sp.edit().putBoolean("stop_guest_on_exit", v).apply() }
-
 }

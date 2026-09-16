@@ -1,0 +1,889 @@
+#!/system/bin/sh
+# Install or remove a desktop environment inside the guest container.
+#
+# Environments come from the session manifests ($AURORA/etc/sessions/*.session),
+# so the installer, the session picker, and desktop-on all read one catalog:
+#   packages=<aurora-platform deps group>   distro package set to install
+#   build=<in-guest provisioner>            only for components no package ships
+#   glue=<module-delivered guest tools>     Aurora's own integration files
+# What is installed is verified against the manifest's required_binaries, so an
+# environment is never reported ready before the launcher could actually run it.
+# Runs detached; progress lands in $AURORA/run/env.state for the app to follow.
+
+set -u
+
+AURORA=${AURORA:-/data/aurora}
+BIN="$AURORA/bin"
+LXC="$AURORA/lxc/bin"
+RUN="$AURORA/run"
+# Overridable so a staged payload can be exercised before the module refresh.
+SESSIONS=${AURORA_ENV_SESSIONS:-$AURORA/etc/sessions}
+STATE="$RUN/env.state"
+CHECKS="$RUN/env.checks"
+STEPS="$RUN/env.steps"
+STEP_DIR="$RUN/env"
+PIDFILE="$RUN/env.pid"
+CANCEL="$RUN/env.cancel"
+LOG="$AURORA/log/env-install.log"
+WAKE_LOCK=${AURORA_SETUP_WAKE_LOCK:-/sys/power/wake_lock}
+WAKE_UNLOCK=${AURORA_SETUP_WAKE_UNLOCK:-/sys/power/wake_unlock}
+WAKELOCK_NAME=aurora-env
+PROBE_DIRS=${AURORA_ENV_PROBE_DIRS:-"usr/local/bin usr/local/sbin usr/lib/aurora usr/bin bin"}
+
+log() { printf '%s %s\n' "$(date '+%H:%M:%S')" "$*"; }
+warn() { log "WARN: $*"; }
+die() { echo "$*" >&2; exit 2; }
+one_line() { printf '%s' "$*" | tr '\n\r\t' '   '; }
+guest_path() {
+    [ -n "${AURORA_ENV_GUEST_ROOT:-}" ] && { echo "$AURORA_ENV_GUEST_ROOT"; return; }
+    root=$(readlink -f "$AURORA/active-guest" 2>/dev/null)
+    [ -n "$root" ] || root="$AURORA/guest"
+    echo "$root"
+}
+
+# ---------------------------------------------------------------- manifest
+
+manifest_field() { # env key
+    sed -n "s/^$2=//p" "$SESSIONS/$1.session" 2>/dev/null | head -n 1
+}
+
+env_exists() { [ -r "$SESSIONS/$1.session" ]; }
+
+env_ids() {
+    for manifest in "$SESSIONS"/*.session; do
+        [ -f "$manifest" ] || continue
+        id=${manifest##*/}; id=${id%.session}
+        case "$id" in ''|*[!a-z0-9-]*) continue ;; esac
+        echo "$id"
+    done
+}
+
+# Comma-separated manifest lists, one item per line.
+manifest_list() { # env key
+    manifest_field "$1" "$2" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | grep -v '^$'
+}
+
+# ---------------------------------------------------------------- device state
+
+guest_running() {
+    [ -x "$LXC/lxc-info" ] || return 1
+    "$LXC/lxc-info" -P "$AURORA" -n guest 2>/dev/null | grep -q RUNNING
+}
+
+in_guest() { # command...
+    "$LXC/lxc-attach" -P "$AURORA" -n guest -- "$@" 2>/dev/null
+}
+
+PLATFORM=${AURORA_ENV_PLATFORM:-/usr/local/bin/aurora-platform}
+
+guest_platform() { in_guest "$PLATFORM" "$@"; }
+
+platform_id() {
+    id=$(guest_platform id 2>/dev/null | tr -d ' \n')
+    case "$id" in debian|arch|alpine) echo "$id" ;; *) echo unknown ;; esac
+}
+
+# The package set a manifest declares, as the guest's package manager sees it.
+# Cached per environment and distro: each resolution execs into the container.
+env_packages() { # env
+    cache="$RUN/env-cache/$1-$(platform_id)-$(env_package_groups "$1" | tr '\n' ',').packages"
+    if [ -r "$cache" ]; then cat "$cache"; return; fi
+    mkdir -p "$RUN/env-cache" 2>/dev/null
+    tmp="$cache.new.$$"
+    for group in $(manifest_list "$1" packages); do
+        guest_platform deps-packages "$group" 2>/dev/null
+    done | sort -u > "$tmp" 2>/dev/null
+    mv -f "$tmp" "$cache" 2>/dev/null
+    cat "$cache"
+}
+
+env_package_groups() { manifest_list "$1" packages; }
+
+packages_missing() { # env -> package names that are not installed
+    guest_running || return 0
+    pkgs=$(env_packages "$1")
+    [ -n "$pkgs" ] || return 0
+    installed=$(guest_platform package-status $pkgs 2>/dev/null)
+    for pkg in $pkgs; do
+        printf '%s\n' "$installed" | grep -qx "$pkg=installed" || echo "$pkg"
+    done
+}
+
+# Binary the manifest names, resolved inside the guest rootfs.
+binary_present() { # absolute guest path
+    case "$1" in
+        /*) [ -x "$(guest_path)$1" ] ;;
+        *) [ -x "$(guest_path)/usr/bin/$1" ] ;;
+    esac
+}
+
+glue_present() { # glue name
+    root=$(guest_path)
+    for dir in $PROBE_DIRS; do
+        [ -e "$root/$dir/$1" ] && return 0
+    done
+    for unit in "$root/etc/systemd/system/$1.service" "$root/usr/lib/systemd/system/$1.service"; do
+        [ -e "$unit" ] && return 0
+    done
+    return 1
+}
+
+missing_binaries() { # env -> manifest binaries the launcher needs and cannot find
+    {
+        for binary in $(manifest_list "$1" required_binaries); do
+            binary_present "$binary" || echo "$binary"
+        done
+        for field in compositor shell; do
+            binary=$(manifest_field "$1" "$field")
+            case "$binary" in
+                /*) binary_present "$binary" || echo "$binary" ;;
+            esac
+        done
+    } | sort -u
+}
+
+# session-catalog owns the runnable/not-runnable verdict; reuse it verbatim.
+# Parsed with awk, not a word-splitting shell loop: reasons are prose.
+session_readiness() { # env
+    SESSION_ID=$1
+    verdict=$("$BIN/session-catalog" 2>/dev/null | awk -v want="$1" '
+        /^===/ { inside = (substr($0, 4) == want); next }
+        inside && /^runtime_ready=/ { sub(/^runtime_ready=/, ""); ready = $0 }
+        inside && /^runtime_reason=/ { sub(/^runtime_reason=/, ""); reason = $0 }
+        END {
+            print "ready=" (ready == "" ? "no" : ready)
+            print "reason=" reason
+        }')
+    SESSION_READY=$(printf '%s\n' "$verdict" | sed -n 's/^ready=//p')
+    SESSION_REASON=$(printf '%s\n' "$verdict" | sed -n 's/^reason=//p')
+    [ -n "$SESSION_READY" ] || SESSION_READY=no
+    if [ -z "$SESSION_REASON" ]; then
+        [ "$SESSION_READY" = yes ] || SESSION_REASON="the session manifest reported no readiness"
+    fi
+}
+
+# What this environment can be installed from, and whether this guest can do it.
+#   recipe         packages | build | none
+#   package_set    available | unsupported | unknown (guest down)
+emit_recipe() { # env
+    groups=$(env_package_groups "$1" | tr '\n' ',' | sed 's/,$//')
+    build=$(manifest_field "$1" build)
+    if [ -n "$groups" ]; then
+        echo "recipe=packages"
+    elif [ -n "$build" ]; then
+        echo "recipe=build"
+    else
+        echo "recipe=none"
+    fi
+    if [ -z "$groups" ]; then
+        if [ -n "$build" ]; then
+            echo "package_set=none"
+        else
+            echo "package_set=none"
+        fi
+    elif ! guest_running; then
+        echo "package_set=unknown"
+    elif [ -n "$(env_packages "$1")" ]; then
+        echo "package_set=available"
+    else
+        echo "package_set=unsupported"
+    fi
+    build_present=no
+    if [ -n "$build" ] && [ -x "$(guest_path)$build" ]; then build_present=yes; fi
+    echo "build_entrypoint=$build"
+    echo "build_present=$build_present"
+    if [ -n "$groups" ] && [ "$(guest_running && echo yes || echo no)" = yes ] && \
+       [ -z "$(env_packages "$1")" ]; then
+        echo "installable=no"
+        echo "installable_reason=no package set '$groups' for $(platform_id) in the distro adapter"
+    elif [ -n "$groups" ]; then
+        echo "installable=yes"
+        echo "installable_reason="
+    elif [ "$build_present" = yes ]; then
+        echo "installable=yes"
+        echo "installable_reason=builds from source in the guest"
+    else
+        echo "installable=no"
+        echo "installable_reason=no package set or in-guest provisioner for this environment"
+    fi
+}
+
+# ------------------------------------------------------------------- state
+
+st_write() { # state step_id step_index
+    tmp="$STATE.new.$$"
+    {
+        echo "running=${ST_RUNNING:-no}"
+        echo "state=$1"
+        echo "action=${ST_ACTION:-install}"
+        echo "env=${ST_ENV:-}"
+        echo "env_title=${ST_TITLE:-}"
+        echo "step=$2"
+        echo "step_index=$3"
+        echo "step_total=$STEP_TOTAL"
+        echo "started=${ST_STARTED:-}"
+        echo "updated=$(date +%s)"
+        echo "finished=${ST_FINISHED:-}"
+        echo "distro=${ST_DISTRO:-}"
+        echo "with_build=${ST_WITH_BUILD:-no}"
+        echo "package_count=${ST_PACKAGE_COUNT:-0}"
+        echo "runtime_ready=${ST_READY:-unknown}"
+        echo "runtime_reason=$(one_line "${ST_READY_REASON:-}")"
+        echo "summary=$(one_line "${ST_SUMMARY:-}")"
+        echo "error=$(one_line "${ST_ERROR:-}")"
+        echo "log=$LOG"
+    } > "$tmp" 2>/dev/null || { rm -f "$tmp"; return 1; }
+    mv -f "$tmp" "$STATE"
+}
+
+step_state() { # id state detail
+    mkdir -p "$STEP_DIR" 2>/dev/null || return 0
+    tmp="$STEP_DIR/$1.state.new.$$"
+    {
+        echo "state=$2"
+        echo "detail=$(one_line "${3:-}")"
+        echo "updated=$(date +%s)"
+    } > "$tmp" 2>/dev/null || { rm -f "$tmp"; return 0; }
+    mv -f "$tmp" "$STEP_DIR/$1.state"
+}
+
+write_steps() { # action
+    mkdir -p "$RUN" 2>/dev/null
+    tmp="$STEPS.new.$$"
+    if [ "$1" = remove ]; then
+        {
+            echo "preflight|Check prerequisites"
+            echo "remove|Remove the environment packages"
+            echo "verify|Verify the guest state"
+        } > "$tmp"
+    else
+        {
+            echo "preflight|Check prerequisites"
+            echo "packages|Install the environment packages"
+            echo "glue|Check Aurora integration files"
+            echo "build|Build the components no package ships"
+            echo "services|Enable session services"
+            echo "verify|Verify the environment"
+        } > "$tmp"
+    fi
+    mv -f "$tmp" "$STEPS"
+}
+
+step_total_for() { # action
+    if [ "$1" = remove ]; then echo 3; else echo 6; fi
+}
+
+finish() { # state summary rc
+    ST_RUNNING=no
+    ST_FINISHED=$(date +%s)
+    [ -n "${2:-}" ] && ST_SUMMARY="$2"
+    st_write "$1" "${LAST_STEP:-}" "${STEP_INDEX:-0}"
+    log "env-install finished: $1 ${ST_SUMMARY:+· $ST_SUMMARY}"
+    RUN_RC=$3
+    rm -f "$PIDFILE"
+    release_wakelock
+}
+
+begin_step() { # id title index
+    LAST_STEP=$1
+    STEP_INDEX=$3
+    st_write running "$1" "$3"
+    step_state "$1" running ""
+    log "=== $1: $2"
+}
+
+release_wakelock() {
+    [ -n "$WAKE_LOCK" ] && [ -w "$WAKE_UNLOCK" ] && \
+        echo "$WAKELOCK_NAME" > "$WAKE_UNLOCK" 2>/dev/null
+    return 0
+}
+
+cancelled() {
+    ST_ERROR="cancelled during the $1 step"
+    step_state "$1" cancelled "stopped by request"
+    finish cancelled "$ST_ERROR" 7
+}
+
+disk_free_mib() { # guest rootfs
+    df -Pk "$1" 2>/dev/null | awk 'NR > 1 { print int($4 / 1024); exit }'
+}
+
+battery_gauge() {
+    for candidate in bms battery; do
+        [ -d "/sys/class/power_supply/$candidate" ] && { echo "$candidate"; return; }
+    done
+    echo ""
+}
+
+battery_level() {
+    gauge=$(battery_gauge); [ -n "$gauge" ] || { echo ""; return; }
+    tr -d ' \n' < "/sys/class/power_supply/$gauge/capacity" 2>/dev/null
+}
+
+# --------------------------------------------------------------- checks
+
+check_record() { # id state title detail fix
+    echo "==check"
+    echo "id=$1"
+    echo "state=$2"
+    echo "title=$3"
+    echo "detail=$(one_line "$4")"
+    echo "fix=$(one_line "${5:-}")"
+}
+
+emit_checks() { # env
+    checks_failed=0
+
+    if [ "$(id -u 2>/dev/null)" = 0 ]; then
+        check_record root ok "Root access" "Magisk su grants uid 0" ""
+    else
+        check_record root fail "Root access" "su returned uid ${uid:-none}" \
+            "Grant Aurora superuser in Magisk → Superuser."
+        checks_failed=$((checks_failed + 1))
+    fi
+
+    missing=""
+    for tool in guest-distro desktop-on guest-start; do
+        [ -x "$BIN/$tool" ] || missing="$missing $tool"
+    done
+    if [ -z "$missing" ]; then
+        check_record runtime ok "Aurora runtime" "Host toolkit present in $BIN" ""
+    else
+        check_record runtime fail "Aurora runtime" "Missing:$missing" \
+            "System installation belongs to the PC workbench: run aurora-installer install."
+        checks_failed=$((checks_failed + 1))
+    fi
+
+    if [ -f "$RUN/desktop-mode" ]; then
+        check_record mode fail "Display ownership" "Desktop mode currently owns the panel" \
+            "Exit to phone mode before changing Linux packages."
+        checks_failed=$((checks_failed + 1))
+    else
+        check_record mode ok "Display ownership" "Phone mode; the Android UI stays live" ""
+    fi
+
+    if guest_running; then
+        distro=$(platform_id)
+        check_record guest ok "Guest container" "running · $distro packages" ""
+    else
+        check_record guest warn "Guest container" "not running; it will be started" \
+            "Starting the guest is automatic and takes a few seconds."
+    fi
+
+    root=$(guest_path)
+    free=$(disk_free_mib "$root")
+    if [ -n "$free" ]; then
+        if [ "$free" -lt 1024 ]; then
+            check_record storage fail "Storage" "$free MiB free in the guest" \
+                "Free space in Android settings or remove another environment first."
+            checks_failed=$((checks_failed + 1))
+        elif [ "$free" -lt 4096 ]; then
+            check_record storage warn "Storage" "$free MiB free in the guest" \
+                "A desktop environment needs several GiB; trim the guest if the install fails."
+        else
+            check_record storage ok "Storage" "$free MiB free in the guest" ""
+        fi
+    fi
+
+    level=$(battery_level)
+    if [ -n "$level" ]; then
+        if [ "$level" -lt 20 ] && [ ! -d /sys/class/power_supply/usb ] ; then
+            check_record power warn "Battery" "$level% and not charging" \
+                "Package downloads need time; connect a charger to be safe."
+        else
+            check_record power ok "Battery" "$level%" ""
+        fi
+    fi
+
+    [ "$checks_failed" -gt 0 ] && return 1
+    return 0
+}
+
+# ---------------------------------------------------------------- reporting
+
+emit_meta() {
+    echo "==meta"
+    if [ -f "$RUN/desktop-mode" ]; then echo "mode=desktop"; else echo "mode=phone"; fi
+    if guest_running; then echo "guest_running=yes"; else echo "guest_running=no"; fi
+    echo "distro=$(platform_id)"
+    echo "guest_root=$(guest_path)"
+    echo "free_mib=$(disk_free_mib "$(guest_path)")"
+    if [ -r "$STATE" ]; then
+        echo "run_state=$(sed -n 's/^state=//p' "$STATE" | tail -n 1)"
+    else
+        echo "run_state=none"
+    fi
+    echo "envs=$(env_ids | tr '\n' ',' | sed 's/,$//')"
+}
+
+emit_environment() { # env
+    id=$1
+    echo "==environment"
+    echo "id=$id"
+    echo "title=$(manifest_field "$id" title)"
+    echo "description=$(manifest_field "$id" description)"
+    echo "backend=$(manifest_field "$id" backend)"
+    echo "renderer=$(manifest_field "$id" renderer)"
+    echo "qualification=$(manifest_field "$id" qualification)"
+    echo "reason=$(manifest_field "$id" reason)"
+    echo "limitations=$(manifest_field "$id" limitations)"
+    echo "packages=$(env_package_groups "$id" | tr '\n' ',' | sed 's/,$//')"
+    echo "build=$(manifest_field "$id" build)"
+    echo "glue=$(manifest_list "$id" glue | tr '\n' ',' | sed 's/,$//')"
+    echo "required_binaries=$(manifest_field "$id" required_binaries)"
+    session_readiness "$id"
+    echo "runtime_ready=$SESSION_READY"
+    echo "runtime_reason=$(one_line "$SESSION_REASON")"
+    missing=$(missing_binaries "$id" | tr '\n' ',' | sed 's/,$//')
+    echo "missing_binaries=$missing"
+    if [ -n "$missing" ]; then echo "installed=no"; else echo "installed=yes"; fi
+    if guest_running; then
+        absent=$(packages_missing "$id" | tr '\n' ',' | sed 's/,$//')
+        if [ -z "$absent" ]; then echo "packages_state=installed"; else echo "packages_state=missing"; fi
+        echo "packages_missing=$absent"
+    else
+        echo "packages_state=unknown"
+        echo "packages_missing="
+    fi
+    glue_missing=""
+    for name in $(manifest_list "$id" glue); do
+        glue_present "$name" || glue_missing="$glue_missing$name,"
+    done
+    echo "glue_missing=${glue_missing%,}"
+    emit_recipe "$id" | while IFS= read -r line; do
+        case "$line" in
+            installable_reason=*) echo "installable_reason=$(one_line "${line#installable_reason=}")" ;;
+            *) echo "$line" ;;
+        esac
+    done
+}
+
+print_catalog() {
+    emit_meta
+    for id in $(env_ids); do emit_environment "$id"; done
+    echo "==step"
+    echo "id=catalog"
+    echo "title=Environment catalog"
+    echo "state=ok"
+    echo "detail=session manifests are the environment catalog"
+    return 0
+}
+
+print_plan() { # env
+    emit_meta
+    env_exists "$1" || die "unknown environment: $1"
+    emit_environment "$1"
+    emit_checks "$1" || true
+    echo "==package"
+    installed=$(guest_running && guest_platform package-status $(env_packages "$1") 2>/dev/null || true)
+    for pkg in $(env_packages "$1"); do
+        state=absent
+        printf '%s\n' "$installed" | grep -qx "$pkg=installed" && state=installed
+        echo "name=$pkg"
+        echo "state=$state"
+    done
+    return 0
+}
+
+print_status() {
+    echo "==state"
+    if [ -r "$STATE" ]; then
+        cat "$STATE"
+    else
+        echo "running=no"
+        echo "state=none"
+        echo "action=install"
+        echo "env="
+        echo "env_title="
+        echo "step="
+        echo "step_index=0"
+        echo "step_total=6"
+        echo "started="
+        echo "updated=$(date +%s)"
+        echo "finished="
+        echo "distro=$(platform_id)"
+        echo "with_build=no"
+        echo "package_count=0"
+        echo "runtime_ready=unknown"
+        echo "runtime_reason="
+        echo "summary="
+        echo "error="
+        echo "log=$LOG"
+    fi
+    [ -r "$STEPS" ] || write_steps install
+    while IFS='|' read -r id title; do
+        [ -n "$id" ] || continue
+        echo "==step"
+        echo "id=$id"
+        echo "title=$title"
+        if [ -r "$STEP_DIR/$id.state" ]; then
+            sed -n 's/^state=/state=/p' "$STEP_DIR/$id.state"
+            sed -n 's/^detail=/detail=/p' "$STEP_DIR/$id.state"
+        else
+            echo "state=pending"
+            echo "detail="
+        fi
+    done < "$STEPS"
+    echo "==log"
+    if [ -r "$LOG" ]; then tail -n 24 "$LOG" 2>/dev/null; fi
+    return 0
+}
+
+print_readiness() {
+    echo "==readiness"
+    if [ -f "$RUN/desktop-mode" ]; then echo "mode=desktop"; else echo "mode=phone"; fi
+    echo "distro=$(platform_id)"
+    if guest_running; then echo "guest_running=yes"; else echo "guest_running=no"; fi
+    echo "session=$(cat "$AURORA/etc/compositor" 2>/dev/null || echo phosh)"
+    session_readiness "$(cat "$AURORA/etc/compositor" 2>/dev/null || echo phosh)"
+    if [ "$SESSION_READY" = yes ]; then echo "graphics=ready"; else echo "graphics=missing"; fi
+    echo "graphics_detail=$(one_line "$SESSION_REASON")"
+    return 0
+}
+
+# ------------------------------------------------------------------ actions
+
+wait_for_guest() { # seconds
+    i=0
+    while [ "$i" -lt "$1" ]; do
+        guest_running && return 0
+        i=$((i + 2)); sleep 2
+    done
+    guest_running
+}
+
+ensure_guest() {
+    guest_running && return 0
+    log "starting the guest container"
+    "$BIN/guest-start" >/dev/null 2>&1
+    wait_for_guest 120
+}
+
+run_install() {
+    env=$ST_ENV
+    ST_TITLE=$(manifest_field "$env" title)
+    [ -n "$ST_TITLE" ] || ST_TITLE=$env
+
+    begin_step preflight "Check prerequisites" 1
+    if emit_checks "$env" > "$CHECKS.new.$$" 2>/dev/null; then
+        mv -f "$CHECKS.new.$$" "$CHECKS" 2>/dev/null
+        step_state preflight ok "Prerequisites satisfied"
+    else
+        mv -f "$CHECKS.new.$$" "$CHECKS" 2>/dev/null
+        detail=$(awk '/^state=fail$/ { failed = 1; next } failed && /^detail=/ { sub(/^detail=/, ""); print; exit }' "$CHECKS")
+        ST_ERROR="prerequisite failed: $detail"
+        step_state preflight fail "$ST_ERROR"
+        finish fail "" 3
+        return
+    fi
+    [ -f "$CANCEL" ] && { cancelled preflight; return; }
+
+    begin_step packages "Install the environment packages" 2
+    if ! ensure_guest; then
+        ST_ERROR="the guest did not reach RUNNING"
+        step_state packages fail "$ST_ERROR"; finish fail "" 4; return
+    fi
+    ST_DISTRO=$(platform_id)
+    groups=$(env_package_groups "$env" | tr '\n' ',')
+    pkgs=$(env_packages "$env")
+    ST_PACKAGE_COUNT=$(printf '%s\n' $pkgs | grep -c . )
+    rc=0
+    if [ -z "$(env_package_groups "$env")" ]; then
+        # Nothing packaged ships this environment; only the build step can help.
+        step_state packages skip "no package set declared; this environment is built from source"
+    elif [ -z "$pkgs" ]; then
+        ST_ERROR="no package set '${groups%,}' for $ST_DISTRO; it needs the Aurora build pipeline"
+        step_state packages fail "$ST_ERROR"; finish fail "" 4; return
+    else
+        log "installing for $env on $ST_DISTRO: $(env_package_groups "$env" | tr '\n' ' ')"
+        guest_platform package-refresh || rc=1
+        if [ "$rc" -eq 0 ]; then
+            for group in $(env_package_groups "$env"); do
+                guest_platform deps "$group" || rc=1
+                [ "$rc" -eq 0 ] || break
+            done
+        fi
+        if [ "$rc" -eq 0 ]; then
+            step_state packages ok "$ST_PACKAGE_COUNT packages via ${groups%,}"
+        else
+            ST_ERROR="package installation failed; see the log (repository or network problem?)"
+            step_state packages fail "$ST_ERROR"
+            finish fail "" 4
+            return
+        fi
+    fi
+    [ -f "$CANCEL" ] && { cancelled packages; return; }
+
+    begin_step glue "Check Aurora integration files" 3
+    glue_missing=""
+    for name in $(manifest_list "$env" glue); do
+        glue_present "$name" || glue_missing="$glue_missing $name"
+    done
+    if [ -z "$glue_missing" ]; then
+        step_state glue ok "Aurora integration present"
+    else
+        step_state glue warn "missing Aurora files:$glue_missing — install the current Aurora module"
+    fi
+
+    begin_step build "Build the components no package ships" 4
+    build_script=$(manifest_field "$env" build)
+    missing=$(missing_binaries "$env" | tr '\n' ',' | sed 's/,$//')
+    if [ -z "$missing" ]; then
+        step_state build skip "packages already provide every required binary"
+    elif [ "$ST_WITH_BUILD" != yes ]; then
+        step_state build skip "needs $missing; not requested"
+    elif [ -z "$build_script" ]; then
+        step_state build warn "needs $missing and no in-guest provisioner is declared"
+    elif [ ! -x "$(guest_path)$build_script" ]; then
+        step_state build warn "needs $missing; $(basename "$build_script") is not in this guest (build it on the PC)"
+    else
+        log "running $build_script for $missing"
+        if in_guest /bin/sh "$build_script"; then
+            step_state build ok "$(basename "$build_script") completed"
+        else
+            step_state build warn "$(basename "$build_script") failed; see the log"
+        fi
+    fi
+    [ -f "$CANCEL" ] && { cancelled build; return; }
+
+    begin_step services "Enable session services" 5
+    for service in $(manifest_list "$env" services); do
+        guest_platform service-enable "$service" >/dev/null 2>&1 || \
+            log "could not enable $service"
+    done
+    step_state services ok "$(manifest_list "$env" services | tr '\n' ',' | sed 's/,$//')"
+
+    finish_verify "$env"
+}
+
+run_remove() {
+    env=$ST_ENV
+    ST_TITLE=$(manifest_field "$env" title)
+    [ -n "$ST_TITLE" ] || ST_TITLE=$env
+
+    begin_step preflight "Check prerequisites" 1
+    if emit_checks "$env" > "$CHECKS.new.$$" 2>/dev/null; then
+        mv -f "$CHECKS.new.$$" "$CHECKS" 2>/dev/null
+        step_state preflight ok "Prerequisites satisfied"
+    else
+        mv -f "$CHECKS.new.$$" "$CHECKS" 2>/dev/null
+        detail=$(awk '/^state=fail$/ { failed = 1; next } failed && /^detail=/ { sub(/^detail=/, ""); print; exit }' "$CHECKS")
+        ST_ERROR="prerequisite failed: $detail"
+        step_state preflight fail "$ST_ERROR"
+        finish fail "" 3
+        return
+    fi
+
+    begin_step remove "Remove the environment packages" 2
+    if ! ensure_guest; then
+        ST_ERROR="the guest did not reach RUNNING"
+        step_state remove fail "$ST_ERROR"; finish fail "" 4; return
+    fi
+    ST_DISTRO=$(platform_id)
+    pkgs=$(env_packages "$env")
+    ST_PACKAGE_COUNT=$(printf '%s\n' $pkgs | grep -c . )
+    if [ -z "$pkgs" ]; then
+        step_state remove skip "no package set to remove on $ST_DISTRO"
+    else
+        # shellcheck disable=SC2086
+        if guest_platform package-remove $pkgs; then
+            step_state remove ok "removed $ST_PACKAGE_COUNT packages"
+        else
+            ST_ERROR="package removal failed; see the log"
+            step_state remove fail "$ST_ERROR"; finish fail "" 4; return
+        fi
+    fi
+    finish_verify "$env"
+}
+
+finish_verify() { # env
+    env=$1
+    index=$STEP_INDEX
+    begin_step verify "Verify the environment" $((index + 1))
+    session_readiness "$env"
+    ST_READY=$SESSION_READY
+    ST_READY_REASON=$SESSION_REASON
+    missing=$(missing_binaries "$env" | tr '\n' ',' | sed 's/,$//')
+    if [ "$SESSION_READY" = yes ]; then
+        step_state verify ok "$ST_TITLE runs in the active guest"
+        finish ok "$ST_TITLE ready" 0
+        return
+    fi
+    build_script=$(manifest_field "$env" build)
+    if [ -z "$missing" ]; then
+        step_state verify warn "the launcher still refuses $ST_TITLE: $SESSION_REASON"
+        finish warn "$ST_TITLE installed, launcher not satisfied" 0
+    elif [ -n "$build_script" ] && [ ! -x "$(guest_path)$build_script" ]; then
+        step_state verify warn "installed, but $missing must be built on the PC ($(basename "$build_script"))"
+        finish warn "$ST_TITLE installed · missing $missing" 0
+    else
+        step_state verify warn "installed, but missing $missing"
+        finish warn "$ST_TITLE installed · missing $missing" 0
+    fi
+}
+
+# ------------------------------------------------------------------ commands
+
+cmd_install() {
+    env=$1
+    ST_ENV=$env
+    env_exists "$env" || die "unknown environment: $env"
+    [ -n "$(env_package_groups "$env")$(manifest_field "$env" build)" ] || \
+        die "no install recipe for $env"
+    pid=
+    [ -r "$PIDFILE" ] && pid=$(cat "$PIDFILE" 2>/dev/null | tr -d ' \n')
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && die "an environment run is already active"
+    mkdir -p "$RUN" "$STEP_DIR" "$AURORA/log" 2>/dev/null
+    rm -f "$CANCEL" "$STATE" "$CHECKS"
+    rm -rf "$STEP_DIR"; mkdir -p "$STEP_DIR" 2>/dev/null
+    ST_ACTION=install
+    STEP_TOTAL=$(step_total_for install)
+    write_steps install
+    if [ "$FOREGROUND" = yes ]; then
+        ST_STARTED=$(date +%s)
+        open_log
+        run_install
+        return "$RUN_RC"
+    fi
+    AURORA_ENV_ACTION=install AURORA_ENV_NAME=$env AURORA_ENV_BUILD=$ST_WITH_BUILD \
+        setsid "$0" __run >/dev/null 2>&1 &
+    echo "started"
+}
+
+cmd_remove() {
+    env=$1
+    ST_ENV=$env
+    env_exists "$env" || die "unknown environment: $env"
+    pid=
+    [ -r "$PIDFILE" ] && pid=$(cat "$PIDFILE" 2>/dev/null | tr -d ' \n')
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && die "an environment run is already active"
+    mkdir -p "$RUN" "$STEP_DIR" "$AURORA/log" 2>/dev/null
+    rm -f "$CANCEL" "$STATE" "$CHECKS"
+    rm -rf "$STEP_DIR"; mkdir -p "$STEP_DIR" 2>/dev/null
+    ST_ACTION=remove
+    STEP_TOTAL=$(step_total_for remove)
+    write_steps remove
+    if [ "$FOREGROUND" = yes ]; then
+        ST_STARTED=$(date +%s)
+        open_log
+        run_remove
+        return "$RUN_RC"
+    fi
+    AURORA_ENV_ACTION=remove AURORA_ENV_NAME=$env \
+        setsid "$0" __run >/dev/null 2>&1 &
+    echo "started"
+}
+
+cmd_cancel() {
+    pid=
+    [ -r "$PIDFILE" ] && pid=$(cat "$PIDFILE" 2>/dev/null | tr -d ' \n')
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        mkdir -p "$RUN" 2>/dev/null
+        : > "$CANCEL"
+        echo "cancelling after the current step"
+        if [ "${1:-}" = "--now" ]; then
+            kill -TERM "$pid" 2>/dev/null
+            echo "sent SIGTERM; a package operation may need a retry"
+        fi
+    else
+        rm -f "$CANCEL" "$PIDFILE"
+        echo "no environment run is active"
+    fi
+}
+
+cmd_reset() {
+    pid=
+    [ -r "$PIDFILE" ] && pid=$(cat "$PIDFILE" 2>/dev/null | tr -d ' \n')
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && die "a run is still active; cancel it first"
+    rm -f "$STATE" "$CHECKS" "$CANCEL" "$PIDFILE"
+    rm -rf "$STEP_DIR" "$RUN/env-cache"
+    echo "environment state cleared"
+}
+
+open_log() {
+    mkdir -p "$AURORA/log" 2>/dev/null
+    exec >> "$LOG" 2>&1
+}
+
+run_action() {
+    mkdir -p "$RUN" "$STEP_DIR" "$AURORA/log" 2>/dev/null
+    ST_ACTION=${AURORA_ENV_ACTION:-install}
+    ST_ENV=${AURORA_ENV_NAME:-}
+    ST_WITH_BUILD=${AURORA_ENV_BUILD:-no}
+    ST_STARTED=$(date +%s)
+    open_log
+    log "=== env-install $ST_ACTION $ST_ENV (distro=$(platform_id), build=$ST_WITH_BUILD)"
+    echo "$$" > "$PIDFILE"
+    if [ -n "$WAKE_LOCK" ] && [ -w "$WAKE_LOCK" ]; then
+        echo "$WAKELOCK_NAME" > "$WAKE_LOCK" 2>/dev/null || \
+            warn "could not hold a wake lock; the run may pause when the phone sleeps"
+    fi
+    [ -n "$ST_ENV" ] || { ST_ERROR="no environment selected"; finish fail "" 2; return; }
+    if [ "$ST_ACTION" = remove ]; then run_remove; else run_install; fi
+}
+
+# ------------------------------------------------------------------ dispatch
+
+ST_RUNNING=no
+ST_STARTED=
+ST_FINISHED=
+ST_ACTION=install
+ST_ENV=
+ST_TITLE=
+ST_DISTRO=
+ST_WITH_BUILD=no
+ST_PACKAGE_COUNT=0
+ST_READY=unknown
+ST_READY_REASON=
+ST_SUMMARY=
+ST_ERROR=
+LAST_STEP=
+STEP_INDEX=0
+STEP_TOTAL=6
+FOREGROUND=no
+RUN_RC=0
+
+[ $# -ge 1 ] || set -- catalog
+cmd=$1; shift
+
+# Flags may follow the positional id; ids themselves never contain spaces.
+positional=
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --with-build) ST_WITH_BUILD=yes; shift ;;
+        --foreground) FOREGROUND=yes; shift ;;
+        --) shift ;;
+        --*) die "unknown option: $1" ;;
+        *) positional="$positional $1"; shift ;;
+    esac
+done
+# shellcheck disable=SC2086
+set -- $positional
+
+case "$cmd" in
+    catalog) print_catalog ;;
+    plan)
+        [ $# -ge 1 ] || die "plan needs an environment id"
+        print_plan "$1"
+        ;;
+    install)
+        [ $# -ge 1 ] || die "install needs an environment id"
+        case "$1" in *[!a-z0-9-]*) die "invalid environment id" ;; esac
+        cmd_install "$1"
+        ;;
+    remove)
+        [ $# -ge 1 ] || die "remove needs an environment id"
+        case "$1" in *[!a-z0-9-]*) die "invalid environment id" ;; esac
+        cmd_remove "$1"
+        ;;
+    status) print_status ;;
+    readiness) print_readiness ;;
+    cancel) cmd_cancel "${1:-}" ;;
+    reset) cmd_reset ;;
+    log) [ -r "$LOG" ] && tail -n "${1:-60}" "$LOG" ;;
+    __run) run_action ;;
+    *)
+        echo "usage: env-install catalog|plan|install|remove|status|readiness|cancel|reset|log" >&2
+        exit 2
+        ;;
+esac

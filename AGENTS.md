@@ -141,7 +141,10 @@ module loading. Both ABI .so files required (arm64-v8a + armeabi-v7a).
 
 **Kernel #4 running** (`4.14.357-perf-g96adfa8256dc #2`, distro clang 22).
 pstore/ramoops enabled. Device module v0.4.1 (versionCode=8); Aqua
-v0.5.0-alpha.1 (versionCode=12) is the current source release. Guest RUNNING.
+v0.5.0-alpha.2 (versionCode=13) is the current source release; it adds the
+in-app desktop environment installer (`bin/env-install` + the companion Apps-tab
+environments section), so the module payload must be refreshed for it to exist
+on-device. Guest RUNNING.
 
 **Milestones complete:** 1 (kernel flash), 3 (guest renders on panel), 4 (input +
 phosh verified, cable-free round trip, §4 signed off), 6 (SF-death Zygisk hook +
