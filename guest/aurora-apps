@@ -32,7 +32,7 @@ PROFILES = ('base', 'extended', 'none')
 
 def selected(root):
     path = root / 'etc/aurora-apps-profile'
-    profile = path.read_text().strip() if path.exists() else 'base'
+    profile = path.read_text().strip() if path.exists() else 'extended'
     if profile not in PROFILES:
         raise RuntimeError(f'{path}: expected base, extended, or none, got {profile!r}')
     return profile
