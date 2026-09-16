@@ -102,14 +102,28 @@ fun EnvironmentSection(vm: AuroraViewModel) {
 
         run?.takeIf { it.present }?.let { EnvironmentRunCard(vm, it) }
 
-        catalog.environments.forEach { environment ->
-            EnvironmentRow(
-                environment = environment,
-                busy = busy || run?.active == true,
-                onInstall = { confirming = environment },
-                onRemove = { vm.removeEnvironment(environment.id) },
-            )
-        }
+        // Grouped the way the compositor work is actually divided: one backend
+        // integration per family, not one list of interchangeable desktops.
+        catalog.environments
+            .groupBy { it.backend }
+            .forEach { (backend, environments) ->
+                SectionLabel(BACKEND_LABELS[backend] ?: backend.ifBlank { "Unspecified backend" })
+                BACKEND_NOTES[backend]?.let { note ->
+                    Text(
+                        note,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                environments.forEach { environment ->
+                    EnvironmentRow(
+                        environment = environment,
+                        busy = busy || run?.active == true,
+                        onInstall = { confirming = environment },
+                        onRemove = { vm.removeEnvironment(environment.id) },
+                    )
+                }
+            }
 
         if (catalog.meta.mode == "desktop") {
             Text(
@@ -133,6 +147,20 @@ fun EnvironmentSection(vm: AuroraViewModel) {
         )
     }
 }
+
+private val BACKEND_LABELS = mapOf(
+    "libhybris-hwcomposer" to "wlroots / hwcomposer",
+    "gralloc-minigbm" to "KWin / Android-backed GBM",
+)
+
+private val BACKEND_NOTES = mapOf(
+    "libhybris-hwcomposer" to
+        "Droidian wlroots talking to hwcomposer through libhybris. Phoc and Phosh " +
+            "are qualified here; other wlroots consumers need explicit ABI work.",
+    "gralloc-minigbm" to
+        "KWin drawing through Android-owned buffers with minigbm facing the " +
+            "compositor. In development, and the panel belongs to KWin alone.",
+)
 
 @Composable
 private fun EnvironmentRow(
