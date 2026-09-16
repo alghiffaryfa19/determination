@@ -88,7 +88,7 @@ mkdir -p "$AURORA/guest"
 cp -f "$AURORA/lxc/config" "$AURORA/guest/config"
 
 # Refresh distro-neutral static guest tools before every start.
-for aurora_guest_tool in aurora-guest-agent aurora-audio-probe aurora-audio-session aurora-pipewire-smoke \
+for aurora_guest_tool in aurora-guest-agent aurora-audio-probe aurora-audio-session aurora-audio-volume aurora-pipewire-smoke \
                       aurora-input-actions aurora-media-action aurora-connectivity aurora-connectivity-menu \
                       aurora-platform aurora-apps aurora-phosh-session aurora-compat-check aurora-osk \
                       aurora-firefox-content-defaults aurora-session-launch aurora-hyprland \

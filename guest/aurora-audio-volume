@@ -1,0 +1,38 @@
+#!/bin/sh
+# Phone volume keys: adjust the claimed guest sink and show the shared OSD.
+# The compositor's PATH does not include the Omarchy tools, so set it here.
+set -u
+PATH=${AURORA_OMARCHY_PATH:-/usr/local/share/aurora-omarchy}/bin:${HOME:-/home/aurora}/.local/bin:/usr/local/bin:/usr/bin:/bin
+export PATH
+
+case "${1:-}" in
+    up)
+        # Standard phone behaviour: raising the volume also unmutes.
+        wpctl set-mute @DEFAULT_AUDIO_SINK@ 0 >/dev/null 2>&1 || true
+        wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+ ;;
+    down) wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- ;;
+    mute) wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle ;;
+    *)
+        echo "usage: aurora-audio-volume up|down|mute" >&2
+        exit 2
+        ;;
+esac
+
+status=$(omarchy-audio-status 2>/dev/null) || exit 0
+volume=${status%% *}
+rest=${status#* }
+muted=${rest%% *}
+case "$volume$muted" in ''|*[!0-9]*) exit 0 ;; esac
+[ "$volume" -ge 0 ] || exit 0
+
+if [ "$muted" = 1 ]; then
+    icon=volume-muted
+elif [ "$volume" -lt 34 ]; then
+    icon=volume-low
+elif [ "$volume" -lt 67 ]; then
+    icon=volume-medium
+else
+    icon=volume-high
+fi
+
+aurora-omarchy ipc shell summon omarchy.osd "{\"icon\":\"$icon\",\"value\":$volume}" >/dev/null 2>&1 || true

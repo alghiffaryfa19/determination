@@ -40,7 +40,7 @@ for f in evgrab aurora-input-forwarder aurorad auroractl aurora-audio-probe auro
     chmod 0755 "$STAGE/bin/$f"
 done
 cp -f "$MODPATH/tools/lxc-config-base" "$STAGE/lxc-config-base"
-for f in aurora-guest-agent aurora-audio-probe aurora-audio-session aurora-pipewire-smoke aurora-input-actions aurora-media-action aurora-connectivity aurora-connectivity-menu aurora-platform aurora-apps aurora-phosh-session aurora-compat-check aurora-osk aurora-firefox-content-defaults aurora-session-launch aurora-plasma-session aurora-plasma-client aurora-hyprland aurora-hyprland-opal aurora-hyprland-omarchy aurora-omarchy aurora-opal aurora-opal-bridge opal; do
+for f in aurora-guest-agent aurora-audio-probe aurora-audio-session aurora-audio-volume aurora-pipewire-smoke aurora-input-actions aurora-media-action aurora-connectivity aurora-connectivity-menu aurora-platform aurora-apps aurora-phosh-session aurora-compat-check aurora-osk aurora-firefox-content-defaults aurora-session-launch aurora-plasma-session aurora-plasma-client aurora-hyprland aurora-hyprland-opal aurora-hyprland-omarchy aurora-omarchy aurora-opal aurora-opal-bridge opal; do
   if [ -f "$MODPATH/guest-tools/$f" ]; then
     cp -f "$MODPATH/guest-tools/$f" "$STAGE/guest-tools/$f"
     chmod 0755 "$STAGE/guest-tools/$f"
