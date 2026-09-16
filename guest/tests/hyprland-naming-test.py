@@ -24,4 +24,15 @@ assert 'title=Hyprland\n' in manifest
 assert 'required_binaries=/opt/hyprland/bin/Hyprland,' in manifest
 assert (ROOT / 'graphics/hyprland/HybrisBuffer.cpp').is_file()
 assert (ROOT / 'guest/build-hyprland.sh').is_file()
+
+# A config that loads a plugin the repository does not build makes Hyprland
+# reload its configuration in a tight loop, which starves and kills the shell.
+for config in sorted((ROOT / 'guest').glob('hyprland-*.conf')):
+    for line in config.read_text().splitlines():
+        if not line.startswith('plugin = '):
+            continue
+        binary = Path(line.split('=', 1)[1].strip()).name
+        provided = any(path.name == binary for path in (ROOT / 'guest').rglob(binary))
+        assert provided, f'{config.name} loads {binary} but nothing in the tree ships it'
+
 print('Hyprland naming contract passed')
