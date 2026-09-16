@@ -7,6 +7,9 @@ export LD_LIBRARY_PATH="$prefix/lib/compat:$prefix/lib:/usr/local/lib:/usr/local
 export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
 export ANDROID_ROOT=/system AURORA_HYBRIS=1
 export AURORA_HYBRIS_HWC=${AURORA_HYBRIS_HWC:-1}
+# The multi-display HWC session in aquamarine still reads the
+# pre-rename variable; keep both in sync until it is rebuilt.
+export DET_HYBRIS_HWC=${DET_HYBRIS_HWC:-$AURORA_HYBRIS_HWC}
 export EGL_PLATFORM=null HYBRIS_EGLPLATFORM=null
 export XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=Hyprland
 export SHELL=/bin/bash LANG=C.UTF-8 LIBSEAT_BACKEND=seatd

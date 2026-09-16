@@ -1,0 +1,192 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 05e6b38..8b6343c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -60,6 +60,8 @@ file(GLOB_RECURSE SRCFILES CONFIGURE_DEPENDS "src/*.cpp" "include/*.hpp")
+ file(GLOB_RECURSE PUBLIC_HEADERS CONFIGURE_DEPENDS "include/*.hpp")
+ 
+ add_library(aquamarine SHARED ${SRCFILES})
++target_include_directories(aquamarine PRIVATE src/dethyprland /usr/local/include /usr/include/android)
++target_link_libraries(aquamarine /usr/local/lib/libhwc2.so /usr/local/lib/libEGL.so /usr/local/lib/libGLESv2.so)
+ target_include_directories(
+   aquamarine
+   PUBLIC "./include"
+diff --git a/include/aquamarine/allocator/Allocator.hpp b/include/aquamarine/allocator/Allocator.hpp
+index 2dc1ee5..950897e 100644
+--- a/include/aquamarine/allocator/Allocator.hpp
++++ b/include/aquamarine/allocator/Allocator.hpp
+@@ -17,6 +17,7 @@ namespace Aquamarine {
+     enum eAllocatorType {
+         AQ_ALLOCATOR_TYPE_GBM = 0,
+         AQ_ALLOCATOR_TYPE_DRM_DUMB,
++        AQ_ALLOCATOR_TYPE_ANDROID,
+     };
+ 
+     class IAllocator {
+diff --git a/include/aquamarine/backend/Headless.hpp b/include/aquamarine/backend/Headless.hpp
+index 1de6a0d..1715094 100644
+--- a/include/aquamarine/backend/Headless.hpp
++++ b/include/aquamarine/backend/Headless.hpp
+@@ -29,6 +29,7 @@ namespace Aquamarine {
+ 
+         Hyprutils::Memory::CSharedPointer<std::function<void()>> framecb;
+         bool                                                     frameScheduled = false;
++        uint64_t                                                 hwcGeneration = 0;
+ 
+         friend class CHeadlessBackend;
+     };
+@@ -73,6 +74,7 @@ namespace Aquamarine {
+             std::vector<CTimer> timers;
+         } timers;
+ 
++        void syncHwcOutputs();
+         void dispatchTimers();
+         void updateTimerFD();
+ 
+diff --git a/include/aquamarine/buffer/Buffer.hpp b/include/aquamarine/buffer/Buffer.hpp
+index a96008f..3e970c4 100644
+--- a/include/aquamarine/buffer/Buffer.hpp
++++ b/include/aquamarine/buffer/Buffer.hpp
+@@ -50,6 +50,8 @@ namespace Aquamarine {
+         virtual void                                   update(const Hyprutils::Math::CRegion& damage) = 0;
+         virtual bool                                   isSynchronous() = 0; // whether the updates to this buffer are synchronous, aka happen over cpu
+         virtual bool                                   good()          = 0;
++        // Borrowed Android native object; lifetime is owned by this buffer, not its pixel fd.
++        virtual void*                                  androidNativeBuffer() { return nullptr; }
+         virtual SDMABUFAttrs                           dmabuf();
+         virtual SSHMAttrs                              shm();
+         virtual std::tuple<uint8_t*, uint32_t, size_t> beginDataPtr(uint32_t flags);
+diff --git a/src/backend/Backend.cpp b/src/backend/Backend.cpp
+index 36e5681..c74f466 100644
+--- a/src/backend/Backend.cpp
++++ b/src/backend/Backend.cpp
+@@ -1,4 +1,5 @@
+ #include <aquamarine/backend/Backend.hpp>
++#include "GrallocAllocator.hpp"
+ #include <aquamarine/backend/Wayland.hpp>
+ #include <aquamarine/backend/Headless.hpp>
+ #include <aquamarine/backend/DRM.hpp>
+@@ -139,8 +140,21 @@ bool Aquamarine::CBackend::start() {
+         return failed;
+     });
+ 
+-    // TODO: obviously change this when (if) we add different allocators.
++    const bool hybris = getenv("DET_HYBRIS") && std::string(getenv("DET_HYBRIS")) == "1";
++    if (hybris) {
++        try {
++            primaryAllocator = makeShared<Dethyprland::GrallocAllocator>(self.lock());
++            if (getenv("DET_HYBRIS_HWC") && std::string(getenv("DET_HYBRIS_HWC")) == "1") {
++                session = CSession::attempt(self.lock());
++                if (!session) throw std::runtime_error("libhybris input seat unavailable");
++            }
++        } catch (const std::exception& error) {
++            log(AQ_LOG_CRITICAL, error.what());
++            return false;
++        }
++    }
+     for (auto const& b : implementations) {
++        if (hybris) break;
+         if (b->drmFD() >= 0) {
+             auto fd = reopenDRMNode(b->drmFD());
+             if (fd < 0) {
+diff --git a/src/backend/Headless.cpp b/src/backend/Headless.cpp
+index d9075cc..e54d776 100644
+--- a/src/backend/Headless.cpp
++++ b/src/backend/Headless.cpp
+@@ -1,4 +1,8 @@
+ #include <aquamarine/backend/Headless.hpp>
++#include "HwcPresenter.hpp"
++#include <algorithm>
++#include <sys/ioctl.h>
++#include <linux/input.h>
+ #include <fcntl.h>
+ #include <ctime>
+ #include <sys/timerfd.h>
+@@ -40,6 +44,9 @@ Aquamarine::CHeadlessOutput::~CHeadlessOutput() {
+ }
+ 
+ bool Aquamarine::CHeadlessOutput::commit() {
++    if (Dethyprland::HwcPresenter::owns(name) && state->state().buffer &&
++        (state->state().committed & COutputState::AQ_OUTPUT_STATE_BUFFER) &&
++        !Dethyprland::HwcPresenter::instance().present(name, state->state().buffer, state->state().explicitInFence)) return false;
+     events.commit.emit();
+     state->onCommit();
+     needsFrame = false;
+@@ -69,7 +76,7 @@ void Aquamarine::CHeadlessOutput::scheduleFrame(const scheduleFrameReason reason
+         return;
+ 
+     frameScheduled = true;
+-    backend->backend->addIdleEvent(framecb);
++    if (!Dethyprland::HwcPresenter::owns(name)) backend->backend->addIdleEvent(framecb);
+ }
+ 
+ bool Aquamarine::CHeadlessOutput::destroy() {
+@@ -95,7 +102,22 @@ bool Aquamarine::CHeadlessBackend::start() {
+ }
+ 
+ std::vector<SP<SPollFD>> Aquamarine::CHeadlessBackend::pollFDs() {
+-    return {makeShared<SPollFD>(timers.timerfd, [this]() { dispatchTimers(); })};
++    std::vector<SP<SPollFD>> fds = {makeShared<SPollFD>(timers.timerfd, [this]() { dispatchTimers(); })};
++    if (Dethyprland::HwcPresenter::enabled()) {
++        auto& hwc = Dethyprland::HwcPresenter::instance();
++        fds.push_back(makeShared<SPollFD>(hwc.eventFd(), [this]() {
++            auto& hwc = Dethyprland::HwcPresenter::instance();
++            hwc.dispatch();
++            syncHwcOutputs();
++            // Retry after desktop-on releases its temporary grab once the Wayland socket appears.
++            if (backend->session) for (auto& device : backend->session->sessionDevices)
++                if (device->path.starts_with("/dev/input/")) (void)ioctl(device->fd, EVIOCGRAB, 1);
++            const auto currentOutputs = outputs;
++            for (auto& output : currentOutputs)
++                if (hwc.takeFrame(output->name) && output->frameScheduled) (*output->framecb)();
++        }));
++    }
++    return fds;
+ }
+ 
+ int Aquamarine::CHeadlessBackend::drmFD() {
+@@ -115,10 +137,26 @@ bool Aquamarine::CHeadlessBackend::setCursor(SP<IBuffer> buffer, const Hyprutils
+ }
+ 
+ void Aquamarine::CHeadlessBackend::onReady() {
+-    ;
++    if (Dethyprland::HwcPresenter::enabled()) syncHwcOutputs();
++}
++
++void Aquamarine::CHeadlessBackend::syncHwcOutputs() {
++    auto& hwc = Dethyprland::HwcPresenter::instance();
++    const auto previous = outputs;
++    for (auto& output : previous) {
++        if (Dethyprland::HwcPresenter::owns(output->name) &&
++            output->hwcGeneration != hwc.output(output->name).generation)
++            output->destroy();
++    }
++    for (const auto& display : hwc.outputs()) {
++        if (std::ranges::none_of(outputs, [&](const auto& output) { return output->name == display.name; }))
++            createOutput(display.name);
++    }
+ }
+ 
+ std::vector<SDRMFormat> Aquamarine::CHeadlessBackend::getRenderFormats() {
++    if (getenv("DET_HYBRIS") && std::string(getenv("DET_HYBRIS")) == "1")
++        return {SDRMFormat{.drmFormat = DRM_FORMAT_ABGR8888, .modifiers = {DRM_FORMAT_MOD_LINEAR}}};
+     for (const auto& impl : backend->getImplementations()) {
+         if (impl->type() != AQ_BACKEND_DRM || impl->getRenderableFormats().empty())
+             continue;
+@@ -151,7 +189,15 @@ std::vector<SDRMFormat> Aquamarine::CHeadlessBackend::getCursorFormats() {
+ bool Aquamarine::CHeadlessBackend::createOutput(const std::string& name) {
+     auto output = SP<CHeadlessOutput>(new CHeadlessOutput(name.empty() ? std::format("HEADLESS-{}", ++outputIDCounter) : name, self.lock()));
+     outputs.emplace_back(output);
+-    output->modes.emplace_back(SP<SOutputMode>(new SOutputMode(Vector2D{1920, 1080}, 60, true)));
++    if (Dethyprland::HwcPresenter::owns(name)) {
++        const auto display = Dethyprland::HwcPresenter::instance().output(name);
++        if (!display.generation) {
++            std::erase(outputs, output);
++            return false;
++        }
++        output->hwcGeneration = display.generation;
++        output->modes.emplace_back(SP<SOutputMode>(new SOutputMode(Vector2D{display.width, display.height}, display.refresh, true)));
++    } else output->modes.emplace_back(SP<SOutputMode>(new SOutputMode(Vector2D{1920, 1080}, 60, true)));
+     output->swapchain = CSwapchain::create(backend->primaryAllocator, self.lock());
+     output->self      = output;
+     backend->events.newOutput.emit(SP<IOutput>(output));
