@@ -18,6 +18,7 @@ yet hardware-qualified end to end.
 
 | Need | Read |
 |---|---|
+| Continue an existing session | [CONTINUE.md](CONTINUE.md) — protocol, house rules, and tracking |
 | Understand scope and supported state | [supported device reference](reference/supported-device.md) |
 | Build or package on a host | [build and package guide](guides/build-and-package.md) |
 | Build or switch guest distros | [guest distro profiles](guides/guest-distros.md) |
