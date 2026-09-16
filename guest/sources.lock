@@ -23,3 +23,6 @@ OMARCHY_COMMIT=5ead870507dfb68db696b3ddb948cc3d178e8d62
 # (9958d297) by the plugin author's hyprpm commit table.
 HYPRGRASS_REPO=https://github.com/horriblename/hyprgrass.git
 HYPRGRASS_COMMIT=51da8d137e042c117fe46a5c019ec38c0de0342a
+# Dialog helpers for Hyprland (ANR, permissions, confirmations).
+HYPRLAND_QTUTILS_REPO=https://github.com/hyprwm/hyprland-qtutils.git
+HYPRLAND_QTUTILS_COMMIT=119bcb9aa742658107b326c50dcd24ab59b309b7
