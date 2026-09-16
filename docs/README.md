@@ -29,6 +29,8 @@ yet hardware-qualified end to end.
 ## Browse by subject
 
 - [Architecture](architecture/README.md): design, graphics, audio, and app API.
+- [Android capability bridge](android-capability-bridge.md): the universalisation project —
+  keeping Android alive and consuming its services and vendor HALs.
 - [Reference](reference/README.md): device profile, boot profile, support, and releases.
 - [Operations](operations/README.md): recovery, diagnostics, and qualification.
 - [History](history/README.md): dated evidence and commentary that is not current instruction.

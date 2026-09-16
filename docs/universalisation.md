@@ -1,5 +1,10 @@
 # Project Universalisation
 
+> This document covers **device portability**. The other half of
+> universalisation — consuming Android services and vendor HALs from Linux —
+> is a separate project documented in
+> [android-capability-bridge.md](android-capability-bridge.md).
+
 Aurora currently has one proven device: OnePlus 7 `guacamoleb`. The
 portable architecture is a hypothesis until a second device crosses a
 meaningfully different hardware or Android axis. This document tracks the work
