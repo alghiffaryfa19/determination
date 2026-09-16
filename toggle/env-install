@@ -13,7 +13,8 @@
 set -u
 
 AURORA=${AURORA:-/data/aurora}
-BIN="$AURORA/bin"
+# Overridable so a staged toolkit can be exercised before the module refresh.
+BIN=${AURORA_ENV_BIN:-$AURORA/bin}
 LXC="$AURORA/lxc/bin"
 RUN="$AURORA/run"
 # Overridable so a staged payload can be exercised before the module refresh.
@@ -109,12 +110,19 @@ packages_missing() { # env -> package names that are not installed
     done
 }
 
-# Binary the manifest names, resolved inside the guest rootfs.
-binary_present() { # absolute guest path
-    case "$1" in
-        /*) [ -x "$(guest_path)$1" ] ;;
-        *) [ -x "$(guest_path)/usr/bin/$1" ] ;;
-    esac
+# A manifest item may offer alternatives ("/usr/libexec/phosh|/usr/bin/phosh")
+# because the same environment has to work on Debian, Arch, and Alpine.
+binary_present() { # item, possibly "a|b"
+    saved_ifs=$IFS
+    IFS=' '
+    for candidate in $(printf '%s' "$1" | tr '|' ' '); do
+        case "$candidate" in
+            /*) [ -x "$(guest_path)$candidate" ] && { IFS=$saved_ifs; return 0; } ;;
+            *) [ -x "$(guest_path)/usr/bin/$candidate" ] && { IFS=$saved_ifs; return 0; } ;;
+        esac
+    done
+    IFS=$saved_ifs
+    return 1
 }
 
 glue_present() { # glue name
@@ -130,13 +138,13 @@ glue_present() { # glue name
 
 missing_binaries() { # env -> manifest binaries the launcher needs and cannot find
     {
-        for binary in $(manifest_list "$1" required_binaries); do
-            binary_present "$binary" || echo "$binary"
+        for item in $(manifest_list "$1" required_binaries); do
+            binary_present "$item" || printf '%s\n' "$(printf '%s' "$item" | sed 's/|/ or /g')"
         done
         for field in compositor shell; do
-            binary=$(manifest_field "$1" "$field")
-            case "$binary" in
-                /*) binary_present "$binary" || echo "$binary" ;;
+            item=$(manifest_field "$1" "$field")
+            case "$item" in
+                /*) binary_present "$item" || printf '%s\n' "$(printf '%s' "$item" | sed 's/|/ or /g')" ;;
             esac
         done
     } | sort -u
@@ -146,7 +154,16 @@ missing_binaries() { # env -> manifest binaries the launcher needs and cannot fi
 # Parsed with awk, not a word-splitting shell loop: reasons are prose.
 session_readiness() { # env
     SESSION_ID=$1
-    verdict=$("$BIN/session-catalog" 2>/dev/null | awk -v want="$1" '
+    catalog=$("$BIN/session-catalog" 2>/dev/null)
+    if [ -z "$catalog" ]; then
+        # Not the same as the launcher refusing the session: the probe itself
+        # could not run (missing, not executable, or an older module).
+        SESSION_ID=$1
+        SESSION_READY=unknown
+        SESSION_REASON="session-catalog produced no verdict (missing or not executable?)"
+        return 0
+    fi
+    verdict=$(printf '%s\n' "$catalog" | awk -v want="$1" '
         /^===/ { inside = (substr($0, 4) == want); next }
         inside && /^runtime_ready=/ { sub(/^runtime_ready=/, ""); ready = $0 }
         inside && /^runtime_reason=/ { sub(/^runtime_reason=/, ""); reason = $0 }
@@ -343,14 +360,14 @@ emit_checks() { # env
     fi
 
     missing=""
-    for tool in guest-distro desktop-on guest-start; do
+    for tool in guest-distro desktop-on guest-start session-catalog session-select; do
         [ -x "$BIN/$tool" ] || missing="$missing $tool"
     done
     if [ -z "$missing" ]; then
         check_record runtime ok "Aurora runtime" "Host toolkit present in $BIN" ""
     else
-        check_record runtime fail "Aurora runtime" "Missing:$missing" \
-            "System installation belongs to the PC workbench: run aurora-installer install."
+        check_record runtime fail "Aurora runtime" "Missing or not executable:$missing" \
+            "Install the current Aurora module; it ships the environment toolkit."
         checks_failed=$((checks_failed + 1))
     fi
 
@@ -536,7 +553,11 @@ print_readiness() {
     if guest_running; then echo "guest_running=yes"; else echo "guest_running=no"; fi
     echo "session=$(cat "$AURORA/etc/compositor" 2>/dev/null || echo phosh)"
     session_readiness "$(cat "$AURORA/etc/compositor" 2>/dev/null || echo phosh)"
-    if [ "$SESSION_READY" = yes ]; then echo "graphics=ready"; else echo "graphics=missing"; fi
+    case "$SESSION_READY" in
+        yes) echo "graphics=ready" ;;
+        unknown) echo "graphics=unknown" ;;
+        *) echo "graphics=missing" ;;
+    esac
     echo "graphics_detail=$(one_line "$SESSION_REASON")"
     return 0
 }
@@ -616,13 +637,28 @@ run_install() {
 
     begin_step glue "Check Aurora integration files" 3
     glue_missing=""
+    glue_repaired=""
     for name in $(manifest_list "$env" glue); do
-        glue_present "$name" || glue_missing="$glue_missing $name"
+        glue_present "$name" && continue
+        # The module payload ships these; re-delivering them is exactly what the
+        # module installer does, so a stale guest repairs itself here.
+        source="$AURORA/guest-tools/$name"
+        if [ -f "$source" ]; then
+            mkdir -p "$(guest_path)/usr/local/bin" 2>/dev/null
+            if cp -f "$source" "$(guest_path)/usr/local/bin/$name" 2>/dev/null; then
+                chmod 0755 "$(guest_path)/usr/local/bin/$name" 2>/dev/null
+                glue_repaired="$glue_repaired $name"
+                continue
+            fi
+        fi
+        glue_missing="$glue_missing $name"
     done
-    if [ -z "$glue_missing" ]; then
-        step_state glue ok "Aurora integration present"
-    else
+    if [ -n "$glue_missing" ]; then
         step_state glue warn "missing Aurora files:$glue_missing — install the current Aurora module"
+    elif [ -n "$glue_repaired" ]; then
+        step_state glue ok "delivered from the module payload:$glue_repaired"
+    else
+        step_state glue ok "Aurora integration present"
     fi
 
     begin_step build "Build the components no package ships" 4

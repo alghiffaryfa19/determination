@@ -22,6 +22,11 @@ different and are recorded in the release manifest.
   artifact, replacing the unrelated bring-up-era component versions.
 - Internal phone-to-desktop handoff with SurfaceFlinger release, exclusive
   input transfer, and restoration to Android.
+- Distro-portable session requirements: manifest path fields accept `|`
+  alternatives (`/usr/local/bin/phoc|/usr/bin/phoc`), `session-select` resolves
+  them to the path that exists on the running guest before handing it to the
+  launcher, and environment readiness distinguishes "the launcher refuses this
+  session" from "the probe could not answer".
 - In-app desktop environment installation: the companion's Apps tab drives
   `toggle/env-install`, which reads the session manifests as its catalog and
   installs an environment's distro packages through the guest adapter

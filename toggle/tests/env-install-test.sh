@@ -109,6 +109,10 @@ cat > "$A/bin/desktop-on" <<'EOF'
 #!/bin/sh
 exit 0
 EOF
+cat > "$A/bin/session-select" <<'EOF'
+#!/bin/sh
+echo "id=$(cat "$A/etc/compositor" 2>/dev/null || echo phosh)"
+EOF
 cat > "$A/bin/guest-distro" <<'EOF'
 #!/bin/sh
 [ "${1:-}" = root ] && { echo "$AURORA_ENV_GUEST_ROOT"; exit 0; }
@@ -161,8 +165,8 @@ id=phosh
 title=Phosh
 description=The verified stack.
 backend=libhybris-hwcomposer
-compositor=/usr/local/bin/phoc
-required_binaries=/usr/libexec/phosh,/usr/bin/squeekboard
+compositor=/usr/local/bin/phoc|/usr/bin/phoc
+required_binaries=/usr/libexec/phosh|/usr/bin/phosh,/usr/bin/squeekboard
 qualification=qualified
 packages=phosh
 build=/root/aurora-build/build-wlroots-phoc.sh
@@ -216,11 +220,62 @@ grep -qx "packages=plasma-mobile" "$WORK/catalog.txt"
 grep -qx "package_set=available" "$WORK/catalog.txt"
 grep -qx "installed=no" "$WORK/catalog.txt"
 
+# --- alternatives: the guest satisfies an item if any path exists ----------
+mkdir -p "$A/guest/usr/local/bin" "$A/guest/usr/bin"
+run reset >/dev/null
+run catalog > "$WORK/alts-none.txt"
+block=$(sed -n '/^id=phosh$/,/^==environment/p' "$WORK/alts-none.txt")
+printf '%s\n' "$block" | grep -q '^missing_binaries=.*/usr/libexec/phosh or /usr/bin/phosh'
+printf '%s\n' "$block" | grep -q '^missing_binaries=.*/usr/local/bin/phoc or /usr/bin/phoc'
+
+# The Aurora-built compositor satisfies the first alternative.
+printf '#!/bin/sh\n' > "$A/guest/usr/local/bin/phoc"
+chmod 0755 "$A/guest/usr/local/bin/phoc"
+run reset >/dev/null
+run catalog > "$WORK/alts-phoc.txt"
+block=$(sed -n '/^id=phosh$/,/^==environment/p' "$WORK/alts-phoc.txt")
+printf '%s\n' "$block" | grep -q '^missing_binaries=.*/usr/libexec/phosh or /usr/bin/phosh'
+printf '%s\n' "$block" | grep -q '^missing_binaries=.*/usr/bin/squeekboard'
+printf '%s\n' "$block" | grep -qv 'missing_binaries=.*/usr/local/bin/phoc or /usr/bin/phoc'
+
+# The distro-packaged shell satisfies the second, so nothing is missing.
+printf '#!/bin/sh\n' > "$A/guest/usr/bin/phosh"
+chmod 0755 "$A/guest/usr/bin/phosh"
+printf '#!/bin/sh\n' > "$A/guest/usr/bin/squeekboard"
+chmod 0755 "$A/guest/usr/bin/squeekboard"
+run reset >/dev/null
+run catalog > "$WORK/alts-both.txt"
+block=$(sed -n '/^id=phosh$/,/^==environment/p' "$WORK/alts-both.txt")
+printf '%s\n' "$block" | grep -qx 'missing_binaries='
+printf '%s\n' "$block" | grep -qx 'installed=yes'
+rm -f "$A/guest/usr/local/bin/phoc" "$A/guest/usr/bin/phosh" "$A/guest/usr/bin/squeekboard"
+
 # --- the compositor counts as a required binary (session-catalog agrees) ----
 grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -qx "missing_binaries=/opt/hyprland/bin/Hyprland"
 grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -qx "runtime_ready=no"
 # Reasons are prose: a word-splitting parse would truncate them to "Missing".
 grep -A30 '^id=hyprland$' "$WORK/catalog.txt" | grep -q "^runtime_reason=Missing guest executable:"
+
+# --- no verdict from the probe is not the same as "the session is refused" --
+chmod -x "$A/bin/session-catalog" 2>/dev/null || mv "$A/bin/session-catalog" "$A/bin/session-catalog.off"
+run reset >/dev/null
+run catalog > "$WORK/no-probe.txt"
+mv "$A/bin/session-catalog.off" "$A/bin/session-catalog" 2>/dev/null || chmod +x "$A/bin/session-catalog"
+block=$(sed -n '/^id=phosh$/,/^==environment/p' "$WORK/no-probe.txt")
+printf '%s\n' "$block" | grep -qx 'runtime_ready=unknown'
+printf '%s\n' "$block" | grep -q '^runtime_reason=session-catalog produced no verdict'
+
+# --- the install gate names a toolkit that cannot run --------------------
+mkdir -p "$A/toolkit-partial"
+for tool in guest-distro desktop-on guest-start session-catalog; do
+    cp "$A/bin/$tool" "$A/toolkit-partial/$tool"
+done
+run reset >/dev/null
+AURORA_ENV_BIN="$A/toolkit-partial" run install plasma-mobile --foreground \
+    > "$WORK/partial.txt" 2>&1 || true
+grep -q 'session-select' "$A/run/env.checks"
+grep -A3 '^id=runtime$' "$A/run/env.checks" | grep -qx 'state=fail'
+grep -q 'Install the current Aurora module' "$A/run/env.checks"
 
 # --- a changed manifest invalidates the cached package resolution ----------
 printf 'phosh\nphoc\n' > "$WORK/pkgs-phosh"
@@ -288,6 +343,29 @@ grep -qx "state=ok" "$WORK/ready-status.txt"
 grep -qx "runtime_ready=yes" "$WORK/ready-status.txt"
 grep -qx 'state=ok' "$A/run/env/verify.state"
 grep -qx 'state=ok' "$A/run/env/glue.state"
+
+# --- missing glue is re-delivered from the module payload ----------------
+mkdir -p "$A/guest-tools"
+printf '#!/bin/sh\n' > "$A/guest-tools/aurora-plasma-client"
+chmod 0755 "$A/guest-tools/aurora-plasma-client"
+rm -f "$A/guest/usr/local/bin/aurora-plasma-client"
+run reset >/dev/null
+run install plasma-mobile --foreground > "$WORK/glue.txt" 2>&1 || true
+grep -qx 'state=ok' "$A/run/env/glue.state"
+grep -q 'delivered from the module payload' "$A/run/env/glue.state"
+[ -x "$A/guest/usr/local/bin/aurora-plasma-client" ] || {
+    echo "glue was not re-delivered into the guest" >&2
+    exit 1
+}
+# ...and an unknown name still warns instead of failing the run.
+rm -f "$A/guest/usr/local/bin/aurora-plasma-client" "$A/guest-tools/aurora-plasma-client"
+run reset >/dev/null
+run install plasma-mobile --foreground > /dev/null 2>&1 || true
+grep -qx 'state=warn' "$A/run/env/glue.state"
+grep -q 'install the current Aurora module' "$A/run/env/glue.state"
+# Restore it for the removal assertion below.
+printf '#!/bin/sh\n' > "$A/guest/usr/local/bin/aurora-plasma-client"
+chmod 0755 "$A/guest/usr/local/bin/aurora-plasma-client"
 
 # --- remove: packages declared by the environment only --------------------
 run reset >/dev/null

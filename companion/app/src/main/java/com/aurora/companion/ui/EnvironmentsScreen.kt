@@ -367,6 +367,14 @@ private fun EnvironmentRunCard(vm: AuroraViewModel, run: EnvInstall.Run) {
                         enabled = vm.envBusy == null,
                     ) { Text("Cancel after this step") }
                 }
+                // A freshly installed environment is only useful once it is the
+                // one desktop mode starts.
+                if (run.succeeded && run.runtimeReady == "yes" && vm.compositor != run.env) {
+                    FilledTonalButton(
+                        onClick = { vm.selectSession(run.env) },
+                        enabled = vm.busy == null,
+                    ) { Text("Use ${run.envTitle.ifBlank { run.env }}") }
+                }
                 TextButton(onClick = { vm.openLog("env-install.log") }) { Text("Open full log") }
             }
         }

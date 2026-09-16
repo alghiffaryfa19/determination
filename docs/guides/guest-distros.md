@@ -49,10 +49,26 @@ glue=aurora-plasma-client                 # Aurora files the module delivers
 
 Package sets are resolved through `aurora-platform deps-packages <group>`, so a
 group that does not exist for the active distro is reported as unsupported
-rather than failing halfway. Afterwards the installer re-checks the manifest's
-`required_binaries` through `session-catalog`: an environment whose compositor
-still has to be compiled finishes as a warning naming the missing binary and
-the provisioner that produces it, and never as a success.
+rather than failing halfway, and a listed set never installs anything. Missing
+`glue` files are re-delivered from the module payload when it still carries
+them, which is the same operation the module installer performs.
+
+Path fields accept alternatives separated by `|`, because the same session has
+to be satisfiable on Debian, Arch, and Alpine layouts:
+
+```text
+compositor=/usr/local/bin/phoc|/usr/bin/phoc
+required_binaries=/usr/libexec/phosh|/usr/bin/phosh,/usr/bin/squeekboard
+```
+
+`session-select` resolves each group to the path that exists on this guest and
+hands the resolved path to the launcher, so `desktop-on` never tries a path that
+was simply written for another distro. `session-catalog` computes readiness from
+the same field, and its verdict is what the installer reports: an environment
+whose compositor still has to be compiled finishes as a warning naming the
+missing binary and the provisioner that produces it, never as a success. When
+the probe itself cannot run, readiness is reported as `unknown` rather than
+`missing`, so an incomplete toolkit is never mistaken for a broken session.
 
 ## Build and install Arch Linux ARM
 

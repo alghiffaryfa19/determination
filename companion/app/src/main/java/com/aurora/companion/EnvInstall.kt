@@ -27,6 +27,7 @@ object EnvInstall {
         val requiredBinaries: List<String>,
         val missingBinaries: List<String>,
         val runtimeReady: Boolean,
+        val runtimeUnknown: Boolean,
         val runtimeReason: String,
         val packagesState: String,
         val packagesMissing: List<String>,
@@ -45,6 +46,7 @@ object EnvInstall {
         /** One line for the list: what state this environment is in now. */
         val status: String
             get() = when {
+                runtimeUnknown -> "Cannot verify"
                 !installable && !present -> "Not installable here"
                 runtimeReady -> "Ready"
                 !present -> "Missing ${missingBinaries.joinToString(", ")}"
@@ -59,6 +61,7 @@ object EnvInstall {
                     "${missingBinaries.joinToString(", ")} · no package provides it; " +
                         "${build.substringAfterLast('/')} builds it in the guest"
                 missingBinaries.isNotEmpty() -> "Missing ${missingBinaries.joinToString(", ")}"
+                runtimeUnknown -> runtimeReason.ifBlank { "The device returned no verdict" }
                 runtimeReady -> "The launcher can start this session"
                 // Installed, nothing missing, yet session-select refuses it.
                 runtimeReason.isNotBlank() -> runtimeReason
@@ -214,6 +217,7 @@ object EnvInstall {
         requiredBinaries = split(fields["required_binaries"] ?: ""),
         missingBinaries = split(fields["missing_binaries"] ?: ""),
         runtimeReady = fields["runtime_ready"] == "yes",
+        runtimeUnknown = fields["runtime_ready"] == "unknown",
         runtimeReason = fields["runtime_reason"] ?: "",
         packagesState = fields["packages_state"] ?: "unknown",
         packagesMissing = split(fields["packages_missing"] ?: ""),
