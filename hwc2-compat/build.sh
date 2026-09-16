@@ -102,10 +102,28 @@ fetch() {
     fi
     # AOSP header trees at the tag matching the ROM (BP4A.251205.006).
     aosp() { local repo=$1 sub=${2:-} dest=$3
-        [ -d "aosp/$dest" ] && return 0
-        mkdir -p "aosp/$dest"
-        curl -fsSL "$GITILES/$repo/+archive/refs/tags/$TAG${sub:+/$sub}.tar.gz" \
-            | tar xz -C "aosp/$dest"; }
+        [ -d "aosp/$dest" ] && [ -n "$(ls -A "aosp/$dest")" ] && return 0
+        local stage
+        stage=$(mktemp -d "aosp/.fetch-$dest.XXXXXX")
+        if ! curl --retry 3 --retry-delay 2 -fsSL \
+            "$GITILES/$repo/+archive/refs/tags/$TAG${sub:+/$sub}.tar.gz" -o "$stage/source.tar.gz"; then
+            echo "Archive unavailable; fetching pinned AOSP tag through Git: $repo" >&2
+            local cache="aosp/.git-${repo//\//-}"
+            if [ ! -d "$cache" ]; then
+                git init --bare "$cache" || { rm -rf "$stage"; return 1; }
+            fi
+            git -C "$cache" fetch --depth 1 "$GITILES/$repo" "refs/tags/$TAG" || {
+                rm -rf "$stage"; return 1;
+            }
+            git -C "$cache" archive --format=tar.gz "FETCH_HEAD${sub:+:$sub}" > "$stage/source.tar.gz" || {
+                rm -rf "$stage"; return 1;
+            }
+        fi
+        mkdir "$stage/tree"
+        tar xzf "$stage/source.tar.gz" -C "$stage/tree" || { rm -rf "$stage"; return 1; }
+        [ ! -d "aosp/$dest" ] || rmdir "aosp/$dest"
+        mv "$stage/tree" "aosp/$dest"
+        rm -rf "$stage"; }
     aosp frameworks/native      ""       frameworks_native
     aosp system/core            ""       system_core
     aosp system/libbase         ""       system_libbase
@@ -387,8 +405,8 @@ install() {
         [ -f "out/$library" ] || { echo "missing out/$library" >&2; exit 1; }
         "$ADB" push "out/$library" /sdcard/Download/ >/dev/null
     done
-    "$ADB" shell "su -c 'set -eu; target=/data/determination/guest/usr/lib/android; \
-        stage=\$target/.determination-stage-\$\$; mkdir -p \$stage; \
+    "$ADB" shell "su -c 'set -eu; target=/data/aurora/guest/usr/lib/android; \
+        stage=\$target/.aurora-stage-\$\$; mkdir -p \$stage; \
         for library in libhwc2_compat_layer.so libui_compat_layer.so; do \
           cp /sdcard/Download/\$library \$stage/\$library; chmod 644 \$stage/\$library; \
         done; mv \$stage/libhwc2_compat_layer.so \$target/; \

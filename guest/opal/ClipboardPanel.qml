@@ -62,7 +62,7 @@ icon:"close";compact:true;implicitWidth:34;implicitHeight:34;tooltip:"Clear sear
                 MText {text:cp.filter ? "Try another word." : Hub.clipboardPaused ? "Resume when you want to collect text again." : Hub.clipboardAvailable ? "Copy text and it’ll appear here.\nNothing is saved to disk." : Hub.clipboardDetail;width:parent.width;wrapMode:Text.Wrap;horizontalAlignment:Text.AlignHCenter;color:Theme.subtext;font.pixelSize:12}
             }
         }
-        SearchKeyboard {visible:cp.touchMode&&cp.keyboardOpen;Layout.fillWidth:true;Layout.preferredHeight:Math.min(244,cp.height*.36)
+        SearchKeyboard {visible:cp.touchMode&&cp.keyboardOpen&&!Hub.systemOskReady;Layout.fillWidth:true;Layout.preferredHeight:Math.min(244,cp.height*.36)
             onInsert:text=>cp.filter+=text
             onErase:cp.filter=cp.filter.slice(0,-1)
             onAccept:{cp.keyboardOpen=false;searchField.focus=false;}

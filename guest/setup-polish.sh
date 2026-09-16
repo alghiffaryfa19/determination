@@ -1,5 +1,5 @@
 #!/bin/bash
-# Determination guest polish: mobile apps, notch (gmobile panel JSON), phosh
+# Aurora guest polish: mobile apps, notch (gmobile panel JSON), phosh
 # settings. Run INSIDE the container as root, in PHONE MODE (guest network
 # needs a stable Android framework --- in desktop mode system_server
 # crash-loops and takes WiFi down, see AGENTS.md §4 known issues).
@@ -7,8 +7,8 @@
 set -e
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export DEBIAN_FRONTEND=noninteractive TMPDIR=/tmp HOME=/root
-[ ! -f /usr/local/lib/det-pidfd-shim.so ] || \
-    export LD_PRELOAD=/usr/local/lib/det-pidfd-shim.so
+[ ! -f /usr/local/lib/aurora-pidfd-shim.so ] || \
+    export LD_PRELOAD=/usr/local/lib/aurora-pidfd-shim.so
 
 echo "== apps =="
 dpkg --configure -a 2>/dev/null || true
@@ -108,7 +108,7 @@ done
 FAVS="[${FAVS%, }]"
 echo "favorites -> $FAVS"
 
-echo "== phosh settings (detuser user dconf, persists) =="
+echo "== phosh settings (aurora user dconf, persists) =="
 # idle-delay 0: phosh's idle blank goes through the same broken
 # output-wake path as the power button (KEY_POWER is quirked inert; an
 # idle blank would still soft-kill the session). Never blank.
@@ -120,8 +120,8 @@ DARKBG=$(ls /usr/share/backgrounds/gnome/*[Dd]ark*.jpg \
             /usr/share/backgrounds/gnome/*-d.jpg 2>/dev/null | head -1)
 BG=${DARKBG:-$(ls /usr/share/backgrounds/gnome/*.jpg /usr/share/backgrounds/gnome/*.png 2>/dev/null | head -1)}
 export BG FAVS
-det-platform run-user detuser env \
-    HOME=/home/detuser USER=detuser LOGNAME=detuser BG="$BG" FAVS="$FAVS" \
+aurora-platform run-user aurora env \
+    HOME=/home/aurora USER=aurora LOGNAME=aurora BG="$BG" FAVS="$FAVS" \
     dbus-run-session -- /bin/sh -c '
     gsettings set org.gnome.desktop.session idle-delay "uint32 0"
     gsettings set org.gnome.desktop.screensaver lock-enabled false
@@ -145,8 +145,8 @@ echo "== Firefox narrow-window content default =="
 # not a normal pref. Seed 67% only when the user has not chosen a global value;
 # site-specific zooms and later Settings changes remain authoritative.
 if ! pgrep -x firefox-esr >/dev/null 2>&1; then
-    det-platform run-user detuser env HOME=/home/detuser USER=detuser LOGNAME=detuser \
-        det-firefox-content-defaults
+    aurora-platform run-user aurora env HOME=/home/aurora USER=aurora LOGNAME=aurora \
+        aurora-firefox-content-defaults
 else
     echo "Firefox is running; preserving its live content database"
 fi

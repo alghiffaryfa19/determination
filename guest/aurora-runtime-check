@@ -1,0 +1,100 @@
+#!/bin/sh
+# Read-only live acceptance for the Hyprland/Omarchy guest session.
+set -u
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+passes=0
+failures=0
+pass() { passes=$((passes + 1)); printf 'PASS  %s\n' "$*"; }
+fail() { failures=$((failures + 1)); printf 'FAIL  %s\n' "$*"; }
+
+user=$(getent passwd 1000 | cut -d: -f1 | head -n1)
+home=$(getent passwd 1000 | cut -d: -f6 | head -n1)
+shell=$(getent passwd 1000 | cut -d: -f7 | head -n1)
+[ -n "$user" ] && pass "uid 1000 account is $user" || fail 'uid 1000 account missing'
+
+hypr_pid=$(pgrep -x Hyprland 2>/dev/null | head -n1)
+if [ -n "$hypr_pid" ]; then
+    pass "Hyprland is running (pid $hypr_pid)"
+    grep -Fq '/opt/hyprland/lib/compat/libudev.so.1' "/proc/$hypr_pid/maps" \
+        && pass 'Hyprland maps compatibility libudev' \
+        || fail 'Hyprland is not using compatibility libudev'
+else
+    fail 'Hyprland is not running'
+fi
+
+runtime=/run/user/1000
+hyprctl=/usr/local/share/aurora-omarchy/bin/hyprctl
+[ -x "$hyprctl" ] || hyprctl=/opt/hyprland/bin/hyprctl
+sig=
+tmp="$runtime/aurora-runtime-check.$$"
+mkdir -p "$tmp" 2>/dev/null || true
+chown 1000:1000 "$tmp" 2>/dev/null || true
+chmod 0700 "$tmp" 2>/dev/null || true
+trap 'rm -rf "$tmp"' EXIT HUP INT TERM
+
+as_user() {
+    aurora-platform run-user "$user" "$@"
+}
+
+for socket in "$runtime"/hypr/*/.socket.sock; do
+    [ -S "$socket" ] || continue
+    candidate=${socket%/.socket.sock}; candidate=${candidate##*/}
+    if as_user env HOME="$home" USER="$user" LOGNAME="$user" XDG_RUNTIME_DIR="$runtime" \
+        HYPRLAND_INSTANCE_SIGNATURE="$candidate" "$hyprctl" monitors -j >"$tmp/monitors" 2>/dev/null; then
+        sig=$candidate
+        break
+    fi
+done
+
+if [ -n "$sig" ]; then
+    pass "live Hyprland socket is $sig"
+    grep -Eq '"name"[[:space:]]*:[[:space:]]*"HWC-1"' "$tmp/monitors" \
+        && pass 'HWC-1 output is live' || fail 'HWC-1 output is missing'
+    as_user env HOME="$home" USER="$user" LOGNAME="$user" XDG_RUNTIME_DIR="$runtime" \
+        HYPRLAND_INSTANCE_SIGNATURE="$sig" "$hyprctl" devices -j >"$tmp/devices" 2>/dev/null || true
+    grep -Eq '"name"[[:space:]]*:[[:space:]]*"touchpanel(-1)?"' "$tmp/devices" \
+        && pass 'touchpanel is attached through libinput' || fail 'touchpanel is missing from Hyprland devices'
+    as_user env HOME="$home" USER="$user" LOGNAME="$user" XDG_RUNTIME_DIR="$runtime" \
+        HYPRLAND_INSTANCE_SIGNATURE="$sig" "$hyprctl" layers -j >"$tmp/layers" 2>/dev/null || true
+    grep -Fq 'omarchy-background' "$tmp/layers" && grep -Fq 'omarchy-bar' "$tmp/layers" \
+        && pass 'Omarchy background and bar layer surfaces are live' \
+        || fail 'Omarchy layer surfaces are incomplete'
+else
+    fail 'no responsive Hyprland control socket found'
+fi
+
+pgrep -x quickshell >/dev/null 2>&1 && pass 'QuickShell process is alive' || fail 'QuickShell is not running'
+pgrep -x squeekboard >/dev/null 2>&1 && pass 'Squeekboard process is alive' || fail 'Squeekboard is not running'
+
+if as_user env HOME="$home" USER="$user" LOGNAME="$user" XDG_RUNTIME_DIR="$runtime" \
+    DBUS_SESSION_BUS_ADDRESS="unix:path=$runtime/bus" \
+    busctl --user get-property sm.puri.OSK0 /sm/puri/OSK0 sm.puri.OSK0 Visible \
+    >"$tmp/osk" 2>/dev/null; then
+    pass 'Squeekboard real D-Bus service is reachable'
+else
+    fail 'Squeekboard D-Bus service is not reachable'
+fi
+
+cat >"$tmp/foot" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$SHELL" > "$AURORA_CHECK_SHELL_OUT"
+EOF
+cat >"$tmp/aurora-osk" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+chmod 0755 "$tmp/foot" "$tmp/aurora-osk"
+ln -s /usr/local/share/aurora-omarchy/bin/aurora-omarchy-compat "$tmp/omarchy-launch-terminal"
+if as_user env HOME="$home" USER="$user" LOGNAME="$user" \
+    PATH="$tmp:/usr/local/share/aurora-omarchy/bin:/usr/local/bin:/usr/bin:/bin" \
+    AURORA_CHECK_SHELL_OUT="$tmp/terminal-shell" SHELL=/system/bin/sh \
+    "$tmp/omarchy-launch-terminal" >/dev/null 2>&1 \
+    && [ "$(cat "$tmp/terminal-shell" 2>/dev/null)" = "$shell" ]; then
+    pass "Terminal resolves the ALARM account shell ($shell)"
+else
+    fail 'Terminal still leaks /system/bin/sh or failed to launch through its wrapper'
+fi
+
+printf '\nLive acceptance: %d pass, %d failure\n' "$passes" "$failures"
+[ "$failures" -eq 0 ]

@@ -17,7 +17,7 @@ mkdir -p "$WORK/bin" "$WORK/runtime"
 touch "$WORK/claimed"
 cat > "$WORK/bin/fake-audio-process" <<'EOF'
 #!/bin/sh
-printf '%s %s\n' "$(basename "$0")" "$$" >> "$DET_TEST_STARTS"
+printf '%s %s\n' "$(basename "$0")" "$$" >> "$AURORA_TEST_STARTS"
 trap 'exit 0' HUP INT TERM
 while :; do sleep 1; done
 EOF
@@ -27,11 +27,11 @@ for command in pipewire pipewire-pulse wireplumber; do
 done
 
 start_session() {
-    DET_AUDIO_MARKER="$WORK/claimed" \
+    AURORA_AUDIO_MARKER="$WORK/claimed" \
     XDG_RUNTIME_DIR="$WORK/runtime" \
-    DET_TEST_STARTS="$WORK/starts" \
+    AURORA_TEST_STARTS="$WORK/starts" \
     PATH="$WORK/bin:$PATH" \
-        "$ROOT/guest/det-audio-session" &
+        "$ROOT/guest/aurora-audio-session" &
     session_pid=$!
     sessions="$sessions $session_pid"
 }
@@ -46,13 +46,13 @@ wait_for() {
 }
 
 owner_is_first() {
-    [ "$(cat "$WORK/runtime/determination-audio-session.lock/owner" 2>/dev/null || true)" = "$first" ]
+    [ "$(cat "$WORK/runtime/aurora-audio-session.lock/owner" 2>/dev/null || true)" = "$first" ]
 }
 graph_started_once() {
     [ -f "$WORK/starts" ] && [ "$(wc -l < "$WORK/starts")" -eq 3 ]
 }
 owner_is_third() {
-    [ "$(cat "$WORK/runtime/determination-audio-session.lock/owner" 2>/dev/null || true)" = "$third" ]
+    [ "$(cat "$WORK/runtime/aurora-audio-session.lock/owner" 2>/dev/null || true)" = "$third" ]
 }
 
 start_session
@@ -65,13 +65,13 @@ start_session
 second=$session_pid
 wait "$second"
 sleep 0.2
-[ "$(cat "$WORK/runtime/determination-audio-session.lock/owner")" = "$first" ]
+[ "$(cat "$WORK/runtime/aurora-audio-session.lock/owner")" = "$first" ]
 [ "$(wc -l < "$WORK/starts")" -eq 3 ]
 
 # The owner releases its lock on shutdown and a later session may take over.
 kill -TERM "$first"
 wait "$first"
-wait_for test ! -d "$WORK/runtime/determination-audio-session.lock"
+wait_for test ! -d "$WORK/runtime/aurora-audio-session.lock"
 start_session
 third=$session_pid
 wait_for owner_is_third

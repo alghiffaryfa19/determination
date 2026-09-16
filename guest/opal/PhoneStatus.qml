@@ -26,7 +26,7 @@ Item {
             icon:Hub.status.wifi ? "wifi" : "wifiOff";text:Hub.status.battery>=0 ? (Hub.status.charging ? "+ " : "")+Hub.status.battery+"%" : "";compact:true;implicitHeight:40
             tooltip:"Quick Settings · "+(Hub.status.network||"Offline")+(Hub.status.charging ? " · Charging" : "")
             tonal:true;onClicked:bar.show("controls")
-            menuEntries:[{text:"Wi-Fi",icon:"wifi",run:()=>Hub.settings("network")},{text:"Dock & displays",icon:"convergence",run:()=>bar.show("convergence")}]
+            menuEntries:[{text:"Wi-Fi",icon:"wifi",run:()=>Hub.settings("network")},{text:"Dock & displays",icon:"convergence",run:()=>bar.show("convergence")}].concat(Hub.systemOskAvailable ? [{text:Hub.systemOskVisible ? "Hide keyboard" : "Show keyboard",icon:"keyboard",run:()=>Hub.systemOsk("toggle")}] : [])
         }
     }
 }

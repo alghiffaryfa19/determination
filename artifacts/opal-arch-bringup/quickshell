@@ -1,0 +1,7 @@
+#!/bin/sh
+export DET_OPAL_GLES=1
+export QT_PLUGIN_PATH=/opt/hyprland/lib/qt6/plugins
+export QML_IMPORT_PATH=/opt/hyprland/lib/qt6/qml
+export QML2_IMPORT_PATH="$QML_IMPORT_PATH"
+export LD_LIBRARY_PATH=/opt/hyprland/lib:/usr/local/lib
+exec /opt/hyprland/bin/quickshell.bin "$@"

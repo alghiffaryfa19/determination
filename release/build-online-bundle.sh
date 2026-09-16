@@ -6,7 +6,7 @@ set -eu
 cd "$(dirname "$0")/.."
 
 . release/version.sh
-det_load_version version.properties
+aurora_load_version version.properties
 
 BASE_URL=${1:-}
 case "$BASE_URL" in
@@ -15,8 +15,8 @@ case "$BASE_URL" in
 esac
 
 OUT=${ONLINE_RELEASE_OUT:-dist/online-release}
-MODULE=${RELEASE_MODULE:-magisk-module/determination-magisk-v$DET_VERSION.zip}
-BOOT=${RELEASE_BOOT:-boot/determination-boot.img}
+MODULE=${RELEASE_MODULE:-magisk-module/aurora-magisk-v$AURORA_VERSION.zip}
+BOOT=${RELEASE_BOOT:-boot/aurora-boot.img}
 APK=${RELEASE_APK:-companion/app/build/outputs/apk/release/app-release.apk}
 LXC_DIR=${RELEASE_LXC_DIR:-dist/lxc-bin}
 DEBIAN_ROOTFS=${DEBIAN_ROOTFS:-guest/rootfs.tar.gz}
@@ -55,11 +55,11 @@ json_array() {
 
 rm -rf "$OUT"
 mkdir -p "$OUT"
-MODULE_NAME="determination-magisk-v$DET_VERSION.zip"
-BOOT_NAME="determination-boot-v$DET_VERSION.img"
-APK_NAME="determination-companion-v$DET_VERSION.apk"
-RUNTIME_NAME="determination-runtime-aarch64-v$DET_VERSION.tar.gz"
-DEBIAN_NAME="determination-rootfs-debian-v$DET_VERSION.tar.gz"
+MODULE_NAME="aurora-magisk-v$AURORA_VERSION.zip"
+BOOT_NAME="aurora-boot-v$AURORA_VERSION.img"
+APK_NAME="aurora-companion-v$AURORA_VERSION.apk"
+RUNTIME_NAME="aurora-runtime-aarch64-v$AURORA_VERSION.tar.gz"
+DEBIAN_NAME="aurora-rootfs-debian-v$AURORA_VERSION.tar.gz"
 cp "$MODULE" "$OUT/$MODULE_NAME"
 cp "$BOOT" "$OUT/$BOOT_NAME"
 cp "$APK" "$OUT/$APK_NAME"
@@ -86,10 +86,10 @@ PUBLISHED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 {
     printf '{\n'
     printf '  "schema": 2,\n'
-    printf '  "version": "%s",\n' "$DET_VERSION"
-    printf '  "versionCode": %s,\n' "$DET_VERSION_CODE"
-    printf '  "codename": "%s",\n' "$DET_CODENAME"
-    printf '  "channel": "%s",\n' "$DET_RELEASE_STATUS"
+    printf '  "version": "%s",\n' "$AURORA_VERSION"
+    printf '  "versionCode": %s,\n' "$AURORA_VERSION_CODE"
+    printf '  "codename": "%s",\n' "$AURORA_CODENAME"
+    printf '  "channel": "%s",\n' "$AURORA_RELEASE_STATUS"
     printf '  "publishedAt": "%s",\n' "$PUBLISHED_AT"
     printf '  "artifacts": [\n'
     printf '    {"type":"module","name":"%s","url":"%s/%s","sha256":"%s","size":%s,"devices":%s,"support":"qualified","description":"Root integration and on-device control plane"},\n' \
@@ -99,9 +99,9 @@ PUBLISHED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     printf '    {"type":"rootfs","name":"%s","url":"%s/%s","sha256":"%s","size":%s,"abis":["arm64-v8a"],"distro":"debian","support":"qualified","description":"Device-qualified Debian and Phosh desktop"},\n' \
         "$DEBIAN_NAME" "$BASE_URL" "$DEBIAN_NAME" "$DEBIAN_SHA" "$DEBIAN_SIZE"
     for profile in arch alpine; do
-        rootfs="$PORTABLE_ROOTFS_DIR/determination-rootfs-$profile.tar.gz"
+        rootfs="$PORTABLE_ROOTFS_DIR/aurora-rootfs-$profile.tar.gz"
         [ -f "$rootfs" ] || continue
-        rootfs_name="determination-rootfs-$profile-v$DET_VERSION.tar.gz"
+        rootfs_name="aurora-rootfs-$profile-v$AURORA_VERSION.tar.gz"
         cp "$rootfs" "$OUT/$rootfs_name"
         rootfs_sha=$(sha256sum "$OUT/$rootfs_name" | cut -d' ' -f1)
         rootfs_size=$(stat -c%s "$OUT/$rootfs_name")
@@ -111,11 +111,11 @@ PUBLISHED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     done
     printf '    {"type":"boot","name":"%s","url":"%s/%s","sha256":"%s","size":%s,"devices":%s,"androidBuilds":%s,"support":"qualified","description":"Device kernel; installer preserves the current Magisk ramdisk"},\n' \
         "$BOOT_NAME" "$BASE_URL" "$BOOT_NAME" "$BOOT_SHA" "$BOOT_SIZE" "$DEVICE_JSON" "$ANDROID_BUILD_JSON"
-    printf '    {"type":"companion","name":"%s","url":"%s/%s","sha256":"%s","size":%s,"abis":["arm64-v8a","armeabi-v7a"],"support":"qualified","description":"Determination companion controller"}\n' \
+    printf '    {"type":"companion","name":"%s","url":"%s/%s","sha256":"%s","size":%s,"abis":["arm64-v8a","armeabi-v7a"],"support":"qualified","description":"Aurora companion controller"}\n' \
         "$APK_NAME" "$BASE_URL" "$APK_NAME" "$APK_SHA" "$APK_SIZE"
     printf '  ]\n}\n'
-} > "$OUT/determination-update.json"
+} > "$OUT/aurora-update.json"
 
 (cd "$OUT" && find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\n' | LC_ALL=C sort | xargs sha256sum > SHA256SUMS)
 printf 'Online release bundle: %s\n' "$OUT"
-printf 'Manifest URL: %s/determination-update.json\n' "$BASE_URL"
+printf 'Manifest URL: %s/aurora-update.json\n' "$BASE_URL"

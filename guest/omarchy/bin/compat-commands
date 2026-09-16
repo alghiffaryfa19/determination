@@ -1,5 +1,5 @@
 compat-commands
-det-omarchy-compat
+aurora-omarchy-compat
 omarchy
 omarchy-agent
 omarchy-agent-crash
@@ -192,6 +192,7 @@ omarchy-launch-config-editor
 omarchy-launch-discord-community
 omarchy-launch-docker-tui
 omarchy-launch-editor
+omarchy-launch-file-manager
 omarchy-launch-floating-terminal-with-presentation
 omarchy-launch-nautilus
 omarchy-launch-nautilus-cwd

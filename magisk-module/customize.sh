@@ -1,43 +1,46 @@
-# Determination Magisk module installer (runs inside Magisk app's install flow).
-# Lays down the on-device toolkit under /data/determination; the module dir
+# Aurora Magisk module installer (runs inside Magisk app's install flow).
+# Lays down the on-device toolkit under /data/aurora; the module dir
 # itself only carries the boot hooks + sepolicy.
 
 ui_print "- $(grep_prop name "$MODPATH/module.prop") $(grep_prop version "$MODPATH/module.prop")"
 
-DET=/data/determination
+AURORA=/data/aurora
 VERSION=$(grep_prop versionCode "$MODPATH/module.prop")
-SETS="$DET/versions"
+SETS="$AURORA/versions"
 STAGE="$SETS/.stage-$VERSION-$$"
 TARGET="$SETS/$VERSION"
-mkdir -p "$STAGE/bin" "$STAGE/guest-tools" "$STAGE/guest-assets" "$STAGE/guest-config" "$STAGE/sessions" "$DET/etc" "$DET/log" "$DET/run" "$DET/lxc" "$SETS"
+mkdir -p "$STAGE/bin" "$STAGE/guest-tools" "$STAGE/guest-assets" "$STAGE/guest-config" "$STAGE/sessions" "$AURORA/etc" "$AURORA/log" "$AURORA/run" "$AURORA/lxc" "$SETS"
 trap 'rm -rf "$STAGE"' EXIT
 [ ! -e "$TARGET" ] || abort "! payload version $VERSION is already staged"
 
 # Existing installs keep the proven Debian rootfs exactly where it is. The
 # active pointer is the only path new multi-distro code writes through.
-if [ -d "$DET/guest" ] && [ ! -e "$DET/active-guest" ]; then
-    ln -s guest "$DET/active-guest.new" && mv -f "$DET/active-guest.new" "$DET/active-guest" \
+if [ -d "$AURORA/guest" ] && [ ! -e "$AURORA/active-guest" ]; then
+    ln -s guest "$AURORA/active-guest.new" && mv -f "$AURORA/active-guest.new" "$AURORA/active-guest" \
         || abort "! cannot create active guest pointer"
 fi
-GUEST_ROOT=$(readlink -f "$DET/active-guest" 2>/dev/null)
-[ -n "$GUEST_ROOT" ] || GUEST_ROOT="$DET/guest"
+GUEST_ROOT=
+if [ -L "$AURORA/active-guest" ]; then
+    GUEST_ROOT=$(readlink -f "$AURORA/active-guest" 2>/dev/null)
+fi
+[ -n "$GUEST_ROOT" ] || GUEST_ROOT="$AURORA/guest"
 
 # Retire the replaced GTK shell from both the staged payload and active guest.
-rm -f "$STAGE/guest-tools/det-hypr-shell" \
-    "$GUEST_ROOT/usr/local/bin/det-hypr-shell"
+rm -f "$STAGE/guest-tools/aurora-hypr-shell" \
+    "$GUEST_ROOT/usr/local/bin/aurora-hypr-shell"
 
 # Do not leave withdrawn experimental sessions selectable after a module update.
 for f in cage gamescope-headless labwc mutter sway weston; do
-    rm -f "$STAGE/sessions/$f.session" "$DET/etc/sessions/$f.session"
+    rm -f "$STAGE/sessions/$f.session" "$AURORA/etc/sessions/$f.session"
 done
 
-for f in evgrab det-input-forwarder detd detctl det-audio-probe det-audio-owner det-audio-route det-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro guest-start desktop-on desktop-off desktop-memory session-catalog session-select session-set run-transition external-presenter external-input native-plasma native-kms-gate native-restore det-hostagent det-color-compat cycle-stress.sh; do
+for f in evgrab aurora-input-forwarder aurorad auroractl aurora-audio-probe aurora-audio-owner aurora-audio-route aurora-audio-smoke device-config generate-lxc-config generate-guest-config lifecycle-lib boot-profile guest-distro guest-start desktop-on desktop-off desktop-memory session-catalog session-select session-set run-transition external-presenter external-input native-plasma native-kms-gate native-restore aurora-hostagent aurora-color-compat cycle-stress.sh; do
     [ -f "$MODPATH/tools/$f" ] || abort "! missing $f in zip"
     cp -f "$MODPATH/tools/$f" "$STAGE/bin/$f"
     chmod 0755 "$STAGE/bin/$f"
 done
 cp -f "$MODPATH/tools/lxc-config-base" "$STAGE/lxc-config-base"
-for f in det-guest-agent det-audio-probe det-audio-session det-pipewire-smoke det-input-actions det-media-action det-connectivity det-connectivity-menu det-platform det-phosh-session det-compat-check det-firefox-content-defaults det-session-launch det-plasma-session det-plasma-client det-hyprland det-hyprland-opal det-hyprland-omarchy det-omarchy det-opal det-opal-bridge opal; do
+for f in aurora-guest-agent aurora-audio-probe aurora-audio-session aurora-pipewire-smoke aurora-input-actions aurora-media-action aurora-connectivity aurora-connectivity-menu aurora-platform aurora-apps aurora-phosh-session aurora-compat-check aurora-osk aurora-firefox-content-defaults aurora-session-launch aurora-plasma-session aurora-plasma-client aurora-hyprland aurora-hyprland-opal aurora-hyprland-omarchy aurora-omarchy aurora-opal aurora-opal-bridge opal; do
   if [ -f "$MODPATH/guest-tools/$f" ]; then
     cp -f "$MODPATH/guest-tools/$f" "$STAGE/guest-tools/$f"
     chmod 0755 "$STAGE/guest-tools/$f"
@@ -50,23 +53,28 @@ done
 if [ -d "$MODPATH/guest-assets/opal" ]; then
     cp -a "$MODPATH/guest-assets/opal" "$STAGE/guest-assets/opal"
     if [ -d "$GUEST_ROOT/usr/local/share" ]; then
-        mkdir -p "$GUEST_ROOT/usr/local/share/det-opal"
-        cp -a "$MODPATH/guest-assets/opal/." "$GUEST_ROOT/usr/local/share/det-opal/"
+        mkdir -p "$GUEST_ROOT/usr/local/share/aurora-opal"
+        cp -a "$MODPATH/guest-assets/opal/." "$GUEST_ROOT/usr/local/share/aurora-opal/"
     fi
 fi
 if [ -d "$MODPATH/guest-assets/omarchy" ]; then
-    mkdir -p "$STAGE/guest-assets/omarchy" "$GUEST_ROOT/usr/local/share/det-omarchy"
+    mkdir -p "$STAGE/guest-assets/omarchy"
     cp -a "$MODPATH/guest-assets/omarchy/." "$STAGE/guest-assets/omarchy/"
-    cp -a "$MODPATH/guest-assets/omarchy/." "$GUEST_ROOT/usr/local/share/det-omarchy/"
+    if [ -d "$GUEST_ROOT/usr/local/share" ]; then
+        mkdir -p "$GUEST_ROOT/usr/local/share/aurora-omarchy"
+        cp -a "$MODPATH/guest-assets/omarchy/." "$GUEST_ROOT/usr/local/share/aurora-omarchy/"
+    fi
 fi
-for det_guest_config in "$MODPATH"/guest-config/*.conf; do
-    [ -f "$det_guest_config" ] || continue
-    config_name=$(basename "$det_guest_config")
-    cp -f "$det_guest_config" "$STAGE/guest-config/$config_name"
+for aurora_guest_config in "$MODPATH"/guest-config/*.conf; do
+    [ -f "$aurora_guest_config" ] || continue
+    config_name=$(basename "$aurora_guest_config")
+    cp -f "$aurora_guest_config" "$STAGE/guest-config/$config_name"
     chmod 0644 "$STAGE/guest-config/$config_name"
-    mkdir -p "$GUEST_ROOT/etc/determination"
-    cp -f "$det_guest_config" "$GUEST_ROOT/etc/determination/$config_name"
-    chmod 0644 "$GUEST_ROOT/etc/determination/$config_name"
+    if [ -d "$GUEST_ROOT/etc" ]; then
+        mkdir -p "$GUEST_ROOT/etc/aurora"
+        cp -f "$aurora_guest_config" "$GUEST_ROOT/etc/aurora/$config_name"
+        chmod 0644 "$GUEST_ROOT/etc/aurora/$config_name"
+    fi
 done
 if [ -f "$MODPATH/guest-tools/setup-compatibility.sh" ]; then
     cp -f "$MODPATH/guest-tools/setup-compatibility.sh" \
@@ -78,72 +86,72 @@ if [ -f "$MODPATH/guest-tools/setup-compatibility.sh" ]; then
         chmod 0755 "$GUEST_ROOT/usr/local/sbin/setup-compatibility.sh"
     fi
 fi
-if [ -f "$MODPATH/guest-tools/det-phosh.service" ]; then
-    cp -f "$MODPATH/guest-tools/det-phosh.service" "$STAGE/guest-tools/det-phosh.service"
-    chmod 0644 "$STAGE/guest-tools/det-phosh.service"
+if [ -f "$MODPATH/guest-tools/aurora-phosh.service" ]; then
+    cp -f "$MODPATH/guest-tools/aurora-phosh.service" "$STAGE/guest-tools/aurora-phosh.service"
+    chmod 0644 "$STAGE/guest-tools/aurora-phosh.service"
     if [ -d "$GUEST_ROOT/usr/local/lib" ]; then
-        mkdir -p "$GUEST_ROOT/usr/local/lib/determination"
-        cp -f "$MODPATH/guest-tools/det-phosh.service" \
-            "$GUEST_ROOT/usr/local/lib/determination/det-phosh.service"
-        chmod 0644 "$GUEST_ROOT/usr/local/lib/determination/det-phosh.service"
+        mkdir -p "$GUEST_ROOT/usr/local/lib/aurora"
+        cp -f "$MODPATH/guest-tools/aurora-phosh.service" \
+            "$GUEST_ROOT/usr/local/lib/aurora/aurora-phosh.service"
+        chmod 0644 "$GUEST_ROOT/usr/local/lib/aurora/aurora-phosh.service"
     fi
     if [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
-        cp -f "$MODPATH/guest-tools/det-phosh.service" \
-            "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
-        chmod 0644 "$GUEST_ROOT/etc/systemd/system/det-phosh.service"
+        cp -f "$MODPATH/guest-tools/aurora-phosh.service" \
+            "$GUEST_ROOT/etc/systemd/system/aurora-phosh.service"
+        chmod 0644 "$GUEST_ROOT/etc/systemd/system/aurora-phosh.service"
     fi
 fi
-if [ -f "$MODPATH/guest-tools/det-plasma.service" ]; then
-    cp -f "$MODPATH/guest-tools/det-plasma.service" "$STAGE/guest-tools/det-plasma.service"
-    chmod 0644 "$STAGE/guest-tools/det-plasma.service"
+if [ -f "$MODPATH/guest-tools/aurora-plasma.service" ]; then
+    cp -f "$MODPATH/guest-tools/aurora-plasma.service" "$STAGE/guest-tools/aurora-plasma.service"
+    chmod 0644 "$STAGE/guest-tools/aurora-plasma.service"
     if [ -d "$GUEST_ROOT/etc/systemd/system" ]; then
-        cp -f "$MODPATH/guest-tools/det-plasma.service" \
-            "$GUEST_ROOT/etc/systemd/system/det-plasma.service"
-        chmod 0644 "$GUEST_ROOT/etc/systemd/system/det-plasma.service"
+        cp -f "$MODPATH/guest-tools/aurora-plasma.service" \
+            "$GUEST_ROOT/etc/systemd/system/aurora-plasma.service"
+        chmod 0644 "$GUEST_ROOT/etc/systemd/system/aurora-plasma.service"
     fi
 fi
-if [ -f "$MODPATH/guest-tools/det-input-udevdb" ]; then
-    cp -f "$MODPATH/guest-tools/det-input-udevdb" "$STAGE/guest-tools/det-input-udevdb"
-    chmod 0755 "$STAGE/guest-tools/det-input-udevdb"
+if [ -f "$MODPATH/guest-tools/aurora-input-udevdb" ]; then
+    cp -f "$MODPATH/guest-tools/aurora-input-udevdb" "$STAGE/guest-tools/aurora-input-udevdb"
+    chmod 0755 "$STAGE/guest-tools/aurora-input-udevdb"
     if [ -d "$GUEST_ROOT/usr/local/sbin" ]; then
-        cp -f "$MODPATH/guest-tools/det-input-udevdb" "$GUEST_ROOT/usr/local/sbin/det-input-udevdb"
-        chmod 0755 "$GUEST_ROOT/usr/local/sbin/det-input-udevdb"
+        cp -f "$MODPATH/guest-tools/aurora-input-udevdb" "$GUEST_ROOT/usr/local/sbin/aurora-input-udevdb"
+        chmod 0755 "$GUEST_ROOT/usr/local/sbin/aurora-input-udevdb"
     fi
 fi
-if [ -f "$MODPATH/guest-tools/determination-connectivity.desktop" ]; then
-    cp -f "$MODPATH/guest-tools/determination-connectivity.desktop" \
-        "$STAGE/guest-tools/determination-connectivity.desktop"
-    chmod 0644 "$STAGE/guest-tools/determination-connectivity.desktop"
+if [ -f "$MODPATH/guest-tools/aurora-connectivity.desktop" ]; then
+    cp -f "$MODPATH/guest-tools/aurora-connectivity.desktop" \
+        "$STAGE/guest-tools/aurora-connectivity.desktop"
+    chmod 0644 "$STAGE/guest-tools/aurora-connectivity.desktop"
     if [ -d "$GUEST_ROOT/usr/share/applications" ]; then
-        cp -f "$MODPATH/guest-tools/determination-connectivity.desktop" \
-            "$GUEST_ROOT/usr/share/applications/determination-connectivity.desktop"
-        chmod 0644 "$GUEST_ROOT/usr/share/applications/determination-connectivity.desktop"
+        cp -f "$MODPATH/guest-tools/aurora-connectivity.desktop" \
+            "$GUEST_ROOT/usr/share/applications/aurora-connectivity.desktop"
+        chmod 0644 "$GUEST_ROOT/usr/share/applications/aurora-connectivity.desktop"
     fi
 fi
-if [ -f "$MODPATH/guest-tools/determination-input-proxy.desktop" ]; then
-    cp -f "$MODPATH/guest-tools/determination-input-proxy.desktop" \
-        "$STAGE/guest-tools/determination-input-proxy.desktop"
-    chmod 0644 "$STAGE/guest-tools/determination-input-proxy.desktop"
+if [ -f "$MODPATH/guest-tools/aurora-input-proxy.desktop" ]; then
+    cp -f "$MODPATH/guest-tools/aurora-input-proxy.desktop" \
+        "$STAGE/guest-tools/aurora-input-proxy.desktop"
+    chmod 0644 "$STAGE/guest-tools/aurora-input-proxy.desktop"
     if [ -d "$GUEST_ROOT/usr/share/applications" ]; then
-        cp -f "$MODPATH/guest-tools/determination-input-proxy.desktop" \
-            "$GUEST_ROOT/usr/share/applications/determination-input-proxy.desktop"
-        chmod 0644 "$GUEST_ROOT/usr/share/applications/determination-input-proxy.desktop"
+        cp -f "$MODPATH/guest-tools/aurora-input-proxy.desktop" \
+            "$GUEST_ROOT/usr/share/applications/aurora-input-proxy.desktop"
+        chmod 0644 "$GUEST_ROOT/usr/share/applications/aurora-input-proxy.desktop"
     fi
 fi
-if [ -f "$MODPATH/guest-tools/90-determination-direct.conf" ]; then
-    cp -f "$MODPATH/guest-tools/90-determination-direct.conf" \
-        "$STAGE/guest-tools/90-determination-direct.conf"
-    chmod 0644 "$STAGE/guest-tools/90-determination-direct.conf"
+if [ -f "$MODPATH/guest-tools/90-aurora-direct.conf" ]; then
+    cp -f "$MODPATH/guest-tools/90-aurora-direct.conf" \
+        "$STAGE/guest-tools/90-aurora-direct.conf"
+    chmod 0644 "$STAGE/guest-tools/90-aurora-direct.conf"
 fi
 
 # Session manifests are repo-owned declarations (the selection itself lives in
-# $DET/etc/compositor), so every install refreshes them wholesale.
+# $AURORA/etc/compositor), so every install refreshes them wholesale.
 for f in "$MODPATH"/sessions/*.session; do
     [ -f "$f" ] || continue
-    mkdir -p "$STAGE/sessions" "$DET/etc/sessions"
+    mkdir -p "$STAGE/sessions" "$AURORA/etc/sessions"
     cp -f "$f" "$STAGE/sessions/${f##*/}"
-    cp -f "$f" "$DET/etc/sessions/${f##*/}"
-    chmod 0644 "$STAGE/sessions/${f##*/}" "$DET/etc/sessions/${f##*/}"
+    cp -f "$f" "$AURORA/etc/sessions/${f##*/}"
+    chmod 0644 "$STAGE/sessions/${f##*/}" "$AURORA/etc/sessions/${f##*/}"
 done
 
 # Verify the complete staged set before one atomic pointer change. Keep the
@@ -151,80 +159,80 @@ done
 (cd "$STAGE" && find . -type f -print | LC_ALL=C sort | xargs sha256sum) > "$STAGE/SHA256SUMS" || abort "! payload hash generation failed"
 printf '%s\n' "$VERSION" > "$STAGE/manifest-id"
 mv "$STAGE" "$TARGET" || abort "! payload activation staging failed"
-ln -s "versions/$VERSION" "$DET/current.new" || abort "! cannot prepare current payload pointer"
-mv -f "$DET/current.new" "$DET/current" || abort "! cannot activate payload pointer"
-if [ -d "$DET/bin" ] && [ ! -L "$DET/bin" ]; then
-    mv "$DET/bin" "$SETS/legacy-bin" || abort "! cannot preserve prior toolkit"
+ln -s "versions/$VERSION" "$AURORA/current.new" || abort "! cannot prepare current payload pointer"
+mv -f "$AURORA/current.new" "$AURORA/current" || abort "! cannot activate payload pointer"
+if [ -d "$AURORA/bin" ] && [ ! -L "$AURORA/bin" ]; then
+    mv "$AURORA/bin" "$SETS/legacy-bin" || abort "! cannot preserve prior toolkit"
 fi
-ln -s current/bin "$DET/bin.new" && mv -f "$DET/bin.new" "$DET/bin" || abort "! cannot activate toolkit"
-if [ -d "$DET/guest-tools" ] && [ ! -L "$DET/guest-tools" ]; then
-    mv "$DET/guest-tools" "$SETS/legacy-guest-tools" || abort "! cannot preserve guest tools"
+ln -s current/bin "$AURORA/bin.new" && mv -f "$AURORA/bin.new" "$AURORA/bin" || abort "! cannot activate toolkit"
+if [ -d "$AURORA/guest-tools" ] && [ ! -L "$AURORA/guest-tools" ]; then
+    mv "$AURORA/guest-tools" "$SETS/legacy-guest-tools" || abort "! cannot preserve guest tools"
 fi
-ln -s current/guest-tools "$DET/guest-tools.new" && mv -f "$DET/guest-tools.new" "$DET/guest-tools" || abort "! cannot activate guest tools"
-if [ -d "$DET/guest-assets" ] && [ ! -L "$DET/guest-assets" ]; then
-    mv "$DET/guest-assets" "$SETS/legacy-guest-assets" || abort "! cannot preserve guest assets"
+ln -s current/guest-tools "$AURORA/guest-tools.new" && mv -f "$AURORA/guest-tools.new" "$AURORA/guest-tools" || abort "! cannot activate guest tools"
+if [ -d "$AURORA/guest-assets" ] && [ ! -L "$AURORA/guest-assets" ]; then
+    mv "$AURORA/guest-assets" "$SETS/legacy-guest-assets" || abort "! cannot preserve guest assets"
 fi
-ln -s current/guest-assets "$DET/guest-assets.new" && mv -f "$DET/guest-assets.new" "$DET/guest-assets" || abort "! cannot activate guest assets"
-if [ -d "$DET/guest-config" ] && [ ! -L "$DET/guest-config" ]; then
-    mv "$DET/guest-config" "$SETS/legacy-guest-config" || abort "! cannot preserve guest config"
+ln -s current/guest-assets "$AURORA/guest-assets.new" && mv -f "$AURORA/guest-assets.new" "$AURORA/guest-assets" || abort "! cannot activate guest assets"
+if [ -d "$AURORA/guest-config" ] && [ ! -L "$AURORA/guest-config" ]; then
+    mv "$AURORA/guest-config" "$SETS/legacy-guest-config" || abort "! cannot preserve guest config"
 fi
-ln -s current/guest-config "$DET/guest-config.new" && mv -f "$DET/guest-config.new" "$DET/guest-config" || abort "! cannot activate guest config"
-if [ -e "$DET/lxc/config.base" ] && [ ! -L "$DET/lxc/config.base" ]; then
-    cp -f "$DET/lxc/config.base" "$SETS/legacy-lxc-config-base" || abort "! cannot preserve LXC base"
-    rm -f "$DET/lxc/config.base"
+ln -s current/guest-config "$AURORA/guest-config.new" && mv -f "$AURORA/guest-config.new" "$AURORA/guest-config" || abort "! cannot activate guest config"
+if [ -e "$AURORA/lxc/config.base" ] && [ ! -L "$AURORA/lxc/config.base" ]; then
+    cp -f "$AURORA/lxc/config.base" "$SETS/legacy-lxc-config-base" || abort "! cannot preserve LXC base"
+    rm -f "$AURORA/lxc/config.base"
 fi
-ln -s ../current/lxc-config-base "$DET/lxc/config.base.new" && mv -f "$DET/lxc/config.base.new" "$DET/lxc/config.base" || abort "! cannot activate LXC base"
+ln -s ../current/lxc-config-base "$AURORA/lxc/config.base.new" && mv -f "$AURORA/lxc/config.base.new" "$AURORA/lxc/config.base" || abort "! cannot activate LXC base"
 
 # Install a known profile only on a matching device. Unknown devices use the
 # runtime discovery defaults and receive no silently-wrong vendor assumptions.
 DEVICE=$(getprop ro.product.device)
-[ ! -f "$DET/etc/device.conf" ] && [ -f "$MODPATH/device-profiles/$DEVICE.conf" ] && {
-    cp -f "$MODPATH/device-profiles/$DEVICE.conf" "$DET/etc/device.conf"
-    chmod 0644 "$DET/etc/device.conf"
+[ ! -f "$AURORA/etc/device.conf" ] && [ -f "$MODPATH/device-profiles/$DEVICE.conf" ] && {
+    cp -f "$MODPATH/device-profiles/$DEVICE.conf" "$AURORA/etc/device.conf"
+    chmod 0644 "$AURORA/etc/device.conf"
     ui_print "- Device profile: $DEVICE"
 }
 # Merge newly introduced typed capabilities into an existing exact-match
 # profile without replacing locally qualified values.
-if [ -f "$DET/etc/device.conf" ] && [ -f "$MODPATH/device-profiles/$DEVICE.conf" ]; then
-    for key in DET_LINUX_FIRST_SUPPORTED DET_LINUX_FIRST_KEEP_NETWORK DET_LINUX_FIRST_FREEZE_SYSTEM_SERVER; do
-        grep -q "^$key=" "$DET/etc/device.conf" && continue
+if [ -f "$AURORA/etc/device.conf" ] && [ -f "$MODPATH/device-profiles/$DEVICE.conf" ]; then
+    for key in AURORA_LINUX_FIRST_SUPPORTED AURORA_LINUX_FIRST_KEEP_NETWORK AURORA_LINUX_FIRST_FREEZE_SYSTEM_SERVER; do
+        grep -q "^$key=" "$AURORA/etc/device.conf" && continue
         value=$(sed -n "s/^$key=//p" "$MODPATH/device-profiles/$DEVICE.conf" | head -n 1)
-        [ -z "$value" ] || printf '%s=%s\n' "$key" "$value" >> "$DET/etc/device.conf"
+        [ -z "$value" ] || printf '%s=%s\n' "$key" "$value" >> "$AURORA/etc/device.conf"
     done
 fi
-[ -f "$DET/etc/device.conf" ] && ui_print "- Config: $DET/etc/device.conf"
+[ -f "$AURORA/etc/device.conf" ] && ui_print "- Config: $AURORA/etc/device.conf"
 
 # Audio ownership profiles are stricter than general device discovery: never
 # guess service names or codec topology. Install only the exact hardware profile
 # selected by the exact-match device config, and preserve local qualification.
-AUDIO_PROFILE_ID=$(sed -n 's/^DET_PROFILE_ID=//p' "$DET/etc/device.conf" 2>/dev/null | head -n 1)
+AUDIO_PROFILE_ID=$(sed -n 's/^AURORA_PROFILE_ID=//p' "$AURORA/etc/device.conf" 2>/dev/null | head -n 1)
 if [ -n "$AUDIO_PROFILE_ID" ] && \
    [ -f "$MODPATH/audio-profiles/$AUDIO_PROFILE_ID.conf" ] && \
-   [ ! -f "$DET/etc/audio-owner.conf" ]; then
-    cp -f "$MODPATH/audio-profiles/$AUDIO_PROFILE_ID.conf" "$DET/etc/audio-owner.conf"
-    chmod 0640 "$DET/etc/audio-owner.conf"
+   [ ! -f "$AURORA/etc/audio-owner.conf" ]; then
+    cp -f "$MODPATH/audio-profiles/$AUDIO_PROFILE_ID.conf" "$AURORA/etc/audio-owner.conf"
+    chmod 0640 "$AURORA/etc/audio-owner.conf"
     ui_print "- Direct audio ownership profile: $AUDIO_PROFILE_ID (manual gate only)"
 fi
 if [ "$AUDIO_PROFILE_ID" = guacamoleb ] && \
-   [ -f "$DET/guest-tools/90-determination-direct.conf" ] && \
+   [ -f "$AURORA/guest-tools/90-aurora-direct.conf" ] && \
    [ -d "$GUEST_ROOT/etc/pipewire/pipewire.conf.d" ]; then
-    cp -f "$DET/guest-tools/90-determination-direct.conf" \
-        "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
-    chmod 0644 "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-determination-direct.conf"
+    cp -f "$AURORA/guest-tools/90-aurora-direct.conf" \
+        "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-aurora-direct.conf"
+    chmod 0644 "$GUEST_ROOT/etc/pipewire/pipewire.conf.d/90-aurora-direct.conf"
 fi
 
 # Keep the payload out of the mounted module dir.
 rm -rf "$MODPATH/tools" "$MODPATH/guest-tools" "$MODPATH/guest-assets" "$MODPATH/device-profiles" \
     "$MODPATH/audio-profiles" "$MODPATH/guest-config"
 
-# Running the Determination kernel? Warn, don't block --- module install before
+# Running the Aurora kernel? Warn, don't block --- module install before
 # kernel flash is a legitimate order of operations.
 if [ ! -e /proc/self/ns/pid ] || ! zcat /proc/config.gz 2>/dev/null | grep -q ANDROID_BINDERFS=y; then
-    ui_print "! Note: Determination kernel not detected (yet) --- guest won't start until it's flashed"
+    ui_print "! Note: Aurora kernel not detected (yet) --- guest won't start until it's flashed"
 elif ! zcat /proc/config.gz 2>/dev/null | grep -q '^CONFIG_VT=y'; then
     # Kernel #3 marker: VT is off in stock and in kernels #1/#2.
-    ui_print "! Note: pre-#3 Determination kernel --- VT / nftables / IPv6-NAT need a kernel update"
+    ui_print "! Note: pre-#3 Aurora kernel --- VT / nftables / IPv6-NAT need a kernel update"
 fi
 
-ui_print "- Toolkit installed to $DET/bin"
-ui_print "- Next: install a guest rootfs + static lxc, then $DET/bin/desktop-on"
+ui_print "- Toolkit installed to $AURORA/bin"
+ui_print "- Next: install a guest rootfs + static lxc, then $AURORA/bin/desktop-on"

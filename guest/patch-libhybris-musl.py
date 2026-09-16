@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Apply Determination's narrow musl host-libc adapters to libhybris.
+"""Apply Aurora's narrow musl host-libc adapters to libhybris.
 
 The Android side is still bionic.  These changes only replace glibc-specific
 host calls and private layouts used by hybris/common.  The patch is deliberately
@@ -12,7 +12,7 @@ import pathlib
 import sys
 
 
-MARKER = "Determination musl host adapters"
+MARKER = "Aurora musl host adapters"
 
 
 def replace_once(text: str, old: str, new: str, path: pathlib.Path) -> str:
@@ -79,7 +79,7 @@ static inline char* hybris_musl_basename(const char* path) {
 def patch_embedded_tls_lifecycle(common: pathlib.Path) -> None:
     main_path = common / "q" / "linker_main.cpp"
     main_text = main_path.read_text()
-    obsolete = """  /* Determination: embedded linker has no initial static TLS image. The
+    obsolete = """  /* Aurora: embedded linker has no initial static TLS image. The
    * normal PT_INTERP path finalizes this layout before dlopen; hybris' entry
    * point must do the same or every bionic DSO is misclassified as static TLS
    * and CHECK-aborts when a short-lived loader client closes it. */
@@ -91,7 +91,7 @@ def patch_embedded_tls_lifecycle(common: pathlib.Path) -> None:
 
     path = common / "q" / "linker_tls.cpp"
     text = path.read_text()
-    marker = "Determination: a static-TLS DSO cannot be safely unloaded"
+    marker = "Aurora: a static-TLS DSO cannot be safely unloaded"
     if marker in text:
         print(f"musl embedded TLS pinning: already patched {path}")
     else:
@@ -100,7 +100,7 @@ def patch_embedded_tls_lifecycle(common: pathlib.Path) -> None:
 }"""
         new = """  g_tls_modules[module_idx].first_generation = new_generation;
   g_tls_modules[module_idx].soinfo_ptr = si;
-  /* Determination: a static-TLS DSO cannot be safely unloaded. Android's
+  /* Aurora: a static-TLS DSO cannot be safely unloaded. Android's
    * normal linker never does so; pin the same modules in the embedded hybris
    * linker instead of reaching unregister_tls_module's deliberate CHECK. */
   if (static_offset != SIZE_MAX)
@@ -113,7 +113,7 @@ def patch_embedded_tls_lifecycle(common: pathlib.Path) -> None:
     unload_path = common / "q" / "linker.cpp"
     unload_text = unload_path.read_text()
     partial_unload = """        } else if (child->get_parents().empty()) {
-          /* Determination: retain a pinned NODELETE dependency even when its
+          /* Aurora: retain a pinned NODELETE dependency even when its
            * unloadable group root closes. Static-TLS bionic DSOs are pinned
            * above because unregistering them would invalidate IE TLS. */
           if (child->can_unload())
@@ -129,7 +129,7 @@ def patch_embedded_tls_lifecycle(common: pathlib.Path) -> None:
         )
         print(f"musl NODELETE group pinning: removed partial-unload experiment from {unload_path}")
 
-    group_marker = "Determination: static TLS pins the complete local load group"
+    group_marker = "Aurora: static TLS pins the complete local load group"
     if group_marker in unload_text:
         print(f"musl NODELETE group pinning: already patched {unload_path}")
         unload_path.write_text(unload_text)
@@ -144,7 +144,7 @@ def patch_embedded_tls_lifecycle(common: pathlib.Path) -> None:
       return false;
     }
 
-    /* Determination: static TLS pins the complete local load group. Retaining
+    /* Aurora: static TLS pins the complete local load group. Retaining
      * only the Initial-Exec TLS DSO leaves its dependency graph pointing at
      * unloaded parents, which makes a successful hybris_dlclose segfault on
      * return. Android treats the group as one lifetime for this purpose. */
@@ -202,7 +202,7 @@ def patch_hooks(common: pathlib.Path) -> None:
     helpers = r"""// this is also used in bionic:
 #define bool int
 
-/* Determination musl host adapters.  Keep bionic-facing names and ABIs while
+/* Aurora musl host adapters.  Keep bionic-facing names and ABIs while
  * avoiding glibc-only symbols and private FILE/pthread layouts. */
 struct hybris_musl_mallinfo {
     size_t arena, ordblks, smblks, hblks, hblkhd;
@@ -309,7 +309,7 @@ struct hybris_musl_rwlockattr {
     if (rc != 0)
         return rc;
     /* glibc/bionic's obsolete API takes the top of a downward-growing stack;
-     * pthread_attr_setstack takes its lowest address. Determination is arm64. */
+     * pthread_attr_setstack takes its lowest address. Aurora is arm64. */
     return pthread_attr_setstack(realattr, (char *)stack_addr - stack_size,
                                  stack_size);
 }"""

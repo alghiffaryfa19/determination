@@ -58,12 +58,31 @@ touch delivery to a compositor, gesture behavior, or input arbitration.
 
 The initial Quickshell runtime lacked the Qt Wayland platform plugin. The
 cross-build container now includes `qt6-wayland:arm64` and the required QML
-runtime modules, in addition to development headers. Rebuild Quickshell and
-stage its matching private Qt runtime; never mix Qt private-API versions.
-A successful `quickshell --version` is not a shell-rendering test.
+runtime modules, in addition to development headers. The rebuilt Quickshell
+0.3.0 and matching private Qt runtime are installed. Both Wayland platform
+plugins resolve their dependencies with the launcher's `LD_LIBRARY_PATH`;
+the initial plain `ldd` invocation omitted it and incorrectly suggested missing
+Qt libraries. Never mix Qt private-API versions.
+
+`aurora-opal check` now checks the executable and both Wayland plugins for
+unresolved dependencies, then runs `quickshell --version`. This passes as the
+unprivileged guest user. The updated launcher is installed in both the active
+rootfs and persistent guest-tools payload. Evidence:
+`artifacts/opal-arch-bringup/resumed-preflight.log`.
+
+A windowless import probe also passes on-device as `aurora`, loading Qt Quick,
+Controls, Layouts, Models, and Quickshell's Hyprland, Wayland, I/O, notification,
+and tray modules. It exits successfully after `OPAL_QML_IMPORTS_OK`; see
+`artifacts/opal-arch-bringup/qml-import-probe.qml` and its `.log`. The probe uses
+Qt's offscreen platform with no windows or rendering, so it does not qualify
+vendor graphics or the complete Opal configuration.
+
+The same pass reconfirmed six accepted input devices including one touchscreen,
+with SurfaceFlinger running and uninterrupted uptime. Shell rendering, touch
+delivery, and gestures still require a separately authorized desktop session.
 
 The companion's new gradient ribbon icon builds successfully. The latest
-blended revision is host-built but not yet installed; the phone was unplugged.
+blended revision was installed successfully during the preceding Pi session.
 Source artwork is `companion/branding/aurora.svg`. Run
 `python3 companion/branding/generate.py` after changing it, and `--check` to
 verify the three generated Android vectors.
@@ -76,4 +95,6 @@ verify the three generated Android vectors.
   readable permissions, idempotence, and preservation of user overrides.
 - `sh guest/tests/hyprland-launch-test.sh`: launcher environment and privilege
   boundaries.
+- `sh guest/tests/opal-runtime-test.sh`: missing plugins, unresolved dependencies,
+  and executable failures must fail the display-safe preflight.
 - `python3 companion/branding/generate.py --check`: artwork/vector consistency.

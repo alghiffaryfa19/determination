@@ -1,11 +1,11 @@
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const configuredRepository = document
-  .querySelector('meta[name="determination-repository-url"]')
+  .querySelector('meta[name="aurora-repository-url"]')
   ?.content.trim();
 const githubPagesOwner = location.hostname.match(/^([^.]+)\.github\.io$/)?.[1];
 const repositoryUrl = configuredRepository ||
-  (githubPagesOwner ? `https://github.com/${githubPagesOwner}/determination` : '');
+  (githubPagesOwner ? `https://github.com/${githubPagesOwner}/aurora` : '');
 document.querySelectorAll('[data-repository-link]').forEach(link => {
   if (!repositoryUrl) return;
   link.href = repositoryUrl;
@@ -17,8 +17,8 @@ wipe.className = 'page-wipe';
 wipe.setAttribute('aria-hidden', 'true');
 document.body.appendChild(wipe);
 
-if (!reduce && sessionStorage.getItem('determination-transition') === '1') {
-  sessionStorage.removeItem('determination-transition');
+if (!reduce && sessionStorage.getItem('aurora-transition') === '1') {
+  sessionStorage.removeItem('aurora-transition');
   wipe.classList.add('arriving');
 }
 
@@ -29,7 +29,7 @@ document.querySelectorAll('a[href]').forEach(link => {
   link.addEventListener('click', event => {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();
-    sessionStorage.setItem('determination-transition', '1');
+    sessionStorage.setItem('aurora-transition', '1');
     wipe.classList.add('leaving');
     setTimeout(() => { location.href = target.href; }, 410);
   });

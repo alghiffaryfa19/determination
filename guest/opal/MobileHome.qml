@@ -135,7 +135,7 @@ Item {
         }
         WindowSwitcher {visible:Hub.mobileTab==="recent";Layout.fillWidth:true;Layout.fillHeight:true;layoutMode:"phone";active:visible&&!mobile.embedded}
         SearchKeyboard {
-            visible:Hub.mobileTab==="apps"&&mobile.keyboardOpen
+            visible:Hub.mobileTab==="apps"&&mobile.keyboardOpen&&!Hub.systemOskReady
             Layout.fillWidth:true;Layout.preferredHeight:Math.min(244,mobile.height*.42)
             onInsert:text=>{mobile.filter+=text;mobileSearch.text=mobile.filter;}
             onErase:{mobile.filter=mobile.filter.slice(0,-1);mobileSearch.text=mobile.filter;}

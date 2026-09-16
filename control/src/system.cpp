@@ -1,4 +1,4 @@
-#include "determination/control/system.hpp"
+#include "aurora/control/system.hpp"
 
 #include <algorithm>
 #include <cerrno>
@@ -16,7 +16,7 @@
 #include <sys/system_properties.h>
 #endif
 
-namespace determination::control {
+namespace aurora::control {
 
 std::uint64_t monotonic_milliseconds()
 {
@@ -248,4 +248,4 @@ std::uint64_t fnv1a64(const std::string &value)
     return hash;
 }
 
-} // namespace determination::control
+} // namespace aurora::control

@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+
+prefix=${AURORA_DHYPRLAND_PREFIX:-/opt/hyprland}
+export LD_LIBRARY_PATH="$prefix/lib/compat:$prefix/lib:${LD_LIBRARY_PATH:-/usr/local/lib:/usr/local/lib/aarch64-linux-gnu}"
+exec "$prefix/bin/hyprctl" "$@"

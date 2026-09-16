@@ -1,0 +1,4 @@
+#!/bin/sh
+# Cached pre-rename build uses the old environment contract.
+export DET_HYBRIS=1 DET_HYBRIS_HWC=1
+exec /opt/hyprland/bin/Hyprland.bin "$@"

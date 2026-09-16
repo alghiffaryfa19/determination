@@ -51,6 +51,11 @@ Scope {
     }
     property bool controller: false
     property string controllerName: ""
+    property bool systemOskAvailable:false
+    property bool systemOskRunning:false
+    property bool systemOskVisible:false
+    property string systemOskDetail:""
+    readonly property bool systemOskReady:systemOskAvailable&&systemOskRunning
     property var clipboardItems: []
     property bool clipboardPaused: false
     property bool clipboardAvailable: false
@@ -176,6 +181,7 @@ Scope {
     property date now: clock.date
     signal navigate(string key)
     function command(data) { bridge.write(JSON.stringify(data)+"\n"); }
+    function systemOsk(verb) { command({action:"system-osk",verb:verb||"toggle"}); }
     function set(key,value) { let p = Object.assign({},prefs); p[key]=value; prefs=p; command({action:"preference",key:key,value:value}); }
     function toggle(p) { page = page === p ? "" : p; if(page === "launcher") query = ""; }
     function mode(m) { if(m==="phone") {const screen=targetScreen||chooseScreen();if(screen)set("phoneDisplay",screen.name);} set("mode",m); page=""; query=""; mobileTab="home"; launcherSection="apps"; category=m==="console" ? "Games" : "All apps"; }
@@ -298,7 +304,7 @@ Scope {
     SystemClock { id: clock; precision: SystemClock.Seconds }
     Process {
         id: bridge
-        command: ["/usr/local/bin/det-opal-bridge"]
+        command: ["/usr/local/bin/aurora-opal-bridge"]
         running: true
         stdinEnabled: true
         stdout: SplitParser {
@@ -326,6 +332,7 @@ Scope {
                     } else if(e.event === "themeBusy") h.themeBusy=e.busy;
                     else if(e.event === "message") h.message(e.text);
                     else if(e.event === "controller") { h.controller=e.connected;h.controllerName=e.name||""; }
+                    else if(e.event === "systemOsk") {h.systemOskAvailable=!!e.available;h.systemOskRunning=!!e.running;h.systemOskVisible=!!e.visible;h.systemOskDetail=e.detail||"";}
                     else if(e.event === "libraryArt") h.gameArt=e.data;
                     else if(e.event === "navigation" && h.prefs.mode === "console") { if(e.key==="home") h.toggle("launcher"); else if(h.page!=="") h.navigate(e.key); }
                     else if(e.event === "calculation" && e.query===h.query.slice(1).trim()) h.calculation=e.result;

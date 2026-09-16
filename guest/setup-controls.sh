@@ -1,12 +1,12 @@
 #!/bin/bash
 # setup-controls.sh --- in-guest, idempotent. Installs the phosh-side triggers
-# for the guest->host control channel (host side is toggle/det-hostagent over
-# /mnt/det-control, bind-mounted from /data/determination/run/control):
+# for the guest->host control channel (host side is toggle/aurora-hostagent over
+# /mnt/aurora-control, bind-mounted from /data/aurora/run/control):
 #
-#   1. det-signal            tiny helper: drop a command file for the host agent
+#   1. aurora-signal            tiny helper: drop a command file for the host agent
 #   2. app-grid launchers    Exit to Phone Mode / Power Off / Restart
 #   3. systemd shutdown hooks map phosh's NATIVE power menu (Power Off /
-#      Restart) onto host actions, run BEFORE unmount so /mnt/det-control is
+#      Restart) onto host actions, run BEFORE unmount so /mnt/aurora-control is
 #      still there
 #   4. pin "Exit to Phone Mode" to phosh favourites
 #
@@ -17,50 +17,50 @@ set -eu
 # dbus-run-session / update-desktop-database all live in /usr/bin and were
 # silently skipped without this (found on first on-device run 2026-07-08).
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-CTRL=/mnt/det-control
+CTRL=/mnt/aurora-control
 
-echo "== det-signal helper =="
+echo "== aurora-signal helper =="
 install -d /usr/local/sbin
-cat > /usr/local/sbin/det-signal <<EOF
+cat > /usr/local/sbin/aurora-signal <<EOF
 #!/bin/sh
-# Ask the native Determination control plane to run a capability-scoped host
+# Ask the native Aurora control plane to run a capability-scoped host
 # action. During the migration release, unsupported/rejected requests fall back
-# to the old command file consumed by toggle/det-hostagent.
+# to the old command file consumed by toggle/aurora-hostagent.
 CTRL=$CTRL
 case "\${1:-}" in
     exit|reboot|poweroff) ;;
-    *) echo "usage: det-signal exit|reboot|poweroff" >&2; exit 2 ;;
+    *) echo "usage: aurora-signal exit|reboot|poweroff" >&2; exit 2 ;;
 esac
-if [ -x /usr/local/bin/det-guest-agent ]; then
+if [ -x /usr/local/bin/aurora-guest-agent ]; then
     case "\$1" in
         exit)
-            if /usr/local/bin/det-guest-agent signal exit >/dev/null 2>&1; then
-                echo "det-signal: requested 'exit' through detd"
+            if /usr/local/bin/aurora-guest-agent signal exit >/dev/null 2>&1; then
+                echo "aurora-signal: requested 'exit' through aurorad"
                 exit 0
             fi
             ;;
     esac
 fi
 if [ ! -d "\$CTRL" ]; then
-    echo "det-signal: control channel \$CTRL not mounted --- is the guest" >&2
+    echo "aurora-signal: control channel \$CTRL not mounted --- is the guest" >&2
     echo "            started under the current lxc config? (needs restart)" >&2
     exit 1
 fi
-: > "\$CTRL/\$1" && echo "det-signal: requested '\$1' from host"
+: > "\$CTRL/\$1" && echo "aurora-signal: requested '\$1' from host"
 EOF
-chmod 0755 /usr/local/sbin/det-signal
+chmod 0755 /usr/local/sbin/aurora-signal
 
-echo "== det-guest-agent service =="
-if [ -x /usr/local/bin/det-guest-agent ]; then
-    cat > /etc/systemd/system/det-guest-agent.service <<'EOF'
+echo "== aurora-guest-agent service =="
+if [ -x /usr/local/bin/aurora-guest-agent ]; then
+    cat > /etc/systemd/system/aurora-guest-agent.service <<'EOF'
 [Unit]
-Description=Determination guest health and control agent
+Description=Aurora guest health and control agent
 After=local-fs.target
 
 [Service]
 Type=simple
-User=detuser
-ExecStart=/usr/local/bin/det-guest-agent serve
+User=aurora
+ExecStart=/usr/local/bin/aurora-guest-agent serve
 Restart=on-failure
 RestartSec=5
 
@@ -68,13 +68,13 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
     systemctl daemon-reload 2>/dev/null || true
-    systemctl enable --now det-guest-agent.service 2>/dev/null ||
-        echo "note: det-guest-agent will start on the next guest boot"
+    systemctl enable --now aurora-guest-agent.service 2>/dev/null ||
+        echo "note: aurora-guest-agent will start on the next guest boot"
 else
-    echo "note: det-guest-agent binary not staged yet; file fallback retained"
+    echo "note: aurora-guest-agent binary not staged yet; file fallback retained"
 fi
 
-echo "== det-session-manager (org.gnome.SessionManager shim) =="
+echo "== aurora-session-manager (org.gnome.SessionManager shim) =="
 # phosh + squeekboard both try to register with org.gnome.SessionManager and
 # fail ("The name org.gnome.SessionManager was not provided by any .service
 # files") because we run phosh BARE --- no gnome-session (phosh-session would
@@ -82,9 +82,9 @@ echo "== det-session-manager (org.gnome.SessionManager shim) =="
 # child-watch dies on the half-backported pidfd and phoc quits). This shim
 # owns the name on phosh's session bus so those clients register cleanly, and
 # it routes the session-manager verbs to the host control channel:
-#   Logout()   -> det-signal exit      (log out of the desktop == back to phone)
-#   Shutdown() -> det-signal poweroff
-#   Reboot()   -> det-signal reboot
+#   Logout()   -> aurora-signal exit      (log out of the desktop == back to phone)
+#   Shutdown() -> aurora-signal poweroff
+#   Reboot()   -> aurora-signal reboot
 # Launched inside dbus-run-session by toggle/desktop-on (step 5e) BEFORE phosh.
 # Pure gi/GDBus (python3 + PyGObject + Gio typelib are all in the rootfs).
 #
@@ -101,27 +101,27 @@ echo "== det-session-manager (org.gnome.SessionManager shim) =="
 # the next input event (power key, touch), which phoc sees regardless of
 # output power state.
 install -d /usr/local/bin
-cat > /usr/local/bin/det-session-manager <<'EOS'
+cat > /usr/local/bin/aurora-session-manager <<'EOS'
 #!/usr/bin/env python3
-# Determination: minimal org.gnome.SessionManager that maps session verbs onto
-# the guest->host control channel (/usr/local/sbin/det-signal). See setup-controls.sh.
+# Aurora: minimal org.gnome.SessionManager that maps session verbs onto
+# the guest->host control channel (/usr/local/sbin/aurora-signal). See setup-controls.sh.
 import os, signal, subprocess, sys
 import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib
 
-DET_SIGNAL = "/usr/local/sbin/det-signal"
+AURORA_SIGNAL = "/usr/local/sbin/aurora-signal"
 
-# Children (det-signal) are fire-and-forget; auto-reap so we never leak zombies.
+# Children (aurora-signal) are fire-and-forget; auto-reap so we never leak zombies.
 signal.signal(signal.SIGCHLD, signal.SIG_IGN)
 
 def host(action):
     try:
-        subprocess.Popen([DET_SIGNAL, action],
+        subprocess.Popen([AURORA_SIGNAL, action],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        sys.stderr.write("det-session-manager: -> host %s\n" % action)
+        sys.stderr.write("aurora-session-manager: -> host %s\n" % action)
     except Exception as e:
-        sys.stderr.write("det-session-manager: det-signal %s failed: %s\n" % (action, e))
+        sys.stderr.write("aurora-session-manager: aurora-signal %s failed: %s\n" % (action, e))
     sys.stderr.flush()
 
 SM_XML = """
@@ -217,11 +217,11 @@ class WakeWatcher:
         conn.signal_subscribe(IM_NAME, IM_NAME, "WatchFired", IM_PATH,
                               None, Gio.DBusSignalFlags.NONE,
                               self.on_watch_fired)
-        sys.stderr.write("det-session-manager: wake watcher armed\n")
+        sys.stderr.write("aurora-session-manager: wake watcher armed\n")
         sys.stderr.flush()
 
     def log(self, msg):
-        sys.stderr.write("det-session-manager: wake: %s\n" % msg)
+        sys.stderr.write("aurora-session-manager: wake: %s\n" % msg)
         sys.stderr.flush()
 
     def call(self, name, path, iface, method, params, cb=None):
@@ -331,10 +331,10 @@ class SM:
         self.wake = WakeWatcher(conn)
 
     def on_acquired(self, conn, name):
-        sys.stderr.write("det-session-manager: owns %s\n" % name); sys.stderr.flush()
+        sys.stderr.write("aurora-session-manager: owns %s\n" % name); sys.stderr.flush()
 
     def on_lost(self, conn, name):
-        sys.stderr.write("det-session-manager: lost/failed name %s\n" % name)
+        sys.stderr.write("aurora-session-manager: lost/failed name %s\n" % name)
         sys.stderr.flush()
 
 def main():
@@ -347,19 +347,19 @@ def main():
 if __name__ == "__main__":
     main()
 EOS
-chmod 0755 /usr/local/bin/det-session-manager
+chmod 0755 /usr/local/bin/aurora-session-manager
 
-echo "== det-console (Ctrl+Alt+F2 emergency terminal) =="
+echo "== aurora-console (Ctrl+Alt+F2 emergency terminal) =="
 # Companion to the phoc PATCH 3 (build-wlroots-phoc.sh): Ctrl+Alt+F2-F12
-# calls det-console <vt> instead of the no-op VT switch (no fbcon on this
+# calls aurora-console <vt> instead of the no-op VT switch (no fbcon on this
 # device). Opens a fullscreen foot terminal. Requires an external keyboard
 # (the on-screen squeekboard can't produce Ctrl+Alt+F*).
-cat > /usr/local/bin/det-console <<'EOS'
+cat > /usr/local/bin/aurora-console <<'EOS'
 #!/bin/sh
-# Determination console --- fullscreen terminal on Ctrl+Alt+F<n>.
+# Aurora console --- fullscreen terminal on Ctrl+Alt+F<n>.
 # Called by phoc's patched VT-switch handler (keyboard.c PATCH 3).
 # Inherit the Wayland env from whoever invoked phoc (desktop-on 5e). phoc runs
-# as detuser (uid 1000), so its VT-switch handler spawns us as detuser too.
+# as aurora (uid 1000), so its VT-switch handler spawns us as aurora too.
 export XDG_RUNTIME_DIR=/run/user/1000
 export WAYLAND_DISPLAY=wayland-0
 export LANG=C.UTF-8
@@ -367,48 +367,48 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 VT="${1:-2}"
 exec foot --fullscreen --title "Console VT${VT}" -- /bin/bash -l
 EOS
-chmod 0755 /usr/local/bin/det-console
+chmod 0755 /usr/local/bin/aurora-console
 
 echo "== app-grid launchers =="
 install -d /usr/share/applications
 # NoDisplay=false so they appear in the phosh app grid. Categories=System so
 # they group sensibly. Icons are stock Adwaita names (adwaita-icon-theme is
 # already pulled in by setup-polish for squeekboard).
-cat > /usr/share/applications/determination-exit.desktop <<EOF
+cat > /usr/share/applications/aurora-exit.desktop <<EOF
 [Desktop Entry]
 Type=Application
 Name=Exit to Phone Mode
 Comment=Hand the display back to Android and return to the phone UI
-Exec=det-signal exit
+Exec=aurora-signal exit
 Icon=system-log-out
 Terminal=false
 Categories=System;
 X-Purism-FormFactor=Workstation;Mobile;
-Keywords=phone;android;exit;desktop;determination;
+Keywords=phone;android;exit;desktop;aurora;
 EOF
-cat > /usr/share/applications/determination-poweroff.desktop <<EOF
+cat > /usr/share/applications/aurora-poweroff.desktop <<EOF
 [Desktop Entry]
 Type=Application
 Name=Power Off Phone
 Comment=Shut the whole phone down from desktop mode
-Exec=det-signal poweroff
+Exec=aurora-signal poweroff
 Icon=system-shutdown
 Terminal=false
 Categories=System;
 X-Purism-FormFactor=Workstation;Mobile;
-Keywords=power;shutdown;off;determination;
+Keywords=power;shutdown;off;aurora;
 EOF
-cat > /usr/share/applications/determination-reboot.desktop <<EOF
+cat > /usr/share/applications/aurora-reboot.desktop <<EOF
 [Desktop Entry]
 Type=Application
 Name=Restart Phone
 Comment=Reboot the whole phone from desktop mode
-Exec=det-signal reboot
+Exec=aurora-signal reboot
 Icon=system-reboot
 Terminal=false
 Categories=System;
 X-Purism-FormFactor=Workstation;Mobile;
-Keywords=reboot;restart;determination;
+Keywords=reboot;restart;aurora;
 EOF
 update-desktop-database /usr/share/applications 2>/dev/null || true
 
@@ -416,79 +416,79 @@ echo "== systemd shutdown hooks (map phosh's native power menu) =="
 # phosh's top-bar power menu calls logind PowerOff/Reboot -> systemd isolates
 # poweroff.target / reboot.target. Inside a container that only stops the
 # container, NOT the phone. These oneshots run as those targets are reached
-# but ORDERED BEFORE umount.target, so /mnt/det-control is still mounted, and
+# but ORDERED BEFORE umount.target, so /mnt/aurora-control is still mounted, and
 # forward the intent to the host agent (which powers/reboots the real phone).
 install -d /etc/systemd/system
-cat > /etc/systemd/system/det-poweroff-signal.service <<EOF
+cat > /etc/systemd/system/aurora-poweroff-signal.service <<EOF
 [Unit]
-Description=Determination: signal host to power off the phone
+Description=Aurora: signal host to power off the phone
 DefaultDependencies=no
 Before=umount.target shutdown.target poweroff.target
 Conflicts=reboot.target
 
 [Service]
 Type=oneshot
-ExecStart=-/usr/local/sbin/det-signal poweroff
+ExecStart=-/usr/local/sbin/aurora-signal poweroff
 
 [Install]
 WantedBy=poweroff.target
 EOF
-cat > /etc/systemd/system/det-reboot-signal.service <<EOF
+cat > /etc/systemd/system/aurora-reboot-signal.service <<EOF
 [Unit]
-Description=Determination: signal host to reboot the phone
+Description=Aurora: signal host to reboot the phone
 DefaultDependencies=no
 Before=umount.target shutdown.target reboot.target
 Conflicts=poweroff.target
 
 [Service]
 Type=oneshot
-ExecStart=-/usr/local/sbin/det-signal reboot
+ExecStart=-/usr/local/sbin/aurora-signal reboot
 
 [Install]
 WantedBy=reboot.target
 EOF
 systemctl daemon-reload 2>/dev/null || true
-systemctl enable det-poweroff-signal.service det-reboot-signal.service 2>/dev/null || true
+systemctl enable aurora-poweroff-signal.service aurora-reboot-signal.service 2>/dev/null || true
 
 echo "== pin 'Exit to Phone Mode' to phosh favourites =="
 # Prepend our exit launcher if not already present; leave the rest untouched.
 dbus-run-session -- /bin/sh -c '
     cur=$(gsettings get sm.puri.phosh favorites 2>/dev/null || echo "@as []")
     case "$cur" in
-        *determination-exit.desktop*) echo "already pinned" ;;
+        *aurora-exit.desktop*) echo "already pinned" ;;
         "@as []"|"[]"|"")
-            gsettings set sm.puri.phosh favorites "['\''determination-exit.desktop'\'']" &&
+            gsettings set sm.puri.phosh favorites "['\''aurora-exit.desktop'\'']" &&
             echo "pinned (fresh list)" ;;
         *)
-            new=$(printf "%s" "$cur" | sed "s/^\[/['\''determination-exit.desktop'\'', /")
+            new=$(printf "%s" "$cur" | sed "s/^\[/['\''aurora-exit.desktop'\'', /")
             gsettings set sm.puri.phosh favorites "$new" && echo "pinned -> $new" ;;
     esac
 ' || echo "note: could not set phosh favorites (key absent?) --- launcher still in app grid"
 
-echo "== battery translator (det-battery) =="
+echo "== battery translator (aurora-battery) =="
 # The OP7 'battery' power_supply node reports a stuck/garbage capacity on this
 # kernel (frozen charge_counter, bogus 41°C temp) --- that's what UPower/phosh
 # read, so the Linux battery shows ~1%. The REAL gauge is the 'bms' node
 # (type=BMS, which UPower ignores). This daemon shadows battery/capacity with
 # the live bms value via a bind-mount that lives ONLY in the guest mount
 # namespace --- Android's own (correct) reading is never touched.
-cat > /usr/local/sbin/det-battery <<'EOS'
+cat > /usr/local/sbin/aurora-battery <<'EOS'
 #!/bin/sh
 set -u
-DET_BATTERY_GAUGE=
-[ -r /etc/determination-device.conf ] && . /etc/determination-device.conf
-[ -n "$DET_BATTERY_GAUGE" ] && [ "$DET_BATTERY_GAUGE" != battery ] || {
-    echo "det-battery: no separate battery gauge configured --- nothing to do"
+AURORA_BATTERY_GAUGE=
+[ -r /etc/aurora-device.conf ] && . /etc/aurora-device.conf
+[ -n "$AURORA_BATTERY_GAUGE" ] && [ "$AURORA_BATTERY_GAUGE" != battery ] || {
+    echo "aurora-battery: no separate battery gauge configured --- nothing to do"
     exit 0
 }
-BMS="/sys/class/power_supply/$DET_BATTERY_GAUGE/capacity"
-CAP=/run/det-battery-capacity
-[ -r "$BMS" ] || { echo "det-battery: $DET_BATTERY_GAUGE node not present --- nothing to do"; exit 0; }
+BMS="/sys/class/power_supply/$AURORA_BATTERY_GAUGE/capacity"
+CAP=/run/aurora-battery-capacity
+[ -r "$BMS" ] || { echo "aurora-battery: $AURORA_BATTERY_GAUGE node not present --- nothing to do"; exit 0; }
 
 seed=$(cat "$BMS" 2>/dev/null)
 case "$seed" in ''|*[!0-9]*) seed=50 ;; esac
 echo "$seed" > "$CAP"
-echo "det-battery: shadowing battery/capacity <- $DET_BATTERY_GAUGE (seed ${seed})"
+echo "aurora-battery: shadowing battery/capacity <- $AURORA_BATTERY_GAUGE (seed ${seed})"
 
 # Poll the real gauge and KEEP the shadow bind alive. The bind must be
 # re-asserted every pass, not just once: the qpnp-smb5 charger re-enumerates
@@ -507,22 +507,22 @@ while :; do
     sleep 15
 done
 EOS
-chmod 0755 /usr/local/sbin/det-battery
-cat > /etc/systemd/system/det-battery.service <<EOF
+chmod 0755 /usr/local/sbin/aurora-battery
+cat > /etc/systemd/system/aurora-battery.service <<EOF
 [Unit]
-Description=Determination: mirror the configured battery gauge into UPower's node
+Description=Aurora: mirror the configured battery gauge into UPower's node
 After=local-fs.target
 [Service]
 Type=simple
-ExecStart=/usr/local/sbin/det-battery
+ExecStart=/usr/local/sbin/aurora-battery
 Restart=on-failure
 RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload 2>/dev/null || true
-systemctl enable --now det-battery.service 2>/dev/null && echo "det-battery enabled + started" ||
-    echo "note: could not start det-battery.service (will start next boot)"
+systemctl enable --now aurora-battery.service 2>/dev/null && echo "aurora-battery enabled + started" ||
+    echo "note: could not start aurora-battery.service (will start next boot)"
 
 echo "== done =="
 echo "Session manager shim installed: Logout->phone, Shutdown/Reboot->host,"
@@ -530,5 +530,5 @@ echo "wake watcher (blank -> next key/touch unblanks; needs setup-input.sh"
 echo "rerun to un-quirk KEY_POWER)."
 echo "Power menu (Power Off / Restart) + app-grid tiles now drive the host."
 echo "Requires the guest to be running under the lxc config that binds"
-echo "/mnt/det-control (restart the container / reboot after installing the"
-echo "new module if 'det-signal' reports the channel isn't mounted)."
+echo "/mnt/aurora-control (restart the container / reboot after installing the"
+echo "new module if 'aurora-signal' reports the channel isn't mounted)."

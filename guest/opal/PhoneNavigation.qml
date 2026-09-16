@@ -1,15 +1,9 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Io
 
 Item {
     id:nav
     property var output:null
-    Process {
-        id:keyboard
-        command:["/usr/local/bin/det-osk","toggle"]
-        onExited:(code,status)=>{if(code!==0)Hub.toast="Keyboard unavailable; check Squeekboard is running.";}
-    }
     implicitHeight:Hub.prefs.phoneButtons ? 64 : 48
     function go(tab) {if(output)Hub.targetScreen=output;Hub.mobileTab=tab;Hub.page="launcher";}
     function back() {if(Hub.page==="launcher"&&Hub.mobileTab!=="home")go("home");else Hub.close();}
@@ -20,7 +14,7 @@ Item {
         MButton {Layout.fillWidth:true;icon:"back";tooltip:"Back within Opal · does not send app keystrokes";onClicked:nav.back()}
         MButton {Layout.fillWidth:true;icon:"home";tonal:Hub.page==="launcher"&&Hub.mobileTab==="home";tooltip:"Home · hold for apps";onClicked:nav.go("home");menuEntries:[{text:"All apps",icon:"apps",run:()=>nav.go("apps")},{text:"Search",icon:"search",run:()=>{nav.go("apps");}}]}
         MButton {Layout.fillWidth:true;icon:"desktop";tonal:Hub.page==="launcher"&&Hub.mobileTab==="recent";tooltip:"Recent apps";onClicked:nav.go("recent")}
-        MButton {Layout.preferredWidth:48;icon:"keyboard";tooltip:"Show / hide keyboard";onClicked:keyboard.running=true}
+        MButton {Layout.preferredWidth:48;icon:"keyboard";tooltip:"Show / hide system keyboard";filled:Hub.systemOskVisible;onClicked:Hub.systemOsk("toggle")}
     }
     RowLayout {
         visible:!Hub.prefs.phoneButtons;anchors.centerIn:parent;width:Math.min(parent.width-24,480);spacing:12
@@ -38,7 +32,7 @@ Item {
                 onCanceled:held=true
             }
         }
-        MButton {icon:"keyboard";compact:true;implicitWidth:48;implicitHeight:48;tooltip:"Show / hide keyboard";onClicked:keyboard.running=true}
+        MButton {icon:"keyboard";compact:true;implicitWidth:48;implicitHeight:48;tooltip:"Show / hide system keyboard";filled:Hub.systemOskVisible;onClicked:Hub.systemOsk("toggle")}
         MButton {icon:"apps";compact:true;tooltip:"All apps";onClicked:nav.go("apps")}
     }
 }

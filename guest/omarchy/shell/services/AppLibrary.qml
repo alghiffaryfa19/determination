@@ -74,15 +74,30 @@ Item {
     if (!iconIndexScan.running) iconIndexScan.running = true
   }
 
+  function desktopEntry(desktopId) {
+    var id = root.normalizeDesktopId(desktopId)
+    var values = DesktopEntries.applications.values || []
+    for (var i = 0; i < values.length; i++) {
+      var entry = values[i]
+      if (root.normalizeDesktopId(entry && entry.id) === id) return entry
+    }
+    return null
+  }
+
   function launch(desktopId, name) {
-    var id = String(desktopId || "")
-    if (!id) return
+    var entry = root.desktopEntry(desktopId)
+    if (!entry) return
     root.beginLaunchFeedback(name)
-    // Start gtk-launch inside a scope under app-graphical.slice so apps do not
-    // inherit wayland-wm@.service. Keeping gtk-launch as the desktop-entry
-    // resolver supports IDs with spaces and entries that UWSM rejects.
-    // Keep the .desktop suffix or ids like org.telegram.desktop won't resolve.
-    Util.execDetached("uwsm-app -- gtk-launch " + Util.shellQuote(id + ".desktop"))
+    // QuickShell already parsed the desktop entry. Launch it from this process
+    // so clients inherit the live Wayland/libhybris environment; gtk-launch's
+    // GLib activation path loses that environment in the Aurora guest.
+    if (entry.runInTerminal) {
+      var command = ["foot", "--"]
+      for (var i = 0; i < entry.command.length; i++) command.push(entry.command[i])
+      Quickshell.execDetached({ command: command, workingDirectory: entry.workingDirectory })
+    } else {
+      entry.execute()
+    }
   }
 
   function remove(desktopId, name) {

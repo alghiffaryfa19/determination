@@ -1,0 +1,8 @@
+FROM docker.io/library/debian:trixie
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    autoconf automake libtool git curl ca-certificates bison flex gettext libwayland-bin \
+    glslang-tools libglib2.0-bin gobject-introspection python3-mako libwayland-dev hwdata \
+    pacman-package-manager gnupg zstd xz-utils build-essential pkg-config \
+    gcc-aarch64-linux-gnu g++-aarch64-linux-gnu meson ninja-build gperf m4 \
+    python3-jinja2 python3-pyelftools libcap-dev libmount-dev libblkid-dev \
+    && rm -rf /var/lib/apt/lists/*

@@ -71,16 +71,16 @@ class InterviewTests(unittest.TestCase):
     def test_complete_install_interview_passes_validated_values(self):
         self.interview.device = device()
         manifest = DEFAULT_MANIFEST or 'https://example.org/aurora-update.json'
-        answers = [manifest, 'Aurora User', 'workstation', 'yes']
+        answers = ['Aurora User', 'prepare']
         with patch('builtins.input', side_effect=answers), contextlib.redirect_stdout(io.StringIO()), \
              patch.object(self.engine, 'install', return_value={'status': 'prepared'}) as install:
-            self.interview.install()
+            self.interview.install(manifest)
         install.assert_called_once_with(
-            device(), manifest, 'arch', 'workstation', True, True,
+            device(), manifest, 'arch', 'aurora', True, True,
             display_name='Aurora User',
         )
         saved = json.loads(self.interview.settings_path.read_text())
-        self.assertEqual(saved['hostname'], 'workstation')
+        self.assertEqual(saved['hostname'], 'aurora')
         self.assertEqual(saved['display_name'], 'Aurora User')
         self.assertNotIn('experimental', saved)
 

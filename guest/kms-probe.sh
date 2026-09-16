@@ -16,8 +16,8 @@
 #   adb shell "su -c 'sh /data/local/tmp/kms-probe.sh'" \
 #       | tee artifacts/kms-probe-$(date +%Y%m%d).txt
 set -u
-DET=/data/determination
-LXC="$DET/lxc/bin/lxc-attach -P $DET -n guest --"
+AURORA=/data/aurora
+LXC="$AURORA/lxc/bin/lxc-attach -P $AURORA -n guest --"
 
 if [ "${1:-}" = "prep" ]; then
     exec $LXC /bin/sh -c '

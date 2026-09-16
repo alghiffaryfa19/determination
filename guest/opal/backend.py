@@ -5,9 +5,10 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from wallpaper_service import DEFAULTS as WALLPAPER_DEFAULTS, local_image, generate, valid_preference, image_library, browse_images
 HOME = pathlib.Path.home()
-STORE = HOME / '.local/state/det-opal/preferences.json'
+STORE = HOME / '.local/state/aurora-opal/preferences.json'
 lock = threading.Lock()
 prefs_lock = threading.Lock()
+system_osk = None
 def emit(data):
     with lock:
         print(json.dumps(data), flush=True)
@@ -39,6 +40,135 @@ def save():
     temp.write_text(json.dumps(prefs, indent=2))
     temp.replace(STORE)
     emit({'event':'preferences', 'data':prefs.copy()})
+    if system_osk: system_osk.refresh(prefs)
+
+class SystemOsk:
+    def __init__(self):
+        self.process = None
+        self.generation = 0
+        self.signature = ''
+        self.lock = threading.Lock()
+
+    def theme_signature(self, values):
+        subset={key:values.get(key) for key in ('light','palette','dynamicColors','dynamicPalette','colorScheme')}
+        return json.dumps(subset, sort_keys=True, separators=(',',':'))
+
+    def publish(self, available, running, detail='', visible=False):
+        emit({'event':'systemOsk','available':bool(available),'running':bool(running),'visible':bool(visible),'detail':detail})
+
+    def visible(self):
+        commands=[]
+        if command_available('gdbus'):
+            commands.append(['gdbus','call','--session','--dest','sm.puri.OSK0','--object-path','/sm/puri/OSK0','--method','org.freedesktop.DBus.Properties.Get','sm.puri.OSK0','Visible'])
+        if command_available('busctl'):
+            commands.append(['busctl','--user','get-property','sm.puri.OSK0','/sm/puri/OSK0','sm.puri.OSK0','Visible'])
+        for command in commands:
+            try:
+                reply=subprocess.check_output(command,stderr=subprocess.DEVNULL,timeout=.8,text=True).strip().lower()
+            except (OSError,subprocess.SubprocessError):
+                continue
+            if 'true' in reply:return True
+            if 'false' in reply:return False
+        return None
+
+    def wait_ready(self, process, generation):
+        for _ in range(40):
+            with self.lock:
+                if generation!=self.generation or process is not self.process:return
+            if process.poll() is not None:return
+            visible=self.visible()
+            if visible is not None:
+                self.publish(True,True,'Wayland input method',visible)
+                return
+            time.sleep(.1)
+        self.publish(True,False,'Squeekboard did not register its session D-Bus service')
+
+    def set_visible(self, visible):
+        if not self.process or self.process.poll() is not None:
+            self.start()
+        deadline=time.monotonic()+2.5
+        while time.monotonic()<deadline:
+            if self.visible() is not None:break
+            time.sleep(.05)
+        commands=[]
+        value='true' if visible else 'false'
+        if command_available('gdbus'):
+            commands.append(['gdbus','call','--session','--dest','sm.puri.OSK0','--object-path','/sm/puri/OSK0','--method','sm.puri.OSK0.SetVisible',value])
+        if command_available('busctl'):
+            commands.append(['busctl','--user','call','sm.puri.OSK0','/sm/puri/OSK0','sm.puri.OSK0','SetVisible','b',value])
+        for command in commands:
+            try:
+                subprocess.run(command,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=1,check=True)
+                self.publish(True,True,'Wayland input method',visible)
+                return True
+            except (OSError,subprocess.SubprocessError):
+                continue
+        self.publish(bool(shutil.which('squeekboard')),False,'System keyboard control is unavailable')
+        return False
+
+    def toggle(self):
+        visible=self.visible()
+        return self.set_visible(not bool(visible))
+
+    def start(self):
+        if os.environ.get('OPAL_SYSTEM_OSK','1') in ('0','false','no'):
+            self.publish(False,False,'System keyboard disabled by OPAL_SYSTEM_OSK')
+            return
+        executable=shutil.which('squeekboard')
+        if not executable:
+            self.publish(False,False,'Squeekboard is not installed')
+            return
+        launcher=pathlib.Path(__file__).with_name('osk_theme.py')
+        if not launcher.is_file():
+            self.publish(False,False,'Opal keyboard theme launcher is missing')
+            return
+        with self.lock:
+            if self.process and self.process.poll() is None: return
+            self.generation+=1
+            generation=self.generation
+            try:
+                self.process=subprocess.Popen([sys.executable,str(launcher),'--preferences',str(STORE),'--',executable],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+            except OSError as error:
+                self.process=None
+                self.publish(True,False,str(error))
+                return
+            process=self.process
+            self.signature=self.theme_signature(prefs)
+        self.publish(True,False,'Starting Wayland input method')
+        threading.Thread(target=self.wait_ready,args=(process,generation),daemon=True).start()
+        threading.Thread(target=self.watch,args=(process,generation),daemon=True).start()
+
+    def watch(self, process, generation):
+        code=process.wait()
+        with self.lock:
+            if generation!=self.generation or process is not self.process: return
+            self.process=None
+        detail='Squeekboard exited' if code==0 else f'Squeekboard exited with status {code}'
+        self.publish(True,False,detail)
+
+    def stop(self):
+        with self.lock:
+            self.generation+=1
+            process=self.process
+            self.process=None
+        if not process or process.poll() is not None: return
+        process.terminate()
+        try: process.wait(timeout=1.5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            try: process.wait(timeout=.5)
+            except subprocess.TimeoutExpired: pass
+
+    def restart(self):
+        self.stop()
+        self.start()
+
+    def refresh(self, values):
+        signature=self.theme_signature(values)
+        if signature==self.signature: return
+        self.signature=signature
+        with self.lock: running=bool(self.process and self.process.poll() is None)
+        if running: threading.Thread(target=self.restart,daemon=True).start()
 
 def settings(which):
     choices = {
@@ -166,6 +296,11 @@ def commands():
                     emit({'event':'message','text':str(error)})
             elif action=='connectivity': connectivity.request(c)
             elif action=='settings': settings(c.get('which'))
+            elif action=='system-osk' and c.get('verb') in ('show','hide','toggle'):
+                if not system_osk:
+                    emit({'event':'systemOsk','available':False,'running':False,'visible':False,'detail':'System keyboard is not initialized'})
+                elif c.get('verb')=='toggle': system_osk.toggle()
+                else: system_osk.set_visible(c.get('verb')=='show')
             elif action=='volume': run('wpctl','set-volume','-l','1','@DEFAULT_AUDIO_SINK@',str(max(0,min(100,int(c['value']))))+'%')
             elif action=='mute': run('wpctl','set-mute','@DEFAULT_AUDIO_SINK@','toggle')
             elif action=='mic': run('wpctl','set-mute','@DEFAULT_AUDIO_SOURCE@','toggle')
@@ -174,7 +309,7 @@ def commands():
             elif action=='bluetooth': run('bluetoothctl','power','off' if c.get('enabled') else 'on')
             elif action=='media' and c.get('verb') in ('play-pause','next','previous'):
                 if command_available('playerctl'): run('playerctl',c['verb'])
-                else: run('det-media-action',c['verb'])
+                else: run('aurora-media-action',c['verb'])
             elif action=='profile' and c.get('value') in ('power-saver','balanced','performance'): run('powerprofilesctl','set',c['value'])
             elif action=='screenshot':
                 time.sleep(.5)
@@ -188,9 +323,9 @@ def commands():
             elif action=='power' and c.get('verb')=='suspend':
                 emit({'event':'message','text':'Suspend is unavailable while Android owns the power lifecycle'})
             elif action=='power' and c.get('verb') in ('reboot','poweroff'):
-                spawn(['det-signal',c['verb']])
+                spawn(['aurora-signal',c['verb']])
             elif action=='power' and c.get('verb')=='logout':
-                pathlib.Path('/mnt/det-control/exit').touch()
+                pathlib.Path('/mnt/aurora-control/exit').touch()
             elif action=='calculate': emit({'event':'calculation','query':c.get('text',''),'result':calculate(c.get('text',''))})
             elif action=='clipboard':
                 if shutil.which('wl-copy'): subprocess.run(['wl-copy'],input=str(c.get('text','')).encode('utf-8'),timeout=2)
@@ -360,15 +495,20 @@ def controllers():
 
 def main():
     import atexit, signal
+    global system_osk
+    system_osk=SystemOsk()
     atexit.register(clipboard.stop)
+    atexit.register(system_osk.stop)
     atexit.register(status_workers.shutdown, wait=False, cancel_futures=True)
     def shutdown(signum, frame):
         clipboard.stop()
+        system_osk.stop()
         raise SystemExit(0)
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
     threading.Thread(target=clipboard.watch,daemon=True).start()
     emit({'event':'preferences','data':prefs})
+    system_osk.start()
     threading.Thread(target=commands,daemon=True).start()
     threading.Thread(target=controllers,daemon=True).start()
     threading.Thread(target=lambda:emit({'event':'libraryArt','data':library_art()}),daemon=True).start()

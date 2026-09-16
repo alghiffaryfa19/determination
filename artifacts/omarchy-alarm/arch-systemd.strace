@@ -1,4 +1,4 @@
-24230 execve("/system/bin/chroot", ["chroot", "/data/determination/guests/arch/"..., "/usr/lib/systemd/systemd", "--version"], 0x7fe12eb010 /* 26 vars */) = 0
+24230 execve("/system/bin/chroot", ["chroot", "/data/aurora/guests/arch/"..., "/usr/lib/systemd/systemd", "--version"], 0x7fe12eb010 /* 26 vars */) = 0
 24230 getpid()                          = 24230
 24230 mmap(NULL, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7666161000
 24230 set_tid_address(0x766632e090)     = 24230
@@ -1577,7 +1577,7 @@
 24230 mmap(0x749ea13000, 262144, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x749ea13000
 24230 prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, 0x749ea13000, 262144, "scudo:primary") = 0
 24230 fstat(1, {st_mode=S_IFSOCK|0777, st_size=0, ...}) = 0
-24230 chdir("/data/determination/guests/arch/rootfs") = 0
+24230 chdir("/data/aurora/guests/arch/rootfs") = 0
 24230 chroot(".")                       = 0
 24230 execve("/usr/lib/systemd/systemd", ["/usr/lib/systemd/systemd", "--version"], 0x7fdd1d22b0 /* 26 vars */) = 0
 24230 brk(NULL)                         = 0x61eff6d000

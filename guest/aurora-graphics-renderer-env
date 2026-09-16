@@ -1,0 +1,68 @@
+#!/bin/sh
+# Source this file from a Mesa compositor session.
+#
+# auto          system Mesa chooses a native hardware driver
+# mesa-prefix   Mesa from AURORA_MESA_PREFIX chooses a native hardware driver
+# zink          zink over the system-selected Vulkan ICD
+# turnip-zink   guacamoleb's explicitly selected zink/Turnip/KGSL proof
+
+# GLVND otherwise discovers both Mesa and libhybris.  A Mesa compositor must
+# never load the libhybris EGL vendor: Android bionic TLS is not valid in this
+# glibc process.  Keep vendor EGL confined to aurora-gralloc-pool.
+if [ -n "${AURORA_MESA_EGL_VENDOR:-}" ]; then
+    export __EGL_VENDOR_LIBRARY_FILENAMES="$AURORA_MESA_EGL_VENDOR"
+else
+    for aurora_mesa_vendor in \
+        /usr/share/glvnd/egl_vendor.d/*mesa*.json \
+        /usr/local/share/glvnd/egl_vendor.d/*mesa*.json
+    do
+        [ -r "$aurora_mesa_vendor" ] || continue
+        export __EGL_VENDOR_LIBRARY_FILENAMES="$aurora_mesa_vendor"
+        break
+    done
+    unset aurora_mesa_vendor
+fi
+
+aurora_prepend_mesa_prefix() {
+    aurora_mesa_prefix=${AURORA_MESA_PREFIX:-/opt/mesa}
+    aurora_mesa_lib="$aurora_mesa_prefix/lib/aarch64-linux-gnu"
+    [ -d "$aurora_mesa_lib" ] || {
+        echo "FATAL: Mesa prefix library directory missing: $aurora_mesa_lib" >&2
+        return 1
+    }
+    export LD_LIBRARY_PATH="$aurora_mesa_lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export LIBGL_DRIVERS_PATH="$aurora_mesa_lib/dri"
+}
+
+AURORA_EXTERNAL_RENDERER=${AURORA_EXTERNAL_RENDERER:-auto}
+case "$AURORA_EXTERNAL_RENDERER" in
+    auto)
+        unset MESA_LOADER_DRIVER_OVERRIDE ZINK_MATCH_ANY_DEVICE
+        unset VK_DRIVER_FILES VK_ICD_FILENAMES
+        ;;
+    mesa-prefix)
+        aurora_prepend_mesa_prefix
+        unset MESA_LOADER_DRIVER_OVERRIDE ZINK_MATCH_ANY_DEVICE
+        unset VK_DRIVER_FILES VK_ICD_FILENAMES
+        ;;
+    zink)
+        [ -z "${AURORA_MESA_PREFIX:-}" ] || aurora_prepend_mesa_prefix
+        export MESA_LOADER_DRIVER_OVERRIDE=zink
+        unset ZINK_MATCH_ANY_DEVICE
+        [ -z "${AURORA_VK_DRIVER_FILES:-}" ] || \
+            export VK_DRIVER_FILES="$AURORA_VK_DRIVER_FILES"
+        ;;
+    turnip-zink)
+        [ -r /opt/mesa/env.sh ] || {
+            echo "FATAL: Turnip/Zink profile requested but /opt/mesa/env.sh is missing" >&2
+            return 1
+        }
+        . /opt/mesa/env.sh
+        ;;
+    *)
+        echo "FATAL: invalid AURORA_EXTERNAL_RENDERER=$AURORA_EXTERNAL_RENDERER" >&2
+        return 2
+        ;;
+esac
+export AURORA_EXTERNAL_RENDERER
+unset -f aurora_prepend_mesa_prefix 2>/dev/null || true

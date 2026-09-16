@@ -554,6 +554,12 @@ class Engine:
                     raise Failure('The Debian rootfs builder is missing. ' + hint)
                 self.phase('Building the Debian desktop rootfs')
                 self.run([repo / 'guest/build-rootfs.sh'], cwd=repo, timeout=14400)
+        elif distro == 'arch':
+            import arch
+            self.phase('Building the enriched Arch desktop and application rootfs')
+            arch.run(self, repo=repo)
+            _, arch_build, _ = arch.pipeline(self, repo=repo)
+            rootfs = arch_build / 'aurora-rootfs-arch.tar.gz'
         else:
             rootfs = repo / 'guest' / f'aurora-rootfs-{distro}.tar.gz'
             if not valid(rootfs, 'rootfs'):
@@ -727,6 +733,16 @@ class Engine:
         self.log(f'Verified recovery backup: {target}')
         return target
 
+    @staticmethod
+    def preserve_legacy_sar(kernel):
+        data = Path(kernel).read_bytes()
+        # Magisk needs the legacy SAR kernel to load its patched ramdisk.
+        original = b'skip_initramfs\0'
+        patched = b'want_initramfs\0'
+        if original not in data and patched not in data:
+            raise Failure('Cannot preserve Magisk legacy SAR: kernel initramfs marker is missing.')
+        Path(kernel).write_bytes(data.replace(original, patched))
+
     def repack(self, backup, kernel=None, release_boot=None):
         self.phase('Repacking the device boot image on this PC')
         directory = self.workspace / 'build' / uuid.uuid4().hex
@@ -739,6 +755,7 @@ class Engine:
             raise Failure('This boot layout has no ramdisk. Separate init_boot packaging is not implemented.')
         self.run([self.magiskboot, 'cpio', ramdisk, 'test'], acceptable=(1,))
         ramdisk_hash = digest(ramdisk)
+        legacy_sar = b'want_initramfs\0' in (current / 'kernel').read_bytes()
         if release_boot:
             candidate = directory / 'candidate'
             candidate.mkdir()
@@ -768,6 +785,8 @@ class Engine:
                         shutil.copyfileobj(gz_in, out)
                 else:
                     shutil.copyfile(kernel_path, current / 'kernel')
+        if legacy_sar:
+            self.preserve_legacy_sar(current / 'kernel')
         expected_kernel_hash = digest(current / 'kernel')
         expected_kernel_dtb_hash = digest(current / 'kernel_dtb') if (current / 'kernel_dtb').is_file() else None
         output = directory / 'aurora-boot.img'
@@ -959,9 +978,11 @@ fi
         needed = expanded + sum(a['size'] for a in artifacts.values()) + device['boot_size'] * 3 + 512 * 1024**2
         if free < needed:
             raise Failure(f'Insufficient phone storage: require {needed // 1024**2} MiB free.')
-        self.shell('set -e; test ! -f /data/aurora/run/desktop-mode; '
-                   'if [ -x /data/aurora/lxc/bin/lxc-info ]; then '
-                   'state=$(/data/aurora/lxc/bin/lxc-info -P /data/aurora -n guest -sH) || exit 1; [ "$state" = STOPPED ]; fi', root=True)
+        install_script = (REPO / 'installer/install-device.sh').read_text()
+        stopped_check = install_script.split('if [ -x "$AURORA/lxc/bin/lxc-info" ]; then', 1)[1].split(
+            'if [ -d "$AURORA/versions/$version" ]; then', 1)[0]
+        self.shell('set -eu; AURORA=/data/aurora; test ! -f "$AURORA/run/desktop-mode"; '
+                   'if [ -x "$AURORA/lxc/bin/lxc-info" ]; then' + stopped_check, root=True)
         remote = '/data/local/tmp/aurora-install-' + uuid.uuid4().hex
         self.shell('mkdir -m 700 ' + remote)
         completed = False

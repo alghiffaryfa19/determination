@@ -1,0 +1,4 @@
+#!/bin/sh
+# Run the vendor-HWC Hyprland compositor with Opal as its config shell.
+export AURORA_HYPRLAND_CONFIG=/etc/aurora/hyprland-opal.conf
+exec /usr/local/bin/aurora-hyprland "$@"

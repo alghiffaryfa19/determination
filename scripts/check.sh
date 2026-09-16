@@ -16,8 +16,8 @@ command -v shellcheck >/dev/null 2>&1 && have_shellcheck=1
 prune='( -name .git -o -name toolchain -o -name __pycache__ -o -name libs -o -name obj -o -name build -o -name .gradle -o -name .kotlin -o -name dist -o -path ./kernel/src ) -prune'
 
 echo "== shell syntax =="
-# Extensionless executables with a #! shebang count as scripts too (det,
-# toggle/desktop-on, guest/det-platform, ...).
+# Extensionless executables with a #! shebang count as scripts too (aurora,
+# toggle/desktop-on, guest/aurora-platform, ...).
 for f in $(find . $prune -o \( -type f -name '*.sh' \) -print | sort); do
     total=$((total+1))
     if ! sh -n "$f" 2>/tmp/opencode/check.err && ! bash -n "$f" 2>>/tmp/opencode/check.err; then
@@ -66,7 +66,7 @@ echo "checked $js json files"
 if [ "$have_shellcheck" -eq 1 ]; then
     echo "== shellcheck =="
     sc_fail=0
-    for f in $(find . $prune -o \( -type f \( -name '*.sh' -o -name 'det' \) \) -print | sort); do
+    for f in $(find . $prune -o \( -type f \( -name '*.sh' -o -name 'aurora' \) \) -print | sort); do
         if ! shellcheck -S warning "$f" 2>/dev/null; then
             echo "WARN shellcheck: $f"; sc_fail=$((sc_fail+1))
         fi

@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2026 Determination contributors
+ * SPDX-FileCopyrightText: 2026 Aurora contributors
  * SPDX-License-Identifier: Apache-2.0
  *
  * direct_hwc2_fill_test: CPU-fill variant of direct_hwc2_test.
@@ -60,7 +60,8 @@ class HWComposer : public HWComposerNativeWindow
         hwc2_compat_display_t *hwcDisplay;
         HWComposerNativeWindowBuffer *lastBuffer;
     protected:
-        int present(HWComposerNativeWindowBuffer *buffer);
+        void present(HWComposerNativeWindowBuffer *buffer) override;
+        int presentFrame(HWComposerNativeWindowBuffer *buffer);
 
     public:
         HWComposer(unsigned int width, unsigned int height, unsigned int format,
@@ -84,7 +85,14 @@ HWComposer::~HWComposer()
         lastBuffer->common.decRef(&lastBuffer->common);
 }
 
-int HWComposer::present(HWComposerNativeWindowBuffer *buffer)
+void HWComposer::present(HWComposerNativeWindowBuffer *buffer)
+{
+    // This libhybris API cannot propagate submission errors to queueBuffer.
+    if (presentFrame(buffer) != 0)
+        exit(EXIT_FAILURE);
+}
+
+int HWComposer::presentFrame(HWComposerNativeWindowBuffer *buffer)
 {
     uint32_t numTypes = 0;
     uint32_t numRequests = 0;

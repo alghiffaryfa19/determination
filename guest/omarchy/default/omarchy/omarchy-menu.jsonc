@@ -25,7 +25,8 @@
   "terminal": {"icon":"","label":"Terminal","action":"omarchy-launch-terminal"},
   "files": {"icon":"","label":"Files","action":"omarchy-launch-file-manager"},
   "browser": {"icon":"󰖟","label":"Browser","action":"omarchy-launch-browser"},
-  "audio": {"icon":"","label":"Audio","action":"det-omarchy audio"},
+  "audio": {"icon":"","label":"Audio","action":"aurora-omarchy audio"},
+  "keyboard": {"icon":"","label":"Keyboard","action":"aurora-osk toggle"},
   "learn": {"icon":"󰧑","label":"Learn"},
   "trigger": {"icon":"󱓞","label":"Trigger"},
   "style": {"icon":"","label":"Style"},
@@ -37,8 +38,8 @@
   "system": {"icon":"","label":"System","aliases":["power-menu"]},
 
   // System
-  // Determination: suspend, hibernate, reboot and shutdown are Android-owned
-  // and stay out of this menu. Logout returns to Android via det-control.
+  // Aurora: suspend, hibernate, reboot and shutdown are Android-owned
+  // and stay out of this menu. Logout returns to Android via aurora-control.
   "system.screensaver": {"icon":"󱄄","label":"Screensaver","action":"omarchy-launch-screensaver force"},
   "system.lock": {"icon":"","label":"Lock","action":"omarchy-system-lock"},
   "system.logout": {"icon":"󰍃","label":"Return to Android","action":"omarchy-system-logout"},
@@ -366,8 +367,8 @@
   "update.channel.dev": {"icon":"🔴","label":"Dev","checked":"[[ \"$(omarchy-channel-current)\" == \"dev\" ]]","action":"omarchy-launch-floating-terminal-with-presentation 'omarchy-channel-set dev'"},
   "update.process.hyprsunset": {"icon":"","label":"Hyprsunset","action":"omarchy-restart-hyprsunset"},
   "update.process.shell": {"icon":"󰍜","label":"Shell","action":"omarchy-restart-shell"},
-  "update.config.hyprland": {"icon":"","label":"Hyprland","action":"omarchy-launch-floating-terminal-with-presentation omarchy-refresh-hyprland"},
-  "update.config.hyprsunset": {"icon":"","label":"Hyprsunset","action":"omarchy-launch-floating-terminal-with-presentation omarchy-refresh-hyprsunset"},
+  "update.config.hyprland": {"icon":"","label":"Hyprland","when":"[[ -f ~/.config/hypr/hyprland.lua ]]","action":"omarchy-launch-floating-terminal-with-presentation omarchy-refresh-hyprland"},
+  "update.config.hyprsunset": {"icon":"","label":"Hyprsunset","when":"[[ -f ~/.config/hypr/hyprsunset.conf ]]","action":"omarchy-launch-floating-terminal-with-presentation omarchy-refresh-hyprsunset"},
   "update.config.plymouth": {"icon":"󱣴","label":"Plymouth","action":"omarchy-launch-floating-terminal-with-presentation omarchy-refresh-plymouth"},
   "update.config.tmux": {"icon":"","label":"Tmux","action":"omarchy-launch-floating-terminal-with-presentation omarchy-refresh-tmux"},
   "update.config.shell": {"icon":"󰍜","label":"Shell","action":"omarchy-launch-floating-terminal-with-presentation omarchy-refresh-shell"},

@@ -1,9 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=Connectivity
-Comment=Manage Android-owned Wi-Fi and Bluetooth
-Icon=network-wireless
-Exec=foot --title=Connectivity /usr/local/bin/det-connectivity-menu
-Terminal=false
-Categories=Settings;System;
-Keywords=WiFi;Wireless;Bluetooth;Network;

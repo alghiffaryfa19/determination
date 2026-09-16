@@ -10,6 +10,7 @@ import shlex
 import shutil
 import sys
 import time
+import automation
 
 from core import DEFAULT_MANIFEST, Engine, Failure, display_name_value, https_url, save_json
 
@@ -177,8 +178,7 @@ class Interview:
         for number, value in enumerate(values, 1):
             detail = descriptions.get(value)
             suffix = f' — {detail}' if detail else ''
-            marker = ' (recommended)' if value == default else ''
-            print(f'    {number}. {value}{marker}{suffix}', flush=True)
+            print(f'    {number}. {value}{suffix}', flush=True)
 
         def valid(text):
             text = clean_answer(text).lower().lstrip(':').strip()
@@ -186,8 +186,7 @@ class Interview:
                 return values[int(text) - 1]
             return choice(text, values)
 
-        default_number = values.index(default) + 1
-        return self.ask(f'Choose 1-{len(values)} or type a name', default_number, valid)
+        return self.ask(f'Choose 1-{len(values)} or type a name', default, valid)
 
     def path(self, label, default=None, directory=False, must_exist=False):
         def valid(text):
@@ -398,21 +397,31 @@ class Interview:
 
     def install(self, manifest_default=None, distro_default=None):
         self.common()
-        manifest = self.manifest(manifest_default)
+        suggested = manifest_default or DEFAULT_MANIFEST or self.local_manifest()
+        if suggested:
+            manifest = self.manifest(suggested)
+        else:
+            print('  Preparing Aurora for this phone automatically.', flush=True)
+            manifest, distro_default = self.port(build_only=True)
         distro = self.automatic_distro(manifest, distro_default)
         display_name = self.ask(
             'Your name in Linux',
             self.settings.get('display_name', 'Aurora User'),
             display_name_value,
         )
-        hostname = self.ask('Guest hostname', self.settings.get('hostname', 'aurora'), hostname_value)
+        hostname = hostname_value(os.environ.get('AURORA_HOSTNAME', self.settings.get('hostname', 'aurora')))
         self.remember(manifest=manifest, distro=distro, display_name=display_name, hostname=hostname)
         experimental = True
-        prepare_only = self.yes_no('Prepare and verify only; do not install or flash', False)
-        if not prepare_only:
-            if not self.yes_no('Continue with installation', False):
-                print('  Installation cancelled.', flush=True)
-                return
+        print(f'\n  Ready: {distro.title()} on {self.device["device"]}, user {display_name}, hostname {hostname}.', flush=True)
+        print('  Installation saves a verified boot backup, installs Aurora, then updates boot.', flush=True)
+        action = self.one_of('Continue', ('install', 'prepare', 'cancel'), 'cancel', {
+            'install': 'back up and install on this phone',
+            'prepare': 'verify and save the build without installing',
+            'cancel': 'keep the build and exit',
+        })
+        if action == 'cancel':
+            return
+        prepare_only = action == 'prepare'
         plan = self.engine.install(
             self.device,
             manifest,
@@ -428,7 +437,7 @@ class Interview:
         if not prepare_only and self.yes_no('Reboot the phone now', False):
             self.engine.run(self.engine.adb_args('reboot'))
 
-    def port(self):
+    def port(self, build_only=False):
         self.common()
         profile = self.port_profile()
         if not self.device.get('config'):
@@ -475,6 +484,8 @@ class Interview:
         result = self.engine.port(self.device, source, target, jobs, manifest, distro, overrides)
         print(f'\n{self.palette.good("Port built")}: {result}', flush=True)
         self.remember(manifest=result, distro=distro)
+        if build_only:
+            return result, distro
         if self.yes_no('Continue with this bundle in the installation interview', True):
             self.install(result, distro)
 
@@ -534,16 +545,30 @@ class Interview:
 
 def main():
     parser = argparse.ArgumentParser(prog='aurora-installer', description='Aurora PC porting and installation interview')
-    parser.add_argument('command', nargs='?', choices=('init', 'install', 'port', 'recovery'), default='init')
+    parser.add_argument('command', nargs='?', choices=('init', 'install', 'port', 'recovery', *automation.COMMANDS), default='init')
     parser.add_argument('--workspace', default=str(Path.home() / '.local/share/aurora'))
     parser.add_argument('--adb', default='adb')
     parser.add_argument('--magiskboot', default='magiskboot')
+    parser.add_argument('--json', action='store_true', help='machine-readable results and progress for non-interactive commands')
+    parser.add_argument('--serial', help='explicit device for non-interactive device operations')
+    parser.add_argument('--backup', help='PC-held boot backup for restore')
+    parser.add_argument('--jobs', type=jobs_value, default=6, help='parallel guest-build jobs (1–256)')
     args = parser.parse_args()
     try:
         engine = Engine(args.workspace, adb=args.adb, magiskboot=args.magiskboot)
+        if args.command in automation.COMMANDS:
+            engine.emit = lambda event: automation.emit(event, args.json)
+            with engine.transaction():
+                code = automation.run(args, engine)
+            raise SystemExit(code)
+        if args.json:
+            raise Failure('--json requires a non-interactive command; run capabilities --json for the list.')
         with engine.transaction():
             Interview(engine).run(args.command)
     except (Failure, OSError, ValueError, KeyboardInterrupt) as error:
+        if args.json:
+            print(json.dumps({'schema': 1, 'ok': False, 'error': str(error) or 'Interrupted'}))
+            raise SystemExit(1)
         print(f'\n{Palette().bad("Stopped: " + str(error))}', file=sys.stderr)
         raise SystemExit(1)
 

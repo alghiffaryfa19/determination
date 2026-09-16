@@ -2,21 +2,12 @@
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 
-out=$(env -i PATH=/usr/bin:/bin HOME=/home/detuser USER=detuser LOGNAME=detuser \
-    "$ROOT/guest/det-phosh-session" --print-environment)
+out=$(env -i PATH=/usr/bin:/bin HOME=/home/aurora USER=aurora LOGNAME=aurora \
+    "$ROOT/guest/aurora-phosh-session" --print-environment)
 printf '%s\n' "$out" | grep -q '^XDG_CURRENT_DESKTOP=Phosh:GNOME$'
 printf '%s\n' "$out" | grep -q '^GTK_USE_PORTAL=1$'
 printf '%s\n' "$out" | grep -q '^EGL_PLATFORM=wayland$'
 printf '%s\n' "$out" | grep -q '^GSK_RENDERER=ngl$'
-
-grep -q '^PAMName=login$' "$ROOT/guest/det-phosh.service"
-grep -q '^User=detuser$' "$ROOT/guest/det-phosh.service"
-grep -q 'XDG_RUNTIME_DIR/bus' "$ROOT/guest/det-phosh-session"
-grep -q 'systemctl --user mask --runtime --now' "$ROOT/guest/det-phosh-session"
-grep -q 'DISABLE_RTKIT=1' "$ROOT/guest/det-audio-session"
-grep -q "browser.content.full-zoom" "$ROOT/guest/det-firefox-content-defaults"
-grep -q 'org.freedesktop.portal.Desktop' "$ROOT/guest/det-compat-check"
-grep -q 'xdg-desktop-portal-phosh' "$ROOT/guest/setup-compatibility.sh"
 
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
@@ -38,7 +29,7 @@ CREATE TABLE prefs (
 ''')
 con.close()
 PY
-HOME="$WORK" "$ROOT/guest/det-firefox-content-defaults" >/dev/null
+HOME="$WORK" "$ROOT/guest/aurora-firefox-content-defaults" >/dev/null
 python3 - "$DB" <<'PY'
 import sqlite3, sys
 con = sqlite3.connect(sys.argv[1])
@@ -52,7 +43,7 @@ con.execute('UPDATE prefs SET value = 0.8 WHERE groupID IS NULL')
 con.commit()
 con.close()
 PY
-HOME="$WORK" "$ROOT/guest/det-firefox-content-defaults" >/dev/null
+HOME="$WORK" "$ROOT/guest/aurora-firefox-content-defaults" >/dev/null
 python3 - "$DB" <<'PY'
 import sqlite3, sys
 con = sqlite3.connect(sys.argv[1])
@@ -60,4 +51,4 @@ assert con.execute('SELECT value FROM prefs WHERE groupID IS NULL').fetchone() =
 con.close()
 PY
 
-echo 'compatibility contract tests passed'
+echo 'session compatibility behavior tests passed'

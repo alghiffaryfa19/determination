@@ -44,6 +44,7 @@ spacing:4
                     ShadeTile {Layout.fillWidth:true;icon:"bluetooth";title:"Bluetooth";subtitle:q.bluetoothDevice ? q.bluetoothDevice.name : Hub.status.bluetooth ? "On" : "Off";active:Hub.status.bluetooth;settings:true;onClicked:Hub.settings("bluetooth");onOpenSettings:Hub.settings("bluetooth")}
                     ShadeTile {Layout.fillWidth:true;icon:Hub.dnd ? "quiet" : "bell";title:"Do not disturb";subtitle:Hub.gameSession ? "Play session active" : Hub.dnd ? "Popups silenced" : "Notifications allowed";active:Hub.dnd;onClicked:{if(Hub.gameSession)Hub.toggleGameSession();else Hub.set("dnd",!Hub.dnd);}}
                     ShadeTile {Layout.fillWidth:true;icon:"coffee";title:"Keep awake";subtitle:Hub.gameSession ? "Play session active" : Hub.keepAwake ? "Idle inhibited" : "Rest when you do";active:Hub.keepAwake||Hub.gameSession;onClicked:{if(Hub.gameSession)Hub.toggleGameSession();else Hub.keepAwake=!Hub.keepAwake;}}
+                    ShadeTile {visible:Hub.systemOskAvailable;Layout.fillWidth:true;icon:"keyboard";title:"Keyboard";subtitle:Hub.systemOskRunning ? (Hub.systemOskVisible ? "Showing" : "Ready for apps") : Hub.systemOskDetail;active:Hub.systemOskVisible;onClicked:Hub.systemOsk("toggle")}
                 }
                 RowLayout {Layout.fillWidth:true;spacing:6
                     MButton {Layout.fillWidth:true;icon:Theme.light ? "sun" : "moon";text:Theme.light ? "Light" : "Dark";morph:true;checked:Theme.light;filled:checked;tonal:!checked;compact:true;onClicked:Hub.set("light",!Theme.light)}
@@ -54,7 +55,7 @@ spacing:4
                 FocusCard {Layout.fillWidth:true}
                 ClipboardCard {Layout.fillWidth:true}
                 RowLayout {Layout.fillWidth:true;visible:Hub.status.profile!=="";spacing:4
-                    Repeater {model:[{id:"power-saver",text:"Saver",icon:"battery"},{id:"balanced",text:"Balanced",icon:"heart"},{id:"performance",text:"Boost",icon:"cpu"}]
+                    Repeater {model:[{id:"power-saver",text:"Saver",icon:"battery"},{id:"balanced",text:"Balanced",icon:"balanced"},{id:"performance",text:"Boost",icon:"cpu"}]
                         MButton {required property var modelData;Layout.fillWidth:true;text:modelData.text;icon:modelData.icon;compact:true;morph:true;checked:Hub.status.profile===modelData.id;filled:checked;tonal:!checked;onClicked:Hub.command({action:"profile",value:modelData.id})}
                     }
                 }

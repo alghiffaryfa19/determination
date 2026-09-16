@@ -50,7 +50,7 @@ all disappeared after `desktop-off` restored `system_server`.
 | Capability | Cooperative internal mode | Boundary |
 |---|---|---|
 | PackageManager, intents, ContentProviders | Yes | Keep calls bounded; do not make guest apps depend on arbitrary Android APIs. |
-| Magisk superuser policy/logging | Yes | Use the Determination fixed-command bridge or `detd`, not an unbounded root shell. |
+| Magisk superuser policy/logging | Yes | Use the Aurora fixed-command bridge or `aurorad`, not an unbounded root shell. |
 | NotificationManager, media sessions, battery/connectivity state | Yes | Bridge state and named actions to Opal; the guest renders it. |
 | Telephony, alarms, Bluetooth, Wi-Fi and framework jobs | Yes | Give each a documented ownership/alert policy; they remain Android-owned. |
 | Framework diagnostics | Yes | `dumpsys` and package inspection work during desktop mode. |
@@ -70,7 +70,7 @@ all disappeared after `desktop-off` restored `system_server`.
    process on exit. The old PLT kill-hook experiment registered but did not
    intercept the real kill path.
 4. Do not issue arbitrary Magisk `su` jobs after display handoff. The root
-   request path touches Android framework services. Use a named `detd`/Zygisk
+   request path touches Android framework services. Use a named `aurorad`/Zygisk
    companion action or a pre-armed root-side operation instead.
 5. Keep `desktop-off --emergency` independent of the new backend. A failed
    cooperative attempt must restore phone mode through the proven freezer/kill
@@ -89,7 +89,7 @@ Implement a versioned Java-level hook capability, loaded only in
 `system_server`, with this contract:
 
 1. Read an authenticated, generation-scoped handoff record from
-   `/data/determination/run/`.
+   `/data/aurora/run/`.
 2. Before SurfaceFlinger stops, put the default display into an explicit
    `internal-handoff` state.
 3. At the exact SF-death/reconnect path identified by traces, return an
@@ -140,7 +140,7 @@ continues to grow.
    Magisk provider-client count. Explicitly quiesce any SystemUI/display task
    that spins or queues while SF is absent.
 4. **Bridge proof.** Demonstrate a bounded notification/media/connectivity
-   snapshot and named action through the Determination companion/Opal bridge.
+   snapshot and named action through the Aurora companion/Opal bridge.
    No arbitrary command channel is permitted.
 5. **Round trips.** Pass ten phone → guest → phone cycles, then a 30-minute
    internal session and an overnight idle session. Each must restore a visible
@@ -173,7 +173,7 @@ While the guest owns the panel:
 - `zygisk/README.md`: injection boundary and intended companion bridge.
 - `docs/troubleshooting.md`: proven watchdog and exit-wedge evidence.
 - `docs/design-spec.md`: internal handoff invariants.
-- `control/`: bounded `detd`/`detctl` protocol; do not invent a second arbitrary
+- `control/`: bounded `aurorad`/`auroractl` protocol; do not invent a second arbitrary
   root command transport.
 
 ## Explicit non-result

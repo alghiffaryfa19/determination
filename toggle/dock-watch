@@ -3,9 +3,9 @@
 # appears, optionally return to phone when it goes away. Off by default.
 
 set -u
-DET=${DET:-/data/determination}
-LOG=$DET/log/dock-watch.log
-CONF=$DET/etc/dock.conf
+AURORA=${AURORA:-/data/aurora}
+LOG=$AURORA/log/dock-watch.log
+CONF=$AURORA/etc/dock.conf
 
 [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 131072 ] &&
     tail -c 65536 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
@@ -43,7 +43,7 @@ signal() {
 }
 
 busy_transition() {
-    sed -n 's/^state=//p' "$DET/run/transition.state" 2>/dev/null |
+    sed -n 's/^state=//p' "$AURORA/run/transition.state" 2>/dev/null |
         grep -qE 'ENTERING|EXITING'
 }
 
@@ -56,26 +56,26 @@ while :; do
         need=$((grace / poll + 1))
         if [ "$fired" = 0 ] && [ "$attaches" -ge "$need" ]; then
             attaches=0
-            [ -f "$DET/run/desktop-mode" ] && continue
+            [ -f "$AURORA/run/desktop-mode" ] && continue
             busy_transition && { echo "skip: transition in flight"; continue; }
             batt=$(cat /sys/class/power_supply/battery/capacity 2>/dev/null || echo 100)
             [ "$batt" -lt "$minbatt" ] && { echo "skip: battery ${batt}% < ${minbatt}%"; continue; }
             echo "dock trigger '${trigger}' stable ${grace}s; entering desktop $(date)"
-            : > "$DET/run/dock-watch.fired"
-            setsid sh -c "nohup $DET/bin/desktop-on >/dev/null 2>&1 &" >/dev/null 2>&1
+            : > "$AURORA/run/dock-watch.fired"
+            setsid sh -c "nohup $AURORA/bin/desktop-on >/dev/null 2>&1 &" >/dev/null 2>&1
             fired=1
         fi
     else
         attaches=0
-        if [ "$fired" = 1 ] || [ -f "$DET/run/dock-watch.fired" ]; then
+        if [ "$fired" = 1 ] || [ -f "$AURORA/run/dock-watch.fired" ]; then
             detaches=$((detaches + 1))
             need=$((exit_grace / poll + 1))
             if [ "$detaches" -ge "$need" ]; then
-                rm -f "$DET/run/dock-watch.fired"
+                rm -f "$AURORA/run/dock-watch.fired"
                 fired=0
-                if [ "${auto_exit:-0}" = "1" ] && [ -f "$DET/run/desktop-mode" ]; then
+                if [ "${auto_exit:-0}" = "1" ] && [ -f "$AURORA/run/desktop-mode" ]; then
                     echo "dock gone ${exit_grace}s; returning to phone $(date)"
-                    setsid sh -c "nohup $DET/bin/desktop-off >/dev/null 2>&1 &" \
+                    setsid sh -c "nohup $AURORA/bin/desktop-off >/dev/null 2>&1 &" \
                         >/dev/null 2>&1
                 fi
             fi

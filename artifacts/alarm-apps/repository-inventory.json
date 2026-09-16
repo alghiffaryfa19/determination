@@ -1,0 +1,169 @@
+{
+  "source": "https://de3.mirror.archlinuxarm.org/aarch64/extra/extra.files",
+  "sha256": "24d6c08e830ef776f04bfd553cb66be7bc2b2e75399a2740db02d58d2bffbe7b",
+  "note": "HTTPS repository metadata only; installation must verify package signatures. Device disconnected; graphical compatibility untested.",
+  "packages": [
+    {
+      "NAME": "adwaita-icon-theme",
+      "VERSION": "50.0-1",
+      "ARCH": "any",
+      "desktop": [],
+      "binaries": []
+    },
+    {
+      "NAME": "desktop-file-utils",
+      "VERSION": "0.28-1",
+      "ARCH": "aarch64",
+      "desktop": [],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/desktop-file-edit",
+        "usr/bin/desktop-file-install",
+        "usr/bin/desktop-file-validate",
+        "usr/bin/update-desktop-database"
+      ]
+    },
+    {
+      "NAME": "file-roller",
+      "VERSION": "44.7-1",
+      "ARCH": "aarch64",
+      "desktop": [
+        "usr/share/applications/org.gnome.FileRoller.desktop"
+      ],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/file-roller"
+      ]
+    },
+    {
+      "NAME": "firefox",
+      "VERSION": "155.0.1-1",
+      "ARCH": "aarch64",
+      "desktop": [
+        "usr/share/applications/firefox.desktop"
+      ],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/firefox"
+      ]
+    },
+    {
+      "NAME": "foot",
+      "VERSION": "1.28.0-2",
+      "ARCH": "aarch64",
+      "desktop": [
+        "usr/share/applications/foot-server.desktop",
+        "usr/share/applications/foot.desktop",
+        "usr/share/applications/footclient.desktop"
+      ],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/foot",
+        "usr/bin/footclient"
+      ]
+    },
+    {
+      "NAME": "galculator",
+      "VERSION": "2.1.4-12",
+      "ARCH": "aarch64",
+      "desktop": [
+        "usr/share/applications/galculator.desktop"
+      ],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/galculator"
+      ]
+    },
+    {
+      "NAME": "loupe",
+      "VERSION": "50.0-1",
+      "ARCH": "aarch64",
+      "desktop": [
+        "usr/share/applications/org.gnome.Loupe.desktop"
+      ],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/loupe"
+      ]
+    },
+    {
+      "NAME": "mousepad",
+      "VERSION": "0.7.0-1",
+      "ARCH": "aarch64",
+      "desktop": [
+        "usr/share/applications/org.xfce.mousepad-settings.desktop",
+        "usr/share/applications/org.xfce.mousepad.desktop"
+      ],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/mousepad"
+      ]
+    },
+    {
+      "NAME": "papers",
+      "VERSION": "50.3-1",
+      "ARCH": "aarch64",
+      "desktop": [
+        "usr/share/applications/org.gnome.Papers-previewer.desktop",
+        "usr/share/applications/org.gnome.Papers.desktop"
+      ],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/papers",
+        "usr/bin/papers-previewer",
+        "usr/bin/papers-thumbnailer"
+      ]
+    },
+    {
+      "NAME": "thunar",
+      "VERSION": "4.20.10-1",
+      "ARCH": "aarch64",
+      "desktop": [
+        "usr/share/applications/thunar-bulk-rename.desktop",
+        "usr/share/applications/thunar-settings.desktop",
+        "usr/share/applications/thunar.desktop"
+      ],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/Thunar",
+        "usr/bin/thunar",
+        "usr/bin/thunar-settings"
+      ]
+    },
+    {
+      "NAME": "ttf-dejavu",
+      "VERSION": "2.37+18+g9b5d1b2f-8",
+      "ARCH": "any",
+      "desktop": [],
+      "binaries": []
+    },
+    {
+      "NAME": "xdg-user-dirs",
+      "VERSION": "0.20-1",
+      "ARCH": "aarch64",
+      "desktop": [],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/xdg-user-dir",
+        "usr/bin/xdg-user-dirs-update"
+      ]
+    },
+    {
+      "NAME": "xdg-utils",
+      "VERSION": "1.2.1-2",
+      "ARCH": "any",
+      "desktop": [],
+      "binaries": [
+        "usr/bin/",
+        "usr/bin/xdg-desktop-icon",
+        "usr/bin/xdg-desktop-menu",
+        "usr/bin/xdg-email",
+        "usr/bin/xdg-icon-resource",
+        "usr/bin/xdg-mime",
+        "usr/bin/xdg-open",
+        "usr/bin/xdg-screensaver",
+        "usr/bin/xdg-settings"
+      ]
+    }
+  ]
+}

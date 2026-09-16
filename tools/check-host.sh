@@ -1,5 +1,8 @@
 #!/bin/sh
-# Run every host-safe Determination validation from one entrypoint.
+# Exercise host-runnable Aurora behavior. This is deliberately not a
+# repository-hygiene check and it does not qualify a physical phone. Use
+# tools/check-repo.sh for metadata/docs/static validation and tools/check-device.sh
+# for a read-only acceptance pass against a live desktop session.
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
@@ -7,34 +10,25 @@ cd "$ROOT"
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
-git ls-files -co --exclude-standard | while IFS= read -r file; do
-    [ -f "$file" ] || continue
-    magic=$(dd if="$file" bs=2 count=1 2>/dev/null || true)
-    [ "$magic" = '#!' ] || continue
-    shebang=$(sed -n '1p' "$file" 2>/dev/null || true)
-    case "$shebang" in
-        '#!'*'/bash'*) bash -n "$file" ;;
-        '#!'*'/sh'*) sh -n "$file" ;;
-    esac
-done
-
-python3 -m py_compile \
-    recon/classify.py docs/check-links.py artifacts/build-index.py \
-    website/check-site.py website/optimize-images.py
 python3 -m unittest discover -s installer/tests
 sh recon/tests/test-classify.sh
 sh toggle/tests/lifecycle-test.sh
 sh toggle/tests/guest-distro-test.sh
 sh toggle/tests/session-set-test.sh
 sh toggle/tests/session-select-test.sh
+sh toggle/tests/desktop-memory-test.sh
+sh toggle/tests/guest-input-config-test.sh
 sh guest/tests/audio-session-test.sh
 sh guest/tests/compatibility-contract-test.sh
 sh guest/tests/omarchy-commands-test.sh
+sh guest/tests/osk-test.sh
 sh guest/tests/portable-rootfs-test.sh
-python3 docs/check-links.py
-python3 artifacts/build-index.py --check
-python3 website/check-site.py
-release/check.sh check
+sh guest/tests/platform-runtime-test.sh
+python3 companion/branding/generate.py --check
+sh guest/tests/hyprland-launch-test.sh
+sh guest/tests/opal-runtime-test.sh
+python3 guest/tests/hyprland-naming-test.py
+python3 guest/tests/session-launch-test.py
 sh graphics/test.sh
 
 if command -v cmake >/dev/null 2>&1 && command -v ninja >/dev/null 2>&1; then
@@ -51,17 +45,19 @@ else
     "$WORK/control-tests"
 
     "$CXX" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
-        -ffunction-sections -fdata-sections audio/src/det_audio_probe.cpp \
-        -Wl,--gc-sections -o "$WORK/det-audio-probe"
+        -ffunction-sections -fdata-sections audio/src/aurora_audio_probe.cpp \
+        -Wl,--gc-sections -o "$WORK/aurora-audio-probe"
     "$CXX" -std=c++20 -O2 -Wall -Wextra -Wpedantic -Werror \
-        -ffunction-sections -fdata-sections audio/src/det_audio_owner.cpp \
-        -Wl,--gc-sections -o "$WORK/det-audio-owner"
-    sh audio/tests/fixture-test.sh "$WORK/det-audio-probe"
+        -ffunction-sections -fdata-sections audio/src/aurora_audio_owner.cpp \
+        -Wl,--gc-sections -o "$WORK/aurora-audio-owner"
+    sh audio/tests/fixture-test.sh "$WORK/aurora-audio-probe"
     sh audio/tests/owner-fixture-test.sh \
-        "$WORK/det-audio-owner" "$WORK/det-audio-probe"
+        "$WORK/aurora-audio-owner" "$WORK/aurora-audio-probe"
 fi
 
 ${CC:-cc} -D_GNU_SOURCE -std=c11 -O2 -Wall -Wextra -Wpedantic -Werror \
     tools/evgrab/evgrab.c -o "$WORK/evgrab-host"
+sh tools/evgrab/test.sh "$WORK/evgrab-host" "$WORK"
 
-echo "all host-safe checks passed"
+echo "host behavioral checks passed"
+echo "NOTE: this does not qualify a phone; run tools/check-device.sh for live acceptance"

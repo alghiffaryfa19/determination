@@ -93,7 +93,7 @@ against the actual `guacamoleb` vendor image, not assumptions.
 | Backend integration | Unlocks |
 |---|---|
 | Droidian wlroots ↔ hwcomposer | Phoc/Phosh; other wlroots consumers require explicit ABI compatibility work |
-| Aquamarine ↔ hwcomposer + Hyprland vendor-EGL renderer | Dethyprland; separate native-handle/fence integration, not a wlroots port |
+| Aquamarine ↔ hwcomposer + Hyprland vendor-EGL renderer | Hyprland; separate native-handle/fence integration, not a wlroots port |
 | KWin ↔ Android-backed GBM/EGL winsys | KDE Plasma / Plasma Mobile : in development; libhybris vendor rendering plus minigbm API |
 
 wlroots first (best compositor-per-effort ratio). KWin is a distinct second

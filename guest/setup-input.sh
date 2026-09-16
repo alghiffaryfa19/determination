@@ -1,5 +1,5 @@
 #!/bin/sh
-# Determination §4 guest-side input handoff + mobile shell --- one script, all
+# Aurora §4 guest-side input handoff + mobile shell --- one script, all
 # gotchas encoded. Run INSIDE the container as root. Idempotent.
 #
 # WHAT THIS SETS UP (2026-07-06):
@@ -10,14 +10,14 @@
 #    requires a wlr_session via libseat; seatd is the no-logind-session
 #    backend. Debian's libseat tries seatd first when the socket exists,
 #    but desktop-on still exports LIBSEAT_BACKEND=seatd to be explicit.
-#  - det-input-udevdb: hand-written /run/udev/data entries. systemd-udevd
+#  - aurora-input-udevdb: hand-written /run/udev/data entries. systemd-udevd
 #    NEVER runs in this container (ConditionPathIsReadWrite=/sys fails ---
 #    the container's /sys is read-only), so libinput's udev backend sees no
 #    ID_INPUT_* properties and silently ignores every device. The hardware
 #    is static, so generating the db once per boot from udevadm's input_id
 #    builtin (which works daemon-less) is sufficient. Verified mapping on
 #    guacamoleb: event1 = "touchpanel" -> ID_INPUT_TOUCHSCREEN=1.
-#  - det-pidfd-shim.so: THE glib child-watch fix. This 4.14 kernel
+#  - aurora-pidfd-shim.so: THE glib child-watch fix. This 4.14 kernel
 #    BACKPORTS pidfd_open (syscall 434 returns a real fd --- probed
 #    2026-07-06) but NOT waitid(P_PIDFD), which returns EINVAL. glib sees
 #    pidfd_open succeed, commits to the pidfd path, then child-watch
@@ -33,8 +33,8 @@ export TMPDIR=/tmp
 echo "== phosh + keyboard + input tools =="
 # Self-repair: adb/USB drops mid-run kill apt via SIGHUP and can leave dpkg
 # interrupted (happened 2026-07-06 when the phone's battery died mid-install).
-if [ -x /usr/local/bin/det-platform ]; then
-    det-platform package-refresh
+if [ -x /usr/local/bin/aurora-platform ]; then
+    aurora-platform package-refresh
 else
     export DEBIAN_FRONTEND=noninteractive
     dpkg --configure -a 2>/dev/null || true
@@ -46,8 +46,8 @@ fi
 # the org.gnome.settings-daemon.* schemas --- it's only in Recommends
 # (found 2026-07-06: the "blinking compositor" crash loop on first light).
 # adwaita-icon-theme: squeekboard renders without its key icons otherwise.
-if [ -x /usr/local/bin/det-platform ]; then
-    det-platform deps phosh
+if [ -x /usr/local/bin/aurora-platform ]; then
+    aurora-platform deps phosh
 else
     apt-get install -y -qq --no-install-recommends \
         phosh squeekboard libinput-tools xkb-data fonts-cantarell \
@@ -55,19 +55,19 @@ else
 fi
 
 echo "== seatd =="
-if [ -x /usr/local/bin/det-platform ]; then
-    det-platform service-enable seatd
-    det-platform service-start seatd
-    det-platform service-active seatd || { echo "FATAL: seatd not active"; exit 1; }
+if [ -x /usr/local/bin/aurora-platform ]; then
+    aurora-platform service-enable seatd
+    aurora-platform service-start seatd
+    aurora-platform service-active seatd || { echo "FATAL: seatd not active"; exit 1; }
 else
     systemctl enable --now seatd
     systemctl --no-pager --quiet is-active seatd || { echo "FATAL: seatd not active"; exit 1; }
 fi
 
-echo "== det-input-udevdb =="
-cat > /usr/local/sbin/det-input-udevdb <<'EOF'
+echo "== aurora-input-udevdb =="
+cat > /usr/local/sbin/aurora-input-udevdb <<'EOF'
 #!/bin/sh
-# Determination: hand-write /run/udev/data entries for input event nodes so
+# Aurora: hand-write /run/udev/data entries for input event nodes so
 # libinput's udev backend accepts devices WITHOUT a running udevd (udevd is
 # condition-blocked in this container: /sys is read-only). /run is tmpfs ---
 # desktop-on re-runs this before each phoc launch. Only devices input_id
@@ -79,7 +79,7 @@ cat > /usr/local/sbin/det-input-udevdb <<'EOF'
 # ("Q:seat"), or session_device_verify then manager_process_seat_device skips it
 # and TakeDevice returns ENODEV. Verified against systemd v257 source.
 set -e
-# systemd v257 may create these 0700 root:root. libinput runs as detuser and
+# systemd v257 may create these 0700 root:root. libinput runs as aurora and
 # treats every event node as unconfigured if it cannot traverse the database.
 install -d -m 0755 /run/udev /run/udev/data
 for ev in /sys/class/input/event*; do
@@ -104,8 +104,8 @@ for ev in /sys/class/input/event*; do
     esac
 done
 EOF
-chmod 755 /usr/local/sbin/det-input-udevdb
-/usr/local/sbin/det-input-udevdb
+chmod 755 /usr/local/sbin/aurora-input-udevdb
+/usr/local/sbin/aurora-input-udevdb
 echo "udev db entries:"; grep -l ID_INPUT /run/udev/data/c13:* | while read -r f; do
     echo "  $f: $(tr '\n' ' ' < "$f")"
 done
@@ -117,9 +117,9 @@ echo "== device-class libinput quirks =="
 # 2026-07-06). Strip the bogus axes via quirk --- the good ones are
 # POSITION_X 0-1078, POSITION_Y 0-2338, TOUCH_MAJOR, SLOT 0-9, TRACKING_ID.
 mkdir -p /etc/libinput
-DET_INPUT_QUIRK=none
-[ -r /etc/determination-device.conf ] && . /etc/determination-device.conf
-case "$DET_INPUT_QUIRK" in
+AURORA_INPUT_QUIRK=none
+[ -r /etc/aurora-device.conf ] && . /etc/aurora-device.conf
+case "$AURORA_INPUT_QUIRK" in
 oneplus-touchpanel-zero-axes)
 cat > /etc/libinput/local-overrides.quirks <<'EOF'
 [OnePlus 7 touchpanel]
@@ -132,7 +132,7 @@ none|'')
     rm -f /etc/libinput/local-overrides.quirks
     ;;
 *)
-    echo "WARN: unknown DET_INPUT_QUIRK=$DET_INPUT_QUIRK; installing no quirk"
+    echo "WARN: unknown AURORA_INPUT_QUIRK=$AURORA_INPUT_QUIRK; installing no quirk"
     rm -f /etc/libinput/local-overrides.quirks
     ;;
 esac
@@ -140,14 +140,14 @@ esac
 # because a blank was permanent --- "power button kills it". Root cause was
 # NOT the phoc hwcomposer backend: phosh has no internal unblank path at
 # all; unblanking is gsd-power's job (ScreenSaver.SetActive(false) on user
-# activity) and we run phosh bare. det-session-manager (setup-controls.sh)
+# activity) and we run phosh bare. aurora-session-manager (setup-controls.sh)
 # now plays that role, so the quirk is gone: power press blanks via phosh,
 # next press/touch wakes via the active watch. The qpnp_pon node stays
 # open+grabbed by phoc either way (Android must not see the key).
 
-echo "== det-pidfd-shim =="
-cat > /tmp/det-pidfd-shim.c <<'EOF'
-/* Determination: this 4.14 kernel backports pidfd_open(434) but NOT
+echo "== aurora-pidfd-shim =="
+cat > /tmp/aurora-pidfd-shim.c <<'EOF'
+/* Aurora: this 4.14 kernel backports pidfd_open(434) but NOT
  * waitid(P_PIDFD) (EINVAL) --- glib child-watch commits to the pidfd path
  * and dies. Make pidfd_open fail ENOSYS so glib uses its SIGCHLD
  * fallback. Interposes both the raw syscall() route glib uses and the
@@ -193,11 +193,11 @@ int pidfd_open(pid_t pid, unsigned int flags)
     return -1;
 }
 EOF
-gcc -shared -fPIC -O2 -o /usr/local/lib/det-pidfd-shim.so /tmp/det-pidfd-shim.c
-echo "shim installed: /usr/local/lib/det-pidfd-shim.so"
+gcc -shared -fPIC -O2 -o /usr/local/lib/aurora-pidfd-shim.so /tmp/aurora-pidfd-shim.c
+echo "shim installed: /usr/local/lib/aurora-pidfd-shim.so"
 
 echo "== phosh binary location (Debian splits wrapper vs binary) =="
-case "$(det-platform id 2>/dev/null || echo debian)" in
+case "$(aurora-platform id 2>/dev/null || echo debian)" in
 debian) dpkg -L phosh | grep -E 'bin/|libexec/' || true ;;
 *) command -v phosh phoc phosh-session || true ;;
 esac

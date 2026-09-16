@@ -1,6 +1,6 @@
-#include "determination/control/adapter.hpp"
+#include "aurora/control/adapter.hpp"
 
-#include "determination/control/system.hpp"
+#include "aurora/control/system.hpp"
 
 #include <cerrno>
 #include <csignal>
@@ -13,7 +13,7 @@
 
 extern char **environ;
 
-namespace determination::control {
+namespace aurora::control {
 
 AdapterResult run_adapter(const std::string &path,
                           const std::vector<std::string> &arguments,
@@ -147,4 +147,4 @@ AdapterResult run_adapter(const std::string &path,
     return result;
 }
 
-} // namespace determination::control
+} // namespace aurora::control

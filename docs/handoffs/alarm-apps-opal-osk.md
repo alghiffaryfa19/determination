@@ -37,6 +37,22 @@ report or a claim that the application/keyboard work below is implemented.
 - Treating offscreen/software test renders as vendor-GPU or panel qualification.
 - Cleaning up the large dirty repository, state directories, or backups.
 
+## Continuation checkpoint: shared init-package protection
+
+The shared `guest/aurora-platform` Arch install path now omits already-installed
+`systemd`, `systemd-libs`, `systemd-sysvcompat`, and `systemd-resolvconf` from
+explicit pacman targets. This covers runtime, wlroots, Hyprland, Quickshell,
+and logical package installation, rather than guarding runtime alone. Missing
+packages remain installable. This does not replace IgnorePkg protection against
+transaction dependency upgrades or audit direct pacman callers.
+
+Host checks passed: platform-runtime, portable-rootfs, guest-input-config,
+hyprland-launch, opal-runtime, and osk. The platform test covers all four
+dependency groups, mixed targets, an all-held no-op, and absent init packages.
+No device commands, live shell changes, application installs, or OSK staging
+edits were made in this checkpoint. The application profile, installer assembly,
+and shared selection-aware OSK remain pending.
+
 ## 1. Workspaces and ownership
 
 ### Aurora repository

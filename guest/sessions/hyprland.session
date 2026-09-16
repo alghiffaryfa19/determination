@@ -1,14 +1,14 @@
 id=hyprland
-title=Dethyprland
+title=Hyprland
 description=Hyprland with vendor EGL/GLES through libhybris and plug-and-play multi-monitor direct hwcomposer presentation.
 backend=libhybris-hwcomposer
 renderer=vendor-hybris
 allocator=android-gralloc
 presentation=multi-output-direct
 input=evdev-grab
-compositor=/usr/local/bin/det-hyprland
+compositor=/usr/local/bin/aurora-hyprland
 shell=hyprland-config
-required_binaries=/opt/dethyprland/bin/Hyprland,/usr/bin/squeekboard,/usr/local/bin/det-hypr-shell
+required_binaries=/opt/hyprland/bin/Hyprland,/usr/bin/squeekboard,/usr/local/bin/aurora-hypr-shell
 qualification=experimental
 reason=User-confirmed vendor EGL/gralloc/HWC bring-up with plug-and-play multi-monitor output; repeated restore and application compatibility are not qualified
 limitations=Kitty requires desktop OpenGL and does not launch through vendor EGL,Generic DMA-BUF and screencopy remain unsupported,Power menu and touch controls are experimental

@@ -1,4 +1,4 @@
-// Determination Zygisk module --- SF-death suppression hook.
+// Aurora Zygisk module --- SF-death suppression hook.
 // PLT-hooks __system_property_set in system_server: when desktop-mode is
 // active, swallows ctl.start/ctl.restart for surfaceflinger so the stopped
 // SF stays stopped (replacing the shell suppressor loop in desktop-on).
@@ -21,12 +21,12 @@
 #include <unistd.h>
 
 #include "zygisk.hpp"
-#include "determination/control/protocol.hpp"
+#include "aurora/control/protocol.hpp"
 
-static constexpr const char *FLAG = "/data/determination/run/desktop-mode";
-static constexpr const char *APP_PROCESS = "com.determination.companion";
-static constexpr const char *BRIDGE_NAME = "determination.companion.bridge";
-static constexpr const char *DETD_SOCKET = "/data/determination/run/detd.sock";
+static constexpr const char *FLAG = "/data/aurora/run/desktop-mode";
+static constexpr const char *APP_PROCESS = "com.aurora.companion";
+static constexpr const char *BRIDGE_NAME = "aurora.companion.bridge";
+static constexpr const char *AURORAD_SOCKET = "/data/aurora/run/aurorad.sock";
 static int (*orig_system_property_set)(const char *, const char *) = nullptr;
 
 static void set_socket_deadline(int fd) {
@@ -61,9 +61,9 @@ static bool read_all(int fd, void *data, size_t size) {
 }
 
 static void write_protocol_error(
-    int client, const determination::control::PacketHeader &request,
-    determination::control::Status status, const char *message) {
-    using namespace determination::control;
+    int client, const aurora::control::PacketHeader &request,
+    aurora::control::Status status, const char *message) {
+    using namespace aurora::control;
     PacketHeader response{};
     response.flags = kFlagResponse;
     response.operation = request.operation;
@@ -76,8 +76,8 @@ static void write_protocol_error(
 }
 
 static void forward_protocol_request(
-    int client, const determination::control::PacketHeader &request) {
-    using namespace determination::control;
+    int client, const aurora::control::PacketHeader &request) {
+    using namespace aurora::control;
     if (request.major != kProtocolMajor || request.header_size != sizeof(PacketHeader) ||
         request.payload_size > kMaximumPayload || (request.flags & kFlagResponse)) {
         write_protocol_error(client, request, Status::InvalidRequest,
@@ -94,17 +94,17 @@ static void forward_protocol_request(
     int daemon = socket(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0);
     if (daemon < 0) {
         write_protocol_error(client, request, Status::Unavailable,
-                             "detd socket failed");
+                             "aurorad socket failed");
         return;
     }
     set_socket_deadline(daemon);
     sockaddr_un address{};
     address.sun_family = AF_UNIX;
-    memcpy(address.sun_path, DETD_SOCKET, strlen(DETD_SOCKET) + 1);
+    memcpy(address.sun_path, AURORAD_SOCKET, strlen(AURORAD_SOCKET) + 1);
     if (connect(daemon, reinterpret_cast<sockaddr *>(&address), sizeof(address)) != 0) {
         close(daemon);
         write_protocol_error(client, request, Status::Unavailable,
-                             "detd unavailable");
+                             "aurorad unavailable");
         return;
     }
 
@@ -119,7 +119,7 @@ static void forward_protocol_request(
         static_cast<ssize_t>(sizeof(request) + payload.size())) {
         close(daemon);
         write_protocol_error(client, request, Status::Unavailable,
-                             "detd request failed");
+                             "aurorad request failed");
         return;
     }
 
@@ -133,7 +133,7 @@ static void forward_protocol_request(
     if (received < static_cast<ssize_t>(sizeof(PacketHeader)) ||
         (incoming.msg_flags & (MSG_TRUNC | MSG_CTRUNC))) {
         write_protocol_error(client, request, Status::Unavailable,
-                             "detd response failed");
+                             "aurorad response failed");
         return;
     }
     PacketHeader response_header{};
@@ -144,7 +144,7 @@ static void forward_protocol_request(
         response_header.payload_size > kMaximumPayload ||
         static_cast<size_t>(received) != sizeof(PacketHeader) + response_header.payload_size) {
         write_protocol_error(client, request, Status::ProtocolMismatch,
-                             "invalid detd response");
+                             "invalid aurorad response");
         return;
     }
     write_all(client, response.data(), static_cast<size_t>(received));
@@ -153,11 +153,11 @@ static void forward_protocol_request(
 static void launch_fixed_action(const char *command, int client) {
     const char *script = nullptr;
     if (strcmp(command, "enter") == 0) {
-        script = "/data/determination/bin/guest-start >/dev/null 2>&1; "
-                 "setsid sh -c 'nohup /data/determination/bin/desktop-on "
+        script = "/data/aurora/bin/guest-start >/dev/null 2>&1; "
+                 "setsid sh -c 'nohup /data/aurora/bin/desktop-on "
                  ">/dev/null 2>&1' >/dev/null 2>&1 &";
     } else if (strcmp(command, "exit") == 0) {
-        script = "setsid sh -c 'nohup /data/determination/bin/desktop-off "
+        script = "setsid sh -c 'nohup /data/aurora/bin/desktop-off "
                  ">/dev/null 2>&1' >/dev/null 2>&1 &";
     } else if (strcmp(command, "ping") == 0) {
         write_all(client, "ok bridge\n", 10);
@@ -182,8 +182,8 @@ static void launch_fixed_action(const char *command, int client) {
 static void root_companion_handler(int client) {
     uint32_t prefix = 0;
     if (!read_all(client, &prefix, sizeof(prefix))) return;
-    if (prefix == determination::control::kProtocolMagic) {
-        determination::control::PacketHeader request{};
+    if (prefix == aurora::control::kProtocolMagic) {
+        aurora::control::PacketHeader request{};
         request.magic = prefix;
         if (!read_all(client, reinterpret_cast<uint8_t *>(&request) + sizeof(prefix),
                       sizeof(request) - sizeof(prefix))) {
@@ -257,7 +257,7 @@ static bool find_lib(const char *name, dev_t *dev, ino_t *ino) {
     return false;
 }
 
-class DeterminationModule : public zygisk::ModuleBase {
+class AuroraModule : public zygisk::ModuleBase {
     zygisk::Api *api_ = nullptr;
     JNIEnv *env_ = nullptr;
     bool is_companion_app_ = false;
@@ -303,8 +303,8 @@ class DeterminationModule : public zygisk::ModuleBase {
                 ssize_t n;
                 while ((n = read(app, request.data(), request.size())) > 0) {
                     total += static_cast<size_t>(n);
-                    if (total > sizeof(determination::control::PacketHeader) +
-                                    determination::control::kMaximumPayload ||
+                    if (total > sizeof(aurora::control::PacketHeader) +
+                                    aurora::control::kMaximumPayload ||
                         !write_all(root, request.data(), static_cast<size_t>(n))) {
                         break;
                     }
@@ -369,5 +369,5 @@ public:
     }
 };
 
-REGISTER_ZYGISK_MODULE(DeterminationModule)
+REGISTER_ZYGISK_MODULE(AuroraModule)
 REGISTER_ZYGISK_COMPANION(root_companion_handler)

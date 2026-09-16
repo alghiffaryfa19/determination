@@ -1,123 +1,123 @@
 #!/system/bin/sh
-# Shared device configuration for host-side Determination scripts.
+# Shared device configuration for host-side Aurora scripts.
 #
 # Values are discovered conservatively at runtime, then overridden by a typed
 # data file. Profiles are never sourced as shell code.
 
-DET=${DET:-/data/determination}
+AURORA=${AURORA:-/data/aurora}
 
-det_first_path() {
-    for det_path in "$@"; do
-        [ -e "$det_path" ] && { echo "$det_path"; return 0; }
+aurora_first_path() {
+    for aurora_path in "$@"; do
+        [ -e "$aurora_path" ] && { echo "$aurora_path"; return 0; }
     done
     return 1
 }
 
-det_first_netdev() {
-    for det_path in /sys/class/net/wlan* /sys/class/net/wifi*; do
-        [ -e "$det_path" ] && { basename "$det_path"; return 0; }
+aurora_first_netdev() {
+    for aurora_path in /sys/class/net/wlan* /sys/class/net/wifi*; do
+        [ -e "$aurora_path" ] && { basename "$aurora_path"; return 0; }
     done
     return 1
 }
 
 # Portable defaults. Discovery deliberately prefers the active Android-facing
 # node names used by existing devices and falls back to the first viable node.
-DET_BACKLIGHT_PATH=${DET_BACKLIGHT_PATH:-$(det_first_path \
+AURORA_BACKLIGHT_PATH=${AURORA_BACKLIGHT_PATH:-$(aurora_first_path \
     /sys/class/backlight/backlight/brightness \
     /sys/class/backlight/panel0-backlight/brightness \
     /sys/class/leds/lcd-backlight/brightness 2>/dev/null)}
-DET_BACKLIGHT_LEVEL=${DET_BACKLIGHT_LEVEL:-}
-DET_WIFI_IFACE=${DET_WIFI_IFACE:-$(det_first_netdev 2>/dev/null)}
-DET_DRM_CARD=${DET_DRM_CARD:-/dev/dri/card0}
-DET_DRM_RENDER_NODE=${DET_DRM_RENDER_NODE:-$(det_first_path \
+AURORA_BACKLIGHT_LEVEL=${AURORA_BACKLIGHT_LEVEL:-}
+AURORA_WIFI_IFACE=${AURORA_WIFI_IFACE:-$(aurora_first_netdev 2>/dev/null)}
+AURORA_DRM_CARD=${AURORA_DRM_CARD:-/dev/dri/card0}
+AURORA_DRM_RENDER_NODE=${AURORA_DRM_RENDER_NODE:-$(aurora_first_path \
     /dev/dri/renderD128 /dev/dri/card0 2>/dev/null)}
-DET_BATTERY_GAUGE=${DET_BATTERY_GAUGE:-}
-DET_EXTRA_DEVICES=${DET_EXTRA_DEVICES:-}
-DET_INPUT_QUIRK=${DET_INPUT_QUIRK:-none}
-DET_HWC_OUTPUT=${DET_HWC_OUTPUT:-HWCOMPOSER-1}
-DET_GRAPHICS_RENDERER=${DET_GRAPHICS_RENDERER:-libhybris}
-DET_GBM_PROVIDER=${DET_GBM_PROVIDER:-minigbm}
-DET_EXTERNAL_RENDERER=${DET_EXTERNAL_RENDERER:-auto}
-DET_PANEL_WIDTH=${DET_PANEL_WIDTH:-}
-DET_PANEL_HEIGHT=${DET_PANEL_HEIGHT:-}
-DET_PANEL_REFRESH_MHZ=${DET_PANEL_REFRESH_MHZ:-}
-DET_OUTPUT_SCALE=${DET_OUTPUT_SCALE:-}
+AURORA_BATTERY_GAUGE=${AURORA_BATTERY_GAUGE:-}
+AURORA_EXTRA_DEVICES=${AURORA_EXTRA_DEVICES:-}
+AURORA_INPUT_QUIRK=${AURORA_INPUT_QUIRK:-none}
+AURORA_HWC_OUTPUT=${AURORA_HWC_OUTPUT:-HWCOMPOSER-1}
+AURORA_GRAPHICS_RENDERER=${AURORA_GRAPHICS_RENDERER:-libhybris}
+AURORA_GBM_PROVIDER=${AURORA_GBM_PROVIDER:-minigbm}
+AURORA_EXTERNAL_RENDERER=${AURORA_EXTERNAL_RENDERER:-auto}
+AURORA_PANEL_WIDTH=${AURORA_PANEL_WIDTH:-}
+AURORA_PANEL_HEIGHT=${AURORA_PANEL_HEIGHT:-}
+AURORA_PANEL_REFRESH_MHZ=${AURORA_PANEL_REFRESH_MHZ:-}
+AURORA_OUTPUT_SCALE=${AURORA_OUTPUT_SCALE:-}
 
-det_profile_bad() { echo "device-config: invalid $1" >&2; return 1; }
-det_profile_word() { case "$2" in ''|*[!A-Za-z0-9._-]*) det_profile_bad "$1";; esac; }
-det_profile_uint() { case "$2" in ''|*[!0-9]*) det_profile_bad "$1";; esac; }
-det_profile_path() { case "$2" in /sys/*|/dev/*) case "$2" in *[!A-Za-z0-9._/-]*) det_profile_bad "$1";; esac;; *) det_profile_bad "$1";; esac; }
+aurora_profile_bad() { echo "device-config: invalid $1" >&2; return 1; }
+aurora_profile_word() { case "$2" in ''|*[!A-Za-z0-9._-]*) aurora_profile_bad "$1";; esac; }
+aurora_profile_uint() { case "$2" in ''|*[!0-9]*) aurora_profile_bad "$1";; esac; }
+aurora_profile_path() { case "$2" in /sys/*|/dev/*) case "$2" in *[!A-Za-z0-9._/-]*) aurora_profile_bad "$1";; esac;; *) aurora_profile_bad "$1";; esac; }
 
-det_profile_set() {
-    det_key=$1 det_value=$2
-    case "$det_key" in
-        DET_PROFILE_ID|DET_WIFI_IFACE|DET_BATTERY_GAUGE|DET_INPUT_QUIRK|DET_GRAPHICS_RENDERER|DET_GBM_PROVIDER|DET_EXTERNAL_RENDERER)
-            det_profile_word "$det_key" "$det_value" || return 1 ;;
-        DET_BACKLIGHT_LEVEL|DET_PANEL_WIDTH|DET_PANEL_HEIGHT|DET_PANEL_REFRESH_MHZ|DET_OUTPUT_SCALE)
-            det_profile_uint "$det_key" "$det_value" || return 1 ;;
-        DET_BACKLIGHT_PATH|DET_DRM_CARD|DET_DRM_RENDER_NODE)
-            det_profile_path "$det_key" "$det_value" || return 1 ;;
-        DET_HWC_OUTPUT)
-            case "$det_value" in HWCOMPOSER-[0-9]) ;; *) det_profile_bad "$det_key"; return 1;; esac ;;
-        DET_LINUX_FIRST_SUPPORTED|DET_LINUX_FIRST_KEEP_NETWORK|DET_LINUX_FIRST_FREEZE_SYSTEM_SERVER)
-            case "$det_value" in 0|1) ;; *) det_profile_bad "$det_key"; return 1;; esac ;;
-        DET_EXTRA_DEVICES)
-            for det_extra in $det_value; do det_profile_path "$det_key" "$det_extra" || return 1; done ;;
-        *) det_profile_bad "unknown key $det_key"; return 1 ;;
+aurora_profile_set() {
+    aurora_key=$1 aurora_value=$2
+    case "$aurora_key" in
+        AURORA_PROFILE_ID|AURORA_WIFI_IFACE|AURORA_BATTERY_GAUGE|AURORA_INPUT_QUIRK|AURORA_GRAPHICS_RENDERER|AURORA_GBM_PROVIDER|AURORA_EXTERNAL_RENDERER)
+            aurora_profile_word "$aurora_key" "$aurora_value" || return 1 ;;
+        AURORA_BACKLIGHT_LEVEL|AURORA_PANEL_WIDTH|AURORA_PANEL_HEIGHT|AURORA_PANEL_REFRESH_MHZ|AURORA_OUTPUT_SCALE)
+            aurora_profile_uint "$aurora_key" "$aurora_value" || return 1 ;;
+        AURORA_BACKLIGHT_PATH|AURORA_DRM_CARD|AURORA_DRM_RENDER_NODE)
+            aurora_profile_path "$aurora_key" "$aurora_value" || return 1 ;;
+        AURORA_HWC_OUTPUT)
+            case "$aurora_value" in HWCOMPOSER-[0-9]) ;; *) aurora_profile_bad "$aurora_key"; return 1;; esac ;;
+        AURORA_LINUX_FIRST_SUPPORTED|AURORA_LINUX_FIRST_KEEP_NETWORK|AURORA_LINUX_FIRST_FREEZE_SYSTEM_SERVER)
+            case "$aurora_value" in 0|1) ;; *) aurora_profile_bad "$aurora_key"; return 1;; esac ;;
+        AURORA_EXTRA_DEVICES)
+            for aurora_extra in $aurora_value; do aurora_profile_path "$aurora_key" "$aurora_extra" || return 1; done ;;
+        *) aurora_profile_bad "unknown key $aurora_key"; return 1 ;;
     esac
-    export "$det_key=$det_value"
+    export "$aurora_key=$aurora_value"
 }
 
-DET_LINUX_FIRST_SUPPORTED=${DET_LINUX_FIRST_SUPPORTED:-0}
-DET_LINUX_FIRST_KEEP_NETWORK=${DET_LINUX_FIRST_KEEP_NETWORK:-1}
-DET_LINUX_FIRST_FREEZE_SYSTEM_SERVER=${DET_LINUX_FIRST_FREEZE_SYSTEM_SERVER:-1}
-DET_DEVICE_CONFIG="$DET/etc/device.conf"
-if [ -r "$DET_DEVICE_CONFIG" ]; then
-    while IFS= read -r det_line || [ -n "$det_line" ]; do
-        case "$det_line" in ''|'#'*) continue;; *'='*)
-            det_key=${det_line%%=*}; det_value=${det_line#*=}
-            det_profile_set "$det_key" "$det_value" || return 1 ;;
-        *) det_profile_bad "malformed line"; return 1;; esac
-    done < "$DET_DEVICE_CONFIG"
+AURORA_LINUX_FIRST_SUPPORTED=${AURORA_LINUX_FIRST_SUPPORTED:-0}
+AURORA_LINUX_FIRST_KEEP_NETWORK=${AURORA_LINUX_FIRST_KEEP_NETWORK:-1}
+AURORA_LINUX_FIRST_FREEZE_SYSTEM_SERVER=${AURORA_LINUX_FIRST_FREEZE_SYSTEM_SERVER:-1}
+AURORA_DEVICE_CONFIG="$AURORA/etc/device.conf"
+if [ -r "$AURORA_DEVICE_CONFIG" ]; then
+    while IFS= read -r aurora_line || [ -n "$aurora_line" ]; do
+        case "$aurora_line" in ''|'#'*) continue;; *'='*)
+            aurora_key=${aurora_line%%=*}; aurora_value=${aurora_line#*=}
+            aurora_profile_set "$aurora_key" "$aurora_value" || return 1 ;;
+        *) aurora_profile_bad "malformed line"; return 1;; esac
+    done < "$AURORA_DEVICE_CONFIG"
 fi
 
 # Android reports the unrotated physical panel size. This is safe for UI
 # scaling; cutouts and touch transforms are deliberately not inferred.
-if [ -z "$DET_PANEL_WIDTH" ] || [ -z "$DET_PANEL_HEIGHT" ]; then
-    det_wm_size=$(wm size 2>/dev/null | sed -n 's/.*Physical size: \([0-9][0-9]*\)x\([0-9][0-9]*\).*/\1 \2/p' | head -n 1)
-    [ -n "$det_wm_size" ] && {
-        DET_PANEL_WIDTH=${det_wm_size%% *}
-        DET_PANEL_HEIGHT=${det_wm_size#* }
+if [ -z "$AURORA_PANEL_WIDTH" ] || [ -z "$AURORA_PANEL_HEIGHT" ]; then
+    aurora_wm_size=$(wm size 2>/dev/null | sed -n 's/.*Physical size: \([0-9][0-9]*\)x\([0-9][0-9]*\).*/\1 \2/p' | head -n 1)
+    [ -n "$aurora_wm_size" ] && {
+        AURORA_PANEL_WIDTH=${aurora_wm_size%% *}
+        AURORA_PANEL_HEIGHT=${aurora_wm_size#* }
     }
 fi
 
 # Aim for roughly 360 logical pixels across, matching common mobile shells.
-if [ -z "$DET_OUTPUT_SCALE" ] && [ -n "$DET_PANEL_WIDTH" ]; then
-    DET_OUTPUT_SCALE=$(((DET_PANEL_WIDTH + 180) / 360))
-    [ "$DET_OUTPUT_SCALE" -lt 1 ] && DET_OUTPUT_SCALE=1
-    [ "$DET_OUTPUT_SCALE" -gt 4 ] && DET_OUTPUT_SCALE=4
+if [ -z "$AURORA_OUTPUT_SCALE" ] && [ -n "$AURORA_PANEL_WIDTH" ]; then
+    AURORA_OUTPUT_SCALE=$(((AURORA_PANEL_WIDTH + 180) / 360))
+    [ "$AURORA_OUTPUT_SCALE" -lt 1 ] && AURORA_OUTPUT_SCALE=1
+    [ "$AURORA_OUTPUT_SCALE" -gt 4 ] && AURORA_OUTPUT_SCALE=4
 fi
-DET_OUTPUT_SCALE=${DET_OUTPUT_SCALE:-1}
+AURORA_OUTPUT_SCALE=${AURORA_OUTPUT_SCALE:-1}
 
-if [ -n "$DET_PANEL_REFRESH_MHZ" ] && {
-        [ "$DET_PANEL_REFRESH_MHZ" -lt 24000 ] ||
-        [ "$DET_PANEL_REFRESH_MHZ" -gt 240000 ]; }; then
-    det_profile_bad DET_PANEL_REFRESH_MHZ
+if [ -n "$AURORA_PANEL_REFRESH_MHZ" ] && {
+        [ "$AURORA_PANEL_REFRESH_MHZ" -lt 24000 ] ||
+        [ "$AURORA_PANEL_REFRESH_MHZ" -gt 240000 ]; }; then
+    aurora_profile_bad AURORA_PANEL_REFRESH_MHZ
     return 1
 fi
 
 # Pick a usable brightness when a profile does not specify one: roughly one
 # third of the panel maximum, never zero. Existing guacamoleb installs retain
 # 1400 through their generated/profile config.
-if [ -z "$DET_BACKLIGHT_LEVEL" ] && [ -n "$DET_BACKLIGHT_PATH" ]; then
-    det_max=${DET_BACKLIGHT_PATH%/brightness}/max_brightness
-    det_max=$(cat "$det_max" 2>/dev/null || echo 4095)
-    DET_BACKLIGHT_LEVEL=$((det_max / 3))
-    [ "$DET_BACKLIGHT_LEVEL" -gt 0 ] 2>/dev/null || DET_BACKLIGHT_LEVEL=1
+if [ -z "$AURORA_BACKLIGHT_LEVEL" ] && [ -n "$AURORA_BACKLIGHT_PATH" ]; then
+    aurora_max=${AURORA_BACKLIGHT_PATH%/brightness}/max_brightness
+    aurora_max=$(cat "$aurora_max" 2>/dev/null || echo 4095)
+    AURORA_BACKLIGHT_LEVEL=$((aurora_max / 3))
+    [ "$AURORA_BACKLIGHT_LEVEL" -gt 0 ] 2>/dev/null || AURORA_BACKLIGHT_LEVEL=1
 fi
 
-export DET_BACKLIGHT_PATH DET_BACKLIGHT_LEVEL DET_WIFI_IFACE
-export DET_DRM_CARD DET_DRM_RENDER_NODE DET_BATTERY_GAUGE DET_EXTRA_DEVICES DET_INPUT_QUIRK
-export DET_HWC_OUTPUT DET_PANEL_WIDTH DET_PANEL_HEIGHT DET_PANEL_REFRESH_MHZ DET_OUTPUT_SCALE
-export DET_GRAPHICS_RENDERER DET_GBM_PROVIDER DET_EXTERNAL_RENDERER
-export DET_LINUX_FIRST_SUPPORTED DET_LINUX_FIRST_KEEP_NETWORK DET_LINUX_FIRST_FREEZE_SYSTEM_SERVER
+export AURORA_BACKLIGHT_PATH AURORA_BACKLIGHT_LEVEL AURORA_WIFI_IFACE
+export AURORA_DRM_CARD AURORA_DRM_RENDER_NODE AURORA_BATTERY_GAUGE AURORA_EXTRA_DEVICES AURORA_INPUT_QUIRK
+export AURORA_HWC_OUTPUT AURORA_PANEL_WIDTH AURORA_PANEL_HEIGHT AURORA_PANEL_REFRESH_MHZ AURORA_OUTPUT_SCALE
+export AURORA_GRAPHICS_RENDERER AURORA_GBM_PROVIDER AURORA_EXTERNAL_RENDERER
+export AURORA_LINUX_FIRST_SUPPORTED AURORA_LINUX_FIRST_KEEP_NETWORK AURORA_LINUX_FIRST_FREEZE_SYSTEM_SERVER

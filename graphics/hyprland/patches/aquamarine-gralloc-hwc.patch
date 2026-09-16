@@ -1,0 +1,131 @@
+## SPDX-FileCopyrightText: 2026 Aurora contributors
+## SPDX-License-Identifier: MIT
+##
+## Aurora patch for BSD-3-Clause Aquamarine. Retain Aquamarine's
+## copyright and BSD-3-Clause notice with this patch and its output.
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 05e6b38..8b6343c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -60,6 +60,8 @@ file(GLOB_RECURSE SRCFILES CONFIGURE_DEPENDS "src/*.cpp" "include/*.hpp")
+ file(GLOB_RECURSE PUBLIC_HEADERS CONFIGURE_DEPENDS "include/*.hpp")
+ 
+ add_library(aquamarine SHARED ${SRCFILES})
++target_include_directories(aquamarine PRIVATE src/hyprland /usr/local/include /usr/include/android)
++target_link_libraries(aquamarine /usr/local/lib/libhwc2.so /usr/local/lib/libEGL.so /usr/local/lib/libGLESv2.so)
+ target_include_directories(
+   aquamarine
+   PUBLIC "./include"
+diff --git a/include/aquamarine/allocator/Allocator.hpp b/include/aquamarine/allocator/Allocator.hpp
+index 2dc1ee5..950897e 100644
+--- a/include/aquamarine/allocator/Allocator.hpp
++++ b/include/aquamarine/allocator/Allocator.hpp
+@@ -17,6 +17,7 @@ namespace Aquamarine {
+     enum eAllocatorType {
+         AQ_ALLOCATOR_TYPE_GBM = 0,
+         AQ_ALLOCATOR_TYPE_DRM_DUMB,
++        AQ_ALLOCATOR_TYPE_ANDROID,
+     };
+ 
+     class IAllocator {
+diff --git a/src/backend/Backend.cpp b/src/backend/Backend.cpp
+index 36e5681..cfb2838 100644
+--- a/src/backend/Backend.cpp
++++ b/src/backend/Backend.cpp
+@@ -1,4 +1,5 @@
+ #include <aquamarine/backend/Backend.hpp>
++#include "GrallocAllocator.hpp"
+ #include <aquamarine/backend/Wayland.hpp>
+ #include <aquamarine/backend/Headless.hpp>
+ #include <aquamarine/backend/DRM.hpp>
+@@ -139,8 +140,17 @@ bool Aquamarine::CBackend::start() {
+         return failed;
+     });
+ 
+-    // TODO: obviously change this when (if) we add different allocators.
++    const bool hybris = getenv("AURORA_HYBRIS") && std::string(getenv("AURORA_HYBRIS")) == "1";
++    if (hybris) {
++        try {
++            primaryAllocator = makeShared<Hyprland::GrallocAllocator>(self.lock());
++        } catch (const std::exception& error) {
++            log(AQ_LOG_CRITICAL, error.what());
++            return false;
++        }
++    }
+     for (auto const& b : implementations) {
++        if (hybris) break;
+         if (b->drmFD() >= 0) {
+             auto fd = reopenDRMNode(b->drmFD());
+             if (fd < 0) {
+diff --git a/src/backend/Headless.cpp b/src/backend/Headless.cpp
+index d9075cc..315a657 100644
+--- a/src/backend/Headless.cpp
++++ b/src/backend/Headless.cpp
+@@ -1,4 +1,5 @@
+ #include <aquamarine/backend/Headless.hpp>
++#include "HwcPresenter.hpp"
+ #include <fcntl.h>
+ #include <ctime>
+ #include <sys/timerfd.h>
+@@ -40,6 +41,8 @@ Aquamarine::CHeadlessOutput::~CHeadlessOutput() {
+ }
+ 
+ bool Aquamarine::CHeadlessOutput::commit() {
++    if (name == "HWC-1" && state->state().buffer &&
++        !Hyprland::HwcPresenter::instance().present(state->state().buffer)) return false;
+     events.commit.emit();
+     state->onCommit();
+     needsFrame = false;
+@@ -69,7 +72,7 @@ void Aquamarine::CHeadlessOutput::scheduleFrame(const scheduleFrameReason reason
+         return;
+ 
+     frameScheduled = true;
+-    backend->backend->addIdleEvent(framecb);
++    if (name != "HWC-1") backend->backend->addIdleEvent(framecb);
+ }
+ 
+ bool Aquamarine::CHeadlessOutput::destroy() {
+@@ -95,7 +98,15 @@ bool Aquamarine::CHeadlessBackend::start() {
+ }
+ 
+ std::vector<SP<SPollFD>> Aquamarine::CHeadlessBackend::pollFDs() {
+-    return {makeShared<SPollFD>(timers.timerfd, [this]() { dispatchTimers(); })};
++    std::vector<SP<SPollFD>> fds = {makeShared<SPollFD>(timers.timerfd, [this]() { dispatchTimers(); })};
++    if (Hyprland::HwcPresenter::enabled()) {
++        auto& hwc = Hyprland::HwcPresenter::instance();
++        fds.push_back(makeShared<SPollFD>(hwc.eventFd(), [this]() {
++            Hyprland::HwcPresenter::instance().drain();
++            for (auto& output : outputs) if (output->name == "HWC-1" && output->frameScheduled) (*output->framecb)();
++        }));
++    }
++    return fds;
+ }
+ 
+ int Aquamarine::CHeadlessBackend::drmFD() {
+@@ -115,10 +126,12 @@ bool Aquamarine::CHeadlessBackend::setCursor(SP<IBuffer> buffer, const Hyprutils
+ }
+ 
+ void Aquamarine::CHeadlessBackend::onReady() {
+-    ;
++    if (Hyprland::HwcPresenter::enabled()) createOutput("HWC-1");
+ }
+ 
+ std::vector<SDRMFormat> Aquamarine::CHeadlessBackend::getRenderFormats() {
++    if (getenv("AURORA_HYBRIS") && std::string(getenv("AURORA_HYBRIS")) == "1")
++        return {SDRMFormat{.drmFormat = DRM_FORMAT_ABGR8888, .modifiers = {DRM_FORMAT_MOD_LINEAR}}};
+     for (const auto& impl : backend->getImplementations()) {
+         if (impl->type() != AQ_BACKEND_DRM || impl->getRenderableFormats().empty())
+             continue;
+@@ -151,7 +164,10 @@ std::vector<SDRMFormat> Aquamarine::CHeadlessBackend::getCursorFormats() {
+ bool Aquamarine::CHeadlessBackend::createOutput(const std::string& name) {
+     auto output = SP<CHeadlessOutput>(new CHeadlessOutput(name.empty() ? std::format("HEADLESS-{}", ++outputIDCounter) : name, self.lock()));
+     outputs.emplace_back(output);
+-    output->modes.emplace_back(SP<SOutputMode>(new SOutputMode(Vector2D{1920, 1080}, 60, true)));
++    if (name == "HWC-1") {
++        auto& hwc = Hyprland::HwcPresenter::instance();
++        output->modes.emplace_back(SP<SOutputMode>(new SOutputMode(Vector2D{hwc.width(), hwc.height()}, hwc.refresh(), true)));
++    } else output->modes.emplace_back(SP<SOutputMode>(new SOutputMode(Vector2D{1920, 1080}, 60, true)));
+     output->swapchain = CSwapchain::create(backend->primaryAllocator, self.lock());
+     output->self      = output;
+     backend->events.newOutput.emit(SP<IOutput>(output));

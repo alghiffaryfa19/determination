@@ -205,7 +205,7 @@ install_deps() {
                 wl-clipboard xdg-desktop-portal xdg-desktop-portal-wlr
             ;;
         arch:runtime)
-            package_install_raw systemd sudo dbus seatd pipewire pipewire-pulse wireplumber \
+            package_install_raw systemd python sudo dbus seatd pipewire pipewire-pulse wireplumber \
                 alsa-utils openssh wayland-protocols util-linux shadow \
                 wl-clipboard xdg-desktop-portal xdg-desktop-portal-wlr
             ;;
@@ -280,7 +280,7 @@ install_deps() {
                 systemd libdisplay-info hwdata libglvnd cairo pango libjpeg-turbo \
                 libwebp file libspng libzip librsvg tomlplusplus libxkbcommon \
                 libxcursor re2 libxcb xcb-util-wm xcb-util-renderutil xcb-util-errors \
-                xorg-xwayland seatd
+                xorg-xwayland seatd squeekboard gtk3 gsettings-desktop-schemas adwaita-icon-theme
             ;;
         arch:quickshell)
             package_install_raw qt6-base qt6-declarative qt6-shadertools qt6-wayland \

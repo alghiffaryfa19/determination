@@ -1,5 +1,5 @@
 #!/bin/sh
-# Package the Determination Magisk module zip (install via Magisk app -> Modules
+# Package the Aurora Magisk module zip (install via Magisk app -> Modules
 # -> Install from storage; no META-INF needed for app installs).
 # Pulls the device evgrab binary and toggle scripts in as payload.
 
@@ -7,21 +7,21 @@ set -eu
 cd "$(dirname "$0")"
 REPO=$(cd .. && pwd)
 . "$REPO/release/version.sh"
-det_load_version "$REPO/version.properties"
+aurora_load_version "$REPO/version.properties"
 
 [ -f ../tools/evgrab/evgrab ] || { echo "build evgrab for aarch64 first (tools/evgrab, make CC=aarch64-linux-gnu-gcc)" >&2; exit 1; }
 file ../tools/evgrab/evgrab | grep -q aarch64 || { echo "evgrab is not an aarch64 build" >&2; exit 1; }
-INPUT_FORWARDER="../tools/input-forwarder/det-input-forwarder"
-[ -f "$INPUT_FORWARDER" ] || { echo "build det-input-forwarder with the Android NDK first" >&2; exit 1; }
-file "$INPUT_FORWARDER" | grep -q 'ARM aarch64' || { echo "det-input-forwarder is not an Android aarch64 build" >&2; exit 1; }
+INPUT_FORWARDER="../tools/input-forwarder/aurora-input-forwarder"
+[ -f "$INPUT_FORWARDER" ] || { echo "build aurora-input-forwarder with the Android NDK first" >&2; exit 1; }
+file "$INPUT_FORWARDER" | grep -q 'ARM aarch64' || { echo "aurora-input-forwarder is not an Android aarch64 build" >&2; exit 1; }
 
-DETD="../control/build/android-arm64/detd"
-DETCTL="../control/build/android-arm64/detctl"
-DET_GUEST_AGENT="../control/build/guest-arm64/det-guest-agent"
-DET_AUDIO_HOST="../audio/build/android-arm64/det-audio-probe"
-DET_AUDIO_GUEST="../audio/build/guest-arm64/det-audio-probe"
-DET_AUDIO_OWNER="../audio/build/android-arm64/det-audio-owner"
-for binary in "$DETD" "$DETCTL"; do
+AURORAD="../control/build/android-arm64/aurorad"
+AURORACTL="../control/build/android-arm64/auroractl"
+AURORA_GUEST_AGENT="../control/build/guest-arm64/aurora-guest-agent"
+AURORA_AUDIO_HOST="../audio/build/android-arm64/aurora-audio-probe"
+AURORA_AUDIO_GUEST="../audio/build/guest-arm64/aurora-audio-probe"
+AURORA_AUDIO_OWNER="../audio/build/android-arm64/aurora-audio-owner"
+for binary in "$AURORAD" "$AURORACTL"; do
     [ -f "$binary" ] || {
         echo "build the native control plane first (./control/build.sh android)" >&2
         exit 1
@@ -31,19 +31,19 @@ for binary in "$DETD" "$DETCTL"; do
         exit 1
     }
 done
-[ -f "$DET_GUEST_AGENT" ] || {
+[ -f "$AURORA_GUEST_AGENT" ] || {
     echo "build the Debian guest agent first (./control/build.sh guest)" >&2
     exit 1
 }
-file "$DET_GUEST_AGENT" | grep -q 'ARM aarch64' || {
-    echo "$DET_GUEST_AGENT is not a Linux aarch64 build" >&2
+file "$AURORA_GUEST_AGENT" | grep -q 'ARM aarch64' || {
+    echo "$AURORA_GUEST_AGENT is not a Linux aarch64 build" >&2
     exit 1
 }
-file "$DET_GUEST_AGENT" | grep -q 'statically linked' || {
-    echo "$DET_GUEST_AGENT must be rebuilt as a distro-neutral static guest binary" >&2
+file "$AURORA_GUEST_AGENT" | grep -q 'statically linked' || {
+    echo "$AURORA_GUEST_AGENT must be rebuilt as a distro-neutral static guest binary" >&2
     exit 1
 }
-for binary in "$DET_AUDIO_HOST" "$DET_AUDIO_GUEST" "$DET_AUDIO_OWNER"; do
+for binary in "$AURORA_AUDIO_HOST" "$AURORA_AUDIO_GUEST" "$AURORA_AUDIO_OWNER"; do
     [ -f "$binary" ] || {
         echo "build the direct audio probes first (./audio/build.sh all)" >&2
         exit 1
@@ -53,13 +53,13 @@ for binary in "$DET_AUDIO_HOST" "$DET_AUDIO_GUEST" "$DET_AUDIO_OWNER"; do
         exit 1
     }
 done
-file "$DET_AUDIO_GUEST" | grep -q 'statically linked' || {
-    echo "$DET_AUDIO_GUEST must be rebuilt as a distro-neutral static guest binary" >&2
+file "$AURORA_AUDIO_GUEST" | grep -q 'statically linked' || {
+    echo "$AURORA_AUDIO_GUEST must be rebuilt as a distro-neutral static guest binary" >&2
     exit 1
 }
 
-ZYGISK_64="../zygisk/libs/arm64-v8a/libdetermination.so"
-ZYGISK_32="../zygisk/libs/armeabi-v7a/libdetermination.so"
+ZYGISK_64="../zygisk/libs/arm64-v8a/libaurora.so"
+ZYGISK_32="../zygisk/libs/armeabi-v7a/libaurora.so"
 [ -f "$ZYGISK_64" ] || { echo "build the zygisk module first (cd zygisk && ndk-build)" >&2; exit 1; }
 [ -f "$ZYGISK_32" ] || { echo "build the zygisk module first (cd zygisk && ndk-build)" >&2; exit 1; }
 
@@ -67,11 +67,11 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
 cp customize.sh post-fs-data.sh service.sh sepolicy.rule "$WORK/"
-det_render_version_template module.prop.in "$WORK/module.prop"
+aurora_render_version_template module.prop.in "$WORK/module.prop"
 mkdir -p "$WORK/tools" "$WORK/guest-tools" "$WORK/guest-assets" "$WORK/zygisk" \
     "$WORK/device-profiles" "$WORK/audio-profiles"
 cp ../tools/evgrab/evgrab "$INPUT_FORWARDER" \
-   "$DETD" "$DETCTL" "$DET_AUDIO_HOST" "$DET_AUDIO_OWNER" \
+   "$AURORAD" "$AURORACTL" "$AURORA_AUDIO_HOST" "$AURORA_AUDIO_OWNER" \
    ../toggle/device-config ../toggle/generate-lxc-config ../toggle/generate-guest-config \
    ../toggle/lifecycle-lib ../toggle/boot-profile ../toggle/guest-distro \
    ../toggle/guest-start ../toggle/desktop-on ../toggle/desktop-off \
@@ -79,8 +79,8 @@ cp ../tools/evgrab/evgrab "$INPUT_FORWARDER" \
     ../toggle/session-catalog ../toggle/session-select ../toggle/session-set \
    ../toggle/run-transition ../toggle/external-presenter ../toggle/external-input \
    ../toggle/native-plasma ../toggle/native-kms-gate ../toggle/native-restore \
-   ../toggle/det-hostagent ../toggle/det-color-compat \
-   ../toggle/cycle-stress.sh ../audio/det-audio-route ../audio/det-audio-smoke \
+   ../toggle/aurora-hostagent ../toggle/aurora-color-compat \
+   ../toggle/cycle-stress.sh ../audio/aurora-audio-route ../audio/aurora-audio-smoke \
    "$WORK/tools/"
 cp ../device-profiles/*.conf "$WORK/device-profiles/"
 cp ../audio/profiles/*.conf "$WORK/audio-profiles/"
@@ -89,42 +89,44 @@ cp ../guest/sessions/*.session "$WORK/sessions/"
 cp ../guest/hyprland.conf "$WORK/guest-config/hyprland.conf"
 cp ../guest/hyprland-opal.conf "$WORK/guest-config/hyprland-opal.conf"
 cp ../guest/hyprland-omarchy.conf "$WORK/guest-config/hyprland-omarchy.conf"
-cp "$DET_GUEST_AGENT" "$WORK/guest-tools/det-guest-agent"
-cp "$DET_AUDIO_GUEST" "$WORK/guest-tools/det-audio-probe"
-cp ../guest/det-audio-session "$WORK/guest-tools/det-audio-session"
-cp ../guest/det-pipewire-smoke "$WORK/guest-tools/det-pipewire-smoke"
-cp ../guest/det-input-actions "$WORK/guest-tools/det-input-actions"
-cp ../guest/det-media-action "$WORK/guest-tools/det-media-action"
-cp ../guest/det-connectivity "$WORK/guest-tools/det-connectivity"
-cp ../guest/det-connectivity-menu "$WORK/guest-tools/det-connectivity-menu"
-cp ../guest/det-platform "$WORK/guest-tools/det-platform"
-cp ../guest/det-phosh-session "$WORK/guest-tools/det-phosh-session"
-cp ../guest/det-compat-check "$WORK/guest-tools/det-compat-check"
-cp ../guest/det-firefox-content-defaults "$WORK/guest-tools/det-firefox-content-defaults"
-cp ../guest/det-session-launch "$WORK/guest-tools/det-session-launch"
-cp ../guest/det-plasma-session "$WORK/guest-tools/det-plasma-session"
-cp ../guest/det-plasma-client "$WORK/guest-tools/det-plasma-client"
-cp ../guest/det-hyprland "$WORK/guest-tools/det-hyprland"
-cp ../guest/det-hyprland-opal "$WORK/guest-tools/det-hyprland-opal"
-cp ../guest/det-opal "$WORK/guest-tools/det-opal"
-cp ../guest/det-omarchy "$WORK/guest-tools/det-omarchy"
-cp ../guest/det-hyprland-omarchy "$WORK/guest-tools/det-hyprland-omarchy"
+cp "$AURORA_GUEST_AGENT" "$WORK/guest-tools/aurora-guest-agent"
+cp "$AURORA_AUDIO_GUEST" "$WORK/guest-tools/aurora-audio-probe"
+cp ../guest/aurora-audio-session "$WORK/guest-tools/aurora-audio-session"
+cp ../guest/aurora-pipewire-smoke "$WORK/guest-tools/aurora-pipewire-smoke"
+cp ../guest/aurora-input-actions "$WORK/guest-tools/aurora-input-actions"
+cp ../guest/aurora-media-action "$WORK/guest-tools/aurora-media-action"
+cp ../guest/aurora-connectivity "$WORK/guest-tools/aurora-connectivity"
+cp ../guest/aurora-connectivity-menu "$WORK/guest-tools/aurora-connectivity-menu"
+cp ../guest/aurora-platform "$WORK/guest-tools/aurora-platform"
+cp ../guest/aurora-apps "$WORK/guest-tools/aurora-apps"
+cp ../guest/aurora-phosh-session "$WORK/guest-tools/aurora-phosh-session"
+cp ../guest/aurora-compat-check "$WORK/guest-tools/aurora-compat-check"
+cp ../guest/aurora-osk "$WORK/guest-tools/aurora-osk"
+cp ../guest/aurora-firefox-content-defaults "$WORK/guest-tools/aurora-firefox-content-defaults"
+cp ../guest/aurora-session-launch "$WORK/guest-tools/aurora-session-launch"
+cp ../guest/aurora-plasma-session "$WORK/guest-tools/aurora-plasma-session"
+cp ../guest/aurora-plasma-client "$WORK/guest-tools/aurora-plasma-client"
+cp ../guest/aurora-hyprland "$WORK/guest-tools/aurora-hyprland"
+cp ../guest/aurora-hyprland-opal "$WORK/guest-tools/aurora-hyprland-opal"
+cp ../guest/aurora-opal "$WORK/guest-tools/aurora-opal"
+cp ../guest/aurora-omarchy "$WORK/guest-tools/aurora-omarchy"
+cp ../guest/aurora-hyprland-omarchy "$WORK/guest-tools/aurora-hyprland-omarchy"
 cp -a ../guest/omarchy "$WORK/guest-assets/omarchy"
-cp ../guest/det-opal-bridge "$WORK/guest-tools/det-opal-bridge"
+cp ../guest/aurora-opal-bridge "$WORK/guest-tools/aurora-opal-bridge"
 cp ../guest/opal-command "$WORK/guest-tools/opal"
 cp -a ../guest/opal "$WORK/guest-assets/opal"
 cp ../guest/setup-compatibility.sh "$WORK/guest-tools/setup-compatibility.sh"
-cp ../guest/det-phosh.service "$WORK/guest-tools/det-phosh.service"
-cp ../guest/det-plasma.service "$WORK/guest-tools/det-plasma.service"
-cp ../guest/determination-connectivity.desktop "$WORK/guest-tools/determination-connectivity.desktop"
-cp ../guest/determination-input-proxy.desktop "$WORK/guest-tools/determination-input-proxy.desktop"
-cp ../guest/det-input-udevdb "$WORK/guest-tools/det-input-udevdb"
-cp ../guest/90-determination-direct.conf "$WORK/guest-tools/90-determination-direct.conf"
+cp ../guest/aurora-phosh.service "$WORK/guest-tools/aurora-phosh.service"
+cp ../guest/aurora-plasma.service "$WORK/guest-tools/aurora-plasma.service"
+cp ../guest/aurora-connectivity.desktop "$WORK/guest-tools/aurora-connectivity.desktop"
+cp ../guest/aurora-input-proxy.desktop "$WORK/guest-tools/aurora-input-proxy.desktop"
+cp ../guest/aurora-input-udevdb "$WORK/guest-tools/aurora-input-udevdb"
+cp ../guest/90-aurora-direct.conf "$WORK/guest-tools/90-aurora-direct.conf"
 cp ../guest/lxc/config "$WORK/tools/lxc-config-base"
 cp "$ZYGISK_64" "$WORK/zygisk/arm64-v8a.so"
 cp "$ZYGISK_32" "$WORK/zygisk/armeabi-v7a.so"
 
-OUT="$PWD/determination-magisk-v$DET_VERSION.zip"
+OUT="$PWD/aurora-magisk-v$AURORA_VERSION.zip"
 rm -f "$OUT"
 # Python zipfile keeps this independent of zip(1). Fixed metadata plus a
 # sorted file list make repeated release builds byte-for-byte reproducible.

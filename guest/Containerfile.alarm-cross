@@ -1,4 +1,4 @@
-FROM localhost/determination/quickshell-cross:trixie
+FROM localhost/aurora/quickshell-cross:trixie
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     meson gperf m4 python3-jinja2 python3-pyelftools gettext \
     && rm -rf /var/lib/apt/lists/*

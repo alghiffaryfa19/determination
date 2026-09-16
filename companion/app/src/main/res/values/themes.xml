@@ -1,18 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Material You 3: dynamic colour on Android 12+, graceful fallback below.
-         Edge-to-edge with transparent system bars; a soul-tinted gradient
-         shows through the translucent surfaces. -->
-    <style name="Theme.Determination" parent="Theme.Material3.DynamicColors.DayNight">
-        <item name="colorPrimary">@color/det_soul</item>
+    <style name="Theme.Aurora" parent="Theme.Material3.DynamicColors.DayNight">
+        <item name="colorPrimary">@color/aurora_accent</item>
         <item name="android:windowBackground">@drawable/bg_gradient</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
 
-    <style name="Theme.Determination.Dialog" parent="Theme.Material3.DayNight.Dialog.Alert">
-        <item name="colorPrimary">@color/det_soul</item>
+    <style name="Theme.Aurora.Dialog" parent="Theme.Material3.DayNight.Dialog.Alert">
+        <item name="colorPrimary">@color/aurora_accent</item>
     </style>
 
 </resources>

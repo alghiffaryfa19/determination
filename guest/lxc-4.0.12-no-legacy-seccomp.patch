@@ -1,7 +1,7 @@
-## SPDX-FileCopyrightText: 2026 Determination contributors
+## SPDX-FileCopyrightText: 2026 Aurora contributors
 ## SPDX-License-Identifier: LGPL-2.1-or-later
 ##
-## Determination patch for LXC 4.0.12. It modifies src/lxc/attach.c, which
+## Aurora patch for LXC 4.0.12. It modifies src/lxc/attach.c, which
 ## upstream marks LGPL-2.1-or-later; retain the upstream LXC notices.
 
 --- a/src/lxc/attach.c

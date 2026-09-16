@@ -1,13 +1,13 @@
 [Thread debugging using libthread_db enabled]
 Using host libthread_db library "/lib/aarch64-linux-gnu/libthread_db.so.1".
 [New Thread 0x7fb7684ba0 (LWP 4732)]
-No running instances for "/usr/local/share/det-opal/shell.qml"
+No running instances for "/usr/local/share/aurora-opal/shell.qml"
 Dead instances:
  - sgkxb2lt
  - k91g0c2lt
  - w52j2c2lt
  - ps2k3c2lt
-[32m  INFO[0m: Launching config: "/usr/local/share/det-opal/shell.qml"
+[32m  INFO[0m: Launching config: "/usr/local/share/aurora-opal/shell.qml"
 [32m  INFO[0m: Shell ID: "886931d2cd7a9b4fff3ab0ad6deb4e7d" Path ID "886931d2cd7a9b4fff3ab0ad6deb4e7d"
 [32m  INFO[0m: Saving logs to "/run/user/1000/quickshell/by-id/el3m4c2lt/log.qslog"
 [33m  WARN[0m: Attribute Qt::AA_UseOpenGLES must be set before QCoreApplication is created.

@@ -1,6 +1,6 @@
 #!/system/bin/sh
 set -eu
-ROOT=${DET_SESSION_SELECT_ROOT:-${DET:-/data/determination}}
+ROOT=${AURORA_SESSION_SELECT_ROOT:-${AURORA:-/data/aurora}}
 GUEST="$ROOT/active-guest"
 [ -d "$GUEST" ] || GUEST="$ROOT/guest"
 for manifest in "$ROOT/etc/sessions/"*.session; do

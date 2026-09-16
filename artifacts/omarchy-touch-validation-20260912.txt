@@ -1,0 +1,155 @@
+before=2185
+ok
+ok
+after=2185
+
+
+
+Plugin hyprgrass by horriblename:
+	Handle: 5dbcb050c0
+	Version: v0.8.2
+	Description: Touchscreen gestures
+
+{
+"mice": [
+
+],
+"keyboards": [
+    {
+        "address": "0x5dbc657d80",
+        "name": "qpnp_pon",
+        "rules": "",
+        "model": "",
+        "layout": "us",
+        "variant": "",
+        "options": "",
+        "active_keymap": "English (US)",
+        "capsLock": false,
+        "numLock": false,
+        "main": false
+    },    {
+        "address": "0x5dbd2adcd0",
+        "name": "gpio-keys",
+        "rules": "",
+        "model": "",
+        "layout": "us",
+        "variant": "",
+        "options": "",
+        "active_keymap": "English (US)",
+        "capsLock": false,
+        "numLock": false,
+        "main": false
+    },    {
+        "address": "0x5dbcc4f620",
+        "name": "sm8150-tavil-snd-card-button-jack",
+        "rules": "",
+        "model": "",
+        "layout": "us",
+        "variant": "",
+        "options": "",
+        "active_keymap": "English (US)",
+        "capsLock": false,
+        "numLock": false,
+        "main": false
+    },    {
+        "address": "0x5dbd3c23f0",
+        "name": "qwerty",
+        "rules": "",
+        "model": "",
+        "layout": "us",
+        "variant": "",
+        "options": "",
+        "active_keymap": "English (US)",
+        "capsLock": false,
+        "numLock": false,
+        "main": false
+    },    {
+        "address": "0x5dbd3f9120",
+        "name": "touchpanel",
+        "rules": "",
+        "model": "",
+        "layout": "us",
+        "variant": "",
+        "options": "",
+        "active_keymap": "English (US)",
+        "capsLock": false,
+        "numLock": false,
+        "main": false
+    },    {
+        "address": "0x5dbd430010",
+        "name": "oplus,hall_tri_state_key",
+        "rules": "",
+        "model": "",
+        "layout": "us",
+        "variant": "",
+        "options": "",
+        "active_keymap": "English (US)",
+        "capsLock": false,
+        "numLock": false,
+        "main": false
+    },    {
+        "address": "0x5dbcb6eaa0",
+        "name": "hl-virtual-keyboard",
+        "rules": "",
+        "model": "",
+        "layout": "us",
+        "variant": "",
+        "options": "",
+        "active_keymap": "English (US)",
+        "capsLock": false,
+        "numLock": false,
+        "main": true
+    }
+],
+"tablets": [
+
+],
+"touch": [
+    {
+        "address": "0x5dbd42f980",
+        "name": "touchpanel-1"
+    }
+],
+"switches": [
+
+]
+}
+
+[{
+    "id": 0,
+    "name": "HWC-1",
+    "description": "",
+    "make": "",
+    "model": "",
+    "serial": "",
+    "width": 1080,
+    "height": 2340,
+    "refreshRate": 60.00000,
+    "x": 0,
+    "y": 0,
+    "activeWorkspace": {
+        "id": 1,
+        "name": "1"
+    },
+    "specialWorkspace": {
+        "id": 0,
+        "name": ""
+    },
+    "reserved": [0, 0, 0, 0],
+    "scale": 2.50,
+    "transform": 0,
+    "focused": true,
+    "dpmsStatus": true,
+    "vrr": false,
+    "solitary": "0",
+    "activelyTearing": false,
+    "directScanoutTo": "0",
+    "disabled": false,
+    "currentFormat": "Invalid",
+    "mirrorOf": "none",
+    "availableModes": ["1080x2340@60.00Hz"]
+}]
+7645700000-7645753000 r-xp 00000000 fc:24 6064291                        /opt/aurorahyprland/lib/compat/libudev.so.1
+7645753000-764576b000 ---p 00053000 fc:24 6064291                        /opt/aurorahyprland/lib/compat/libudev.so.1
+764576b000-7645770000 r--p 0005b000 fc:24 6064291                        /opt/aurorahyprland/lib/compat/libudev.so.1
+7645770000-7645771000 rw-p 00060000 fc:24 6064291                        /opt/aurorahyprland/lib/compat/libudev.so.1

@@ -1,0 +1,8 @@
+FROM localhost/aurora/quickshell-cross:trixie
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    qt6-wayland:arm64 libqt6svg6:arm64 \
+    qml6-module-qtquick:arm64 qml6-module-qtquick-window:arm64 \
+    qml6-module-qtquick-controls:arm64 qml6-module-qtquick-layouts:arm64 \
+    qml6-module-qtquick-templates:arm64 qml6-module-qtqml:arm64 \
+    qml6-module-qtqml-models:arm64 qml6-module-qtqml-workerscript:arm64 \
+    && rm -rf /var/lib/apt/lists/*

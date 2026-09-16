@@ -1,11 +1,11 @@
-# Determination platform overhaul
+# Aurora platform overhaul
 
 **Status:** execution plan, started 2026-07-20  
 **Scope:** the platform after the OnePlus 7 internal-desktop proof  
 **Rule:** every phase must leave a recoverable phone, useful evidence, and an
 honest compatibility claim.
 
-This is the plan for turning Determination from a remarkably capable collection
+This is the plan for turning Aurora from a remarkably capable collection
 of device-bring-up tools into a maintainable convergence platform. It is
 deliberately larger than the Aqua release checklist. Aqua may cut from a stable
 point while later phases continue.
@@ -18,7 +18,7 @@ them only when the replacement has passed the same hardware gate.
 
 These are not negotiable during the overhaul:
 
-1. Android remains PID 1. Determination is not a ROM and does not modify
+1. Android remains PID 1. Aurora is not a ROM and does not modify
    `/system` or `/vendor`.
 2. Phone mode is the recovery baseline. After a crash, failed update, dead
    guest, or interrupted transition, the system must either reach phone mode or
@@ -36,7 +36,7 @@ These are not negotiable during the overhaul:
 8. Apps never receive arbitrary root-shell access. Privileged operations are
    named, versioned, authenticated, bounded, logged, and independently
    authorisable.
-9. Android owns Android display colour state. Determination must not force a
+9. Android owns Android display colour state. Aurora must not force a
    Night Light temperature, saturation, colour matrix, or display colour mode.
    Desktop colour management is opt-in and session-local; transition code may
    observe Android state but must not rewrite it.
@@ -47,7 +47,7 @@ These are not negotiable during the overhaul:
     explicit in-app controls.
 12. Every dangerous operation has a deadline, a journal entry, and a rollback
     or recovery action.
-13. Determination services do not depend on Android framework/media services
+13. Aurora services do not depend on Android framework/media services
     for their core function. In particular, product audio uses direct hardware
     access, not AudioFlinger, AAudio, or a companion-app PCM bridge. Android
     services may be observed or explicitly arbitrated, but they are not the
@@ -59,12 +59,12 @@ The overhaul is successful when all of these are true:
 
 - one daemon owns desired mode, observed mode, transitions, recovery, and the
   privileged device API;
-- `det`, the companion app, the guest session, Quick Settings, and automation
+- `aurora`, the companion app, the guest session, Quick Settings, and automation
   all use the same versioned API;
 - killing any client does not abandon a transition or leave display ownership
   ambiguous;
 - a reboot during ENTERING, DESKTOP, EXITING, or RECOVERY reconciles to PHONE;
-- `det doctor --json` explains the system without depending on a responsive
+- `aurora doctor --json` explains the system without depending on a responsive
   Android framework;
 - the shell transition implementation is an adapter behind the daemon, then is
   reduced step by step as native replacements prove themselves;
@@ -97,11 +97,11 @@ Initial quantitative targets:
 ## 3. Target architecture
 
 ```text
- Android app / QS tile / shortcuts      host det CLI       guest session
+ Android app / QS tile / shortcuts      host aurora CLI       guest session
                  |                           |                    |
                  +-------- versioned local RPC ------------------+
                                              |
-                                      detd (root, bionic)
+                                      aurorad (root, bionic)
                                state owner / policy / journal
                                   /          |          \
                          transition     guest/lxc      services
@@ -111,7 +111,7 @@ Initial quantitative targets:
                         HWC ownership      + agents     and DP display
 ```
 
-The important boundary is not “C++ good, shell bad.” `detd` owns state and
+The important boundary is not “C++ good, shell bad.” `aurorad` owns state and
 transactions. Small scripts may remain as leaf adapters where Android's toolbox
 already expresses the operation clearly. No script may independently decide
 the global mode once the daemon is authoritative.
@@ -120,22 +120,22 @@ the global mode once the daemon is authoritative.
 
 | Component | Responsibility | Privilege |
 |---|---|---|
-| `detd` | state machine, RPC, policy, journal, recovery, service supervision | root host daemon |
-| `detctl` | stable CLI and machine-readable client | caller's identity; no implicit escalation |
-| `det-guest-agent` | guest health/events and a tiny capability-scoped host command bridge | uid 1000 in guest |
-| `det-audiod` | hardware ownership, codec/route policy, metrics and recovery | root host control plus unprivileged guest API |
-| `det-presenterd` | Android display presenter lifecycle and protocol policy | Android app/service boundary |
-| `det-recond` or `det probe` | capability collection with a stable schema | read-only root where required |
-| `det-watchdog` | optional minimal boot recovery if the main daemon cannot start | root, no feature policy |
+| `aurorad` | state machine, RPC, policy, journal, recovery, service supervision | root host daemon |
+| `auroractl` | stable CLI and machine-readable client | caller's identity; no implicit escalation |
+| `aurora-guest-agent` | guest health/events and a tiny capability-scoped host command bridge | uid 1000 in guest |
+| `aurora-audiod` | hardware ownership, codec/route policy, metrics and recovery | root host control plus unprivileged guest API |
+| `aurora-presenterd` | Android display presenter lifecycle and protocol policy | Android app/service boundary |
+| `aurora-recond` or `aurora probe` | capability collection with a stable schema | read-only root where required |
+| `aurora-watchdog` | optional minimal boot recovery if the main daemon cannot start | root, no feature policy |
 
-`detd`, `detctl`, and `det-guest-agent` are the first three replacements. The
+`aurorad`, `auroractl`, and `aurora-guest-agent` are the first three replacements. The
 others are separate workstreams and must not be coupled merely to share a
 long-lived process.
 
 ### 3.2 Filesystem contract
 
 ```text
-/data/determination/
+/data/aurora/
   bin/                 deployed binaries and compatibility adapters
   etc/                 validated persistent configuration
   libexec/             private transition/service adapters
@@ -190,7 +190,7 @@ Each state record contains:
 - recovery disposition: retry, rollback, phone-safe reboot, or manual action;
 - component build manifest and device-profile digest.
 
-Only `detd` writes authoritative state. Marker files remain temporary
+Only `aurorad` writes authoritative state. Marker files remain temporary
 compatibility outputs for old Zygisk and shell consumers.
 
 ### 4.2 Transition semantics
@@ -261,11 +261,11 @@ arbitrary Android property operation.
 
 ### 4.5 Compatibility migration
 
-1. Ship daemon and CLI dark; `detctl ping` and `status` only.
+1. Ship daemon and CLI dark; `auroractl ping` and `status` only.
 2. Let daemon observe markers without owning transitions.
 3. Make daemon authoritative while it launches old transition scripts.
-4. Move companion and host `det` commands to the API with old paths as fallback.
-5. Replace `det-hostagent` with `det-guest-agent`.
+4. Move companion and host `aurora` commands to the API with old paths as fallback.
+5. Replace `aurora-hostagent` with `aurora-guest-agent`.
 6. Extract transition steps from scripts into daemon-owned adapters.
 7. Remove direct companion `su` calls command by command.
 8. Retain an offline `desktop-off --emergency` recovery adapter which does not
@@ -273,7 +273,7 @@ arbitrary Android property operation.
 9. Delete an old path only after device qualification proves the new one and
    rollback installation is tested.
 
-## 5. Replacement one: `detd`
+## 5. Replacement one: `aurorad`
 
 Initial implementation slice:
 
@@ -306,19 +306,19 @@ Native extraction order after ownership is proven:
 Hardware-specific sysfs operations stay capability adapters rather than being
 compiled as OnePlus constants.
 
-## 6. Replacement two: `detctl` and app API
+## 6. Replacement two: `auroractl` and app API
 
-`detctl` is both a human CLI and a reference protocol client:
+`auroractl` is both a human CLI and a reference protocol client:
 
 ```text
-detctl status [--json]
-detctl doctor [--json]
-detctl mode phone|desktop [--wait] [--deadline 30s]
-detctl recover [--wait]
-detctl guest start|stop|restart
-detctl service list|restart <known-name>
-detctl events [--json-lines]
-detctl capabilities [--json]
+auroractl status [--json]
+auroractl doctor [--json]
+auroractl mode phone|desktop [--wait] [--deadline 30s]
+auroractl recover [--wait]
+auroractl guest start|stop|restart
+auroractl service list|restart <known-name>
+auroractl events [--json-lines]
+auroractl capabilities [--json]
 ```
 
 Exit codes are stable: success, rejected, unavailable, deadline, degraded,
@@ -349,7 +349,7 @@ Third-party app API:
 - publish protocol and permission documentation with examples and deprecation
   policy.
 
-## 7. Replacement three: `det-guest-agent`
+## 7. Replacement three: `aurora-guest-agent`
 
 The native guest agent replaces the inotify command file and scattered helper
 signals.
@@ -378,12 +378,12 @@ Migration maps existing commands exactly before adding new ones:
 | `poweroff` | user-confirmed `POWER_OFF` |
 | wake/session events | typed guest health/event messages |
 
-The old `det-hostagent` remains an emergency fallback for one release and logs
+The old `aurora-hostagent` remains an emergency fallback for one release and logs
 when it is used.
 
 ## 8. Observability and recovery
 
-`det doctor --json` must work while system_server is frozen. It reports:
+`aurora doctor --json` must work while system_server is frozen. It reports:
 
 - build manifest, protocol versions, boot ID, uptime, kernel, profile digest;
 - desired/observed internal and external mode;
@@ -511,7 +511,7 @@ Audio is an independent product boundary.
   USB audio or a directly managed Bluetooth backend. A phone-codec path which
   cannot be safely shared is advertised as unavailable or requires an explicit
   ownership handoff; it does not silently tunnel through Android.
-- A small privileged `det-audiod` owns only hardware arbitration and
+- A small privileged `aurora-audiod` owns only hardware arbitration and
   device-specific route operations. PCM stays in PipeWire whenever the kernel
   interface permits it.
 - ALSA UCM2 profiles and capability probes describe mixers, codecs, jacks,
@@ -640,7 +640,7 @@ state journal, timings, hashes, and bounded relevant logs under `artifacts/`.
 - add install-time compatibility checks which fail before replacing a working
   version;
 - stage update, self-test, atomically activate, retain previous version;
-- make rollback available from Android, `det`, Magisk action, and USB recovery;
+- make rollback available from Android, `aurora`, Magisk action, and USB recovery;
 - publish supported device/ROM/kernel combinations from evidence.
 
 ## 16. Android-native features
@@ -689,13 +689,13 @@ recovery:
 
 - a rare Deltarune-flavoured transition variant selected locally, never on the
   first transition after an update;
-- `det soul` prints a tiny animated health/status heart whose behaviour reflects
+- `aurora soul` prints a tiny animated health/status heart whose behaviour reflects
   PHONE, DESKTOP, DEGRADED, and RECOVERY;
 - a Konami-style key sequence in the companion opens the graphics benchmark
   dashboard, not a destructive command;
 - release codenames unlock wallpaper/accent packs stored in the guest;
 - a terminal fortune assembled from real system facts and project lore;
-- an “absolute determination” achievement after 50 clean cycles, backed by the
+- an “absolute aurora” achievement after 50 clean cycles, backed by the
   actual qualification journal rather than a counter in the UI;
 - presenter colour bars hide a small build ID so first-frame photos retain
   provenance.
@@ -722,8 +722,8 @@ independent.
 ### Wave 1 : native control skeleton
 
 - create host-buildable control protocol and state core;
-- implement `detd` dark launch, lock, atomic state and read-only status;
-- implement `detctl hello/status/doctor`;
+- implement `aurorad` dark launch, lock, atomic state and read-only status;
+- implement `auroractl hello/status/doctor`;
 - add host unit tests and Android NDK builds;
 - package binaries without making boot depend on them.
 
@@ -741,7 +741,7 @@ independent.
 
 ### Wave 3 : app/CLI migration
 
-- route host `det` through `detctl`;
+- route host `aurora` through `auroractl`;
 - update Zygisk root companion to forward structured RPC;
 - migrate companion status, enter, exit and recover;
 - preserve old-module fallback;
@@ -751,7 +751,7 @@ independent.
 
 ### Wave 4 : guest-agent replacement
 
-- ship `det-guest-agent` and guest endpoint policy;
+- ship `aurora-guest-agent` and guest endpoint policy;
 - map all old control commands;
 - move session manager/power/health integration;
 - run old and new agents in compare-only mode, then switch authority.
@@ -829,7 +829,7 @@ exactly on exit, and disabling audio affects nothing else.
 The first batch starts now and is intentionally narrower than the whole plan:
 
 1. build the protocol/state library with host tests;
-2. build Android `detd` and `detctl` for arm64;
+2. build Android `aurorad` and `auroractl` for arm64;
 3. add read-only `hello`, `status`, `doctor`, and `capabilities`;
 4. package and dark-launch the daemon after boot;
 5. add authoritative mode requests which call existing transition adapters;
@@ -849,7 +849,7 @@ observe and control their independent lifetimes.
 
 The first batch is now implemented through source/build gates:
 
-- `detd`, `detctl`, durable transitions, Zygisk forwarding and the native guest
+- `aurorad`, `auroractl`, durable transitions, Zygisk forwarding and the native guest
   endpoint are built and packaged; boot is intentionally still observe-only;
 - explicit app intents and signature AIDL expose fixed native operations;
 - doctor/metrics understand guest, presenter and audio-owner contradictions;
@@ -883,5 +883,5 @@ transition, presenter and audio builds await deployment and recovery testing.
 - A colour-temperature preference silently written during a transition is not
   display restoration.
 
-That honesty is part of the architecture. Determination has already done the
+That honesty is part of the architecture. Aurora has already done the
 hard, strange work. The overhaul is how that work stops depending on heroics.

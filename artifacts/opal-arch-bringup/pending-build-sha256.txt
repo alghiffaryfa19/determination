@@ -1,0 +1,2 @@
+554b5aaccf12847b05305d7a23fb65b3d945706c94ab51b180f3c0b4047de8fa  artifacts/opal-arch-bringup/quickshell-current-runtime.tar.gz
+4b85d5a28491a6006a0997d7bda0fbcf3e10636a0113b2fd6e879135850abdad  companion/app/build/outputs/apk/debug/app-debug.apk

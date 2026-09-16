@@ -59,7 +59,7 @@ diff --git a/src/gallium/drivers/zink/zink_screen.c b/src/gallium/drivers/zink/z
           idx = zink_get_display_device(screen, pdev_count, pdevs, dev_major,
                                         dev_minor);
 
-+      /* Determination/kgsl: a KGSL-backed turnip device exposes no
++      /* Aurora/kgsl: a KGSL-backed turnip device exposes no
 +       * VK_EXT_physical_device_drm identity, so display-device matching can
 +       * never succeed even though the driver works. On single-GPU systems,
 +       * allow falling back to the first enumerated device. */

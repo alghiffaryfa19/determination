@@ -3,7 +3,7 @@ set -eu
 REPO=$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)
 ROOT=$(mktemp -d)
 trap 'rm -rf "$ROOT"' EXIT
-export DET_SESSION_SELECT_ROOT=$ROOT
+export AURORA_SESSION_SELECT_ROOT=$ROOT
 mkdir -p "$ROOT/etc/sessions" "$ROOT/guest/usr/bin"
 printf '#!/bin/sh\nexit 0\n' > "$ROOT/guest/usr/bin/test"
 chmod +x "$ROOT/guest/usr/bin/test"

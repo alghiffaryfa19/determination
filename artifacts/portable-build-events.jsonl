@@ -1,0 +1,6 @@
+{"schema": 1, "event": {"stage": "toolchain", "status": "cached"}}
+{"schema": 1, "event": {"stage": "source", "status": "running"}}
+{"schema": 1, "event": {"phase": "Authenticating the Arch Linux ARM base"}}
+{"schema": 1, "event": {"stage": "source", "status": "complete"}}
+{"schema": 1, "event": {"stage": "packages", "status": "running"}}
+{"schema": 1, "event": {"phase": "Staging signed ARM64 desktop packages"}}

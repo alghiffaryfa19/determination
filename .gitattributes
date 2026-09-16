@@ -14,8 +14,8 @@ artifacts/** -text
 
 # Captured terminal output, patch context, and upstream source retain their
 # original whitespace; do not treat it as project formatting drift.
-artifacts/dethyprland-*.txt -whitespace
+artifacts/aurorahyprland-*.txt -whitespace
 artifacts/opal-deployed.txt -whitespace
-graphics/dethyprland/patches/*.patch -whitespace
+graphics/aurorahyprland/patches/*.patch -whitespace
 guest/quickshell-vendor-egl.patch -whitespace
 guest/vendor/** -whitespace

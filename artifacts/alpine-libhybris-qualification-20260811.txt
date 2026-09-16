@@ -1,4 +1,4 @@
-Determination Alpine libhybris qualification - 2026-08-11
+Aurora Alpine libhybris qualification - 2026-08-11
 Device: OnePlus 7 / guacamoleb
 Android: crDroid 12.11 / Android 16 (SDK 36)
 Guest: Alpine Linux v3.24, aarch64, native musl (no glibc or gcompat)
@@ -87,7 +87,7 @@ After the test:
   SurfaceFlinger running                         PASS
   sys.boot_completed=1                           PASS
   boot animation stopped                         PASS
-  Determination mode=phone                       PASS
+  Aurora mode=phone                       PASS
   Alpine SSH/network still reachable             PASS
   libhybris property bridge still healthy        PASS
 
@@ -95,7 +95,7 @@ Qualification boundary
 ----------------------
 Alpine now passes the native libhybris build, loader lifecycle, display-safe
 native-handle contract, real Android-16 HWC panel render, and one clean Android
-restore. It is not yet a device-qualified Determination guest: patched Phoc
+restore. It is not yet a device-qualified Aurora guest: patched Phoc
 plus real input, repeated desktop restoration, direct audio, and external
-display remain untested. /etc/determination-ready must therefore continue to
+display remain untested. /etc/aurora-ready must therefore continue to
 report graphics=unqualified.

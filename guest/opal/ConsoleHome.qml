@@ -56,7 +56,7 @@ Item {
     onLibraryChanged:selection=0
     function launch() {if(selectedWindows.length)Hub.focusWindow(selectedWindows[0]);else if(selected)Hub.launch(selected);}
     function changeTab(delta) {category=tabs[(tabs.indexOf(category)+delta+tabs.length)%tabs.length];query="";selection=0;}
-    function searchToggle() {if(embedded){Hub.page="launcher";return;}searching=!searching;if(searching)search.forceActiveFocus();}
+    function searchToggle() {if(embedded){Hub.page="launcher";return;}searching=!searching;if(searching)c.forceActiveFocus();}
     function navigate(key) {
         if(menuOpen) {
             if(key==="back"||key==="menu")menuOpen=false;
@@ -87,6 +87,8 @@ map[Qt.Key_Left]="left";map[Qt.Key_Right]="right";map[Qt.Key_Up]="up";map[Qt.Key
         else if(e.key===Qt.Key_Tab){c.navigate(e.modifiers&Qt.ShiftModifier ? "previousTab" : "nextTab");e.accepted=true;}
         else if(e.key===Qt.Key_F2){c.navigate("pin");e.accepted=true;}
         else if(e.key===Qt.Key_F3){c.searchToggle();e.accepted=true;}
+        else if(c.searching&&e.key===Qt.Key_Backspace){c.query=c.query.slice(0,-1);e.accepted=true;}
+        else if(c.searching&&e.text&&!(e.modifiers&(Qt.ControlModifier|Qt.AltModifier|Qt.MetaModifier))){c.query+=e.text;e.accepted=true;}
     }
     Component.onCompleted:if(!embedded)forceActiveFocus()
     ColumnLayout {

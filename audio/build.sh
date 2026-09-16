@@ -39,7 +39,7 @@ build_guest() {
         -DCMAKE_SYSTEM_NAME=Linux \
         -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
         -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-        -DDET_STATIC_GUEST=ON \
+        -DAURORA_STATIC_GUEST=ON \
         -DBUILD_TESTING=OFF
     cmake --build "$AUDIO/build/guest-arm64"
 }

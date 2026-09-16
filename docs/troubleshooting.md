@@ -7,7 +7,7 @@ hard way - do not "simplify" the fixes without rereading the linked evidence.
 
 `service.bootanim.exit 1` is a *symptom*, not the cause.
 
-1. Check Watchdog: `det log main | grep -i watchdog`
+1. Check Watchdog: `aurora log main | grep -i watchdog`
 2. Look for `Blocked in handler on main thread` + `ChargingControlController`.
 
 If present, this is the lazy-HAL wedge: `vendor.lineage_health` idles out and
@@ -19,7 +19,7 @@ in a loop, and nothing ever draws over bootanim's final frame.
 Fix: `desktop-off` runs the health-HAL keeper (re-asserts
 `start vendor.lineage_health` across the ss boot window) plus the bootanim
 keeper. If you see this anyway, the keepers did not run - check
-`toggle/desktop-off` step 1c/3b on-device under `/data/determination/bin/`.
+`toggle/desktop-off` step 1c/3b on-device under `/data/aurora/bin/`.
 
 ## Guest never starts / su returns permission denied
 
@@ -31,8 +31,8 @@ Never run `adb root` - it drops wireless transports.
 Android's `/data` is `nosuid,nodev`; the container rootfs inherits it after
 pivot, so setuid bits are ignored. `guest-start` remounts the container root
 `suid,dev,exec` post-start (the host-side bind remount does not reach the
-pivoted root on 4.14). If sudo still fails, also run `det passwd` once -
-sudo is password-gated for detuser.
+pivoted root on 4.14). If sudo still fails, also run `aurora passwd` once -
+sudo is password-gated for aurora.
 
 ## Watchdog kill-loop right after entering desktop mode
 
@@ -50,7 +50,7 @@ from accumulated block time; SIGKILL lets init/zygote respawn it fresh.
 ## Battery percentage stuck while charging
 
 UPower reads the raw `battery/capacity`, which the qpnp-smb5 charger freezes
-on some states. `det-battery` bind-mounts the corrected `bms` capacity over
+on some states. `aurora-battery` bind-mounts the corrected `bms` capacity over
 it, re-asserted every poll pass because the charger re-enumerates its
 power_supply node on USB plug/unplug and silently drops the bind.
 
@@ -92,9 +92,9 @@ symlink inside the container root.
 ## glib child-watch hangs launching sessions
 
 Never start sessions with `phoc -E`: pidfd support is half-backported on
-4.14.357, breaking glib's child watch. The `det-pidfd-shim.so` LD_PRELOAD
+4.14.357, breaking glib's child watch. The `aurora-pidfd-shim.so` LD_PRELOAD
 forces the SIGCHLD fallback by making `pidfd_open` return ENOSYS. Sessions
-launch through `det-session-manager`/`det-phosh-session` instead.
+launch through `aurora-session-manager`/`aurora-phosh-session` instead.
 
 ## Zygisk modules stopped loading after update
 
@@ -104,7 +104,7 @@ disables the whole module.
 
 ## Kernel/config changes vanish on boot
 
-The running config is merged from `determination.config` by
+The running config is merged from `aurora.config` by
 `kernel/build.sh`; flashing a stock boot.img or OTA revert wipes the custom
 kernel. Recovery path: `usb-install/host-flash.sh restore` using backups in
-`/sdcard/Download/boot_a-before-determination-*.img`.
+`/sdcard/Download/boot_a-before-aurora-*.img`.

@@ -1,12 +1,12 @@
 #!/system/bin/sh
-# Typed, persistent boot profile. Application is delegated to detd when its
+# Typed, persistent boot profile. Application is delegated to aurorad when its
 # boot-profile RPC becomes available; this adapter only records safe intent.
 set -eu
-DET=${DET:-/data/determination}
-STATE="$DET/state"
-RUN="$DET/run"
+AURORA=${AURORA:-/data/aurora}
+STATE="$AURORA/state"
+RUN="$AURORA/run"
 mkdir -p "$STATE" "$RUN"
-. "$DET/bin/lifecycle-lib"
+. "$AURORA/bin/lifecycle-lib"
 
 bp_write() { # desired previous generation attempts deadline result
     tmp="$STATE/boot-profile.new.$$"
@@ -19,7 +19,7 @@ bp_write() { # desired previous generation attempts deadline result
         echo "attempt_count=$4"
         echo "deadline_seconds=$5"
         echo "result=$6"
-        echo "profile_digest=$(sha256sum "$DET/etc/device.conf" 2>/dev/null | awk '{print $1}' || echo none)"
+        echo "profile_digest=$(sha256sum "$AURORA/etc/device.conf" 2>/dev/null | awk '{print $1}' || echo none)"
     } > "$tmp"
     mv -f "$tmp" "$STATE/boot-profile"
 }
@@ -32,11 +32,11 @@ case "$profile" in
         previous=$(sed -n 's/^desired=//p' "$STATE/boot-profile" 2>/dev/null | tail -n 1)
         [ "$previous" = linux-first ] || previous=phone
         generation=$(lc_generation_next)
-        deadline=${DET_LINUX_FIRST_DEADLINE:-45}
+        deadline=${AURORA_LINUX_FIRST_DEADLINE:-45}
         bp_write "$profile" "$previous" "$generation" 0 "$deadline" accepted
-        if [ -x "$DET/bin/detctl" ]; then
-            "$DET/bin/detctl" boot-profile "$profile" || {
-                echo "boot profile rejected by detd" >&2
+        if [ -x "$AURORA/bin/auroractl" ]; then
+            "$AURORA/bin/auroractl" boot-profile "$profile" || {
+                echo "boot profile rejected by aurorad" >&2
                 exit 1
             }
         fi
@@ -45,13 +45,13 @@ case "$profile" in
         ;;
     status) cat "$STATE/boot-profile" 2>/dev/null || echo 'desired=phone' ;;
     apply)
-        [ -x "$DET/bin/detctl" ] || { echo "detd unavailable" >&2; exit 69; }
+        [ -x "$AURORA/bin/auroractl" ] || { echo "aurorad unavailable" >&2; exit 69; }
         desired=$(sed -n 's/^desired=//p' "$STATE/boot-profile" | tail -n 1)
         previous=$(sed -n 's/^previous_known_good=//p' "$STATE/boot-profile" | tail -n 1)
         generation=$(sed -n 's/^generation=//p' "$STATE/boot-profile" | tail -n 1)
         deadline=$(sed -n 's/^deadline_seconds=//p' "$STATE/boot-profile" | tail -n 1)
         apply_rc=0
-        "$DET/bin/detctl" boot-apply --wait --deadline "$deadline" || apply_rc=$?
+        "$AURORA/bin/auroractl" boot-apply --wait --deadline "$deadline" || apply_rc=$?
         if [ "$apply_rc" -eq 0 ]; then
             bp_write "$desired" "$previous" "$generation" 0 "$deadline" committed
             exit 0
@@ -63,10 +63,10 @@ case "$profile" in
         [ "$apply_rc" -eq 3 ] || [ "$apply_rc" -eq 4 ] || exit "$apply_rc"
         case "$desired" in
             linux-first)
-                "$DET/bin/guest-start"
-                "$DET/bin/desktop-on"
+                "$AURORA/bin/guest-start"
+                "$AURORA/bin/desktop-on"
                 ;;
-            phone) "$DET/bin/desktop-off" --emergency ;;
+            phone) "$AURORA/bin/desktop-off" --emergency ;;
             *) echo "invalid persisted boot profile: $desired" >&2; exit 2 ;;
         esac
         bp_write "$desired" "$previous" "$generation" 0 "$deadline" committed
@@ -83,11 +83,11 @@ case "$profile" in
         attempts=$((attempts + 1))
         # One failed automatic attempt returns to the known-good phone profile.
         bp_write phone "${previous:-phone}" "${generation:-0}" "$attempts" "${deadline:-45}" recovery-required
-        [ ! -x "$DET/bin/detctl" ] || "$DET/bin/detctl" boot-profile phone >/dev/null 2>&1 || true
+        [ ! -x "$AURORA/bin/auroractl" ] || "$AURORA/bin/auroractl" boot-profile phone >/dev/null 2>&1 || true
         echo "boot profile recovered to phone after failed attempt=$attempts"
         ;;
     recover)
-        "$DET/bin/desktop-off" --emergency
+        "$AURORA/bin/desktop-off" --emergency
         exec "$0" phone
         ;;
     *) echo "usage: boot-profile phone|linux-first|status|apply|failed|recover" >&2; exit 2 ;;

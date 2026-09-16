@@ -15,5 +15,9 @@ RUN dpkg --add-architecture arm64 \
       qt6-base-dev:arm64 qt6-base-private-dev:arm64 \
       qt6-declarative-dev:arm64 qt6-declarative-private-dev:arm64 \
       qt6-shadertools-dev:arm64 qt6-wayland-dev:arm64 \
-      qt6-wayland-private-dev:arm64 \
+      qt6-wayland-private-dev:arm64 qt6-wayland:arm64 libqt6svg6:arm64 \
+      qml6-module-qtquick:arm64 qml6-module-qtquick-window:arm64 \
+      qml6-module-qtquick-controls:arm64 qml6-module-qtquick-layouts:arm64 \
+      qml6-module-qtquick-templates:arm64 qml6-module-qtqml:arm64 \
+      qml6-module-qtqml-models:arm64 qml6-module-qtqml-workerscript:arm64 \
  && rm -rf /var/lib/apt/lists/*

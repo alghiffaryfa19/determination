@@ -3,10 +3,10 @@
 # Runs in phone mode: stops SF, renders one finite sequence, then restores SF.
 set -u
 
-DET=/data/determination
-. "$DET/bin/device-config"
+AURORA=/data/aurora
+. "$AURORA/bin/device-config"
 
-BL=$DET_BACKLIGHT_PATH
+BL=$AURORA_BACKLIGHT_PATH
 OLD_BL=
 [ -n "$BL" ] && OLD_BL=$(cat "$BL" 2>/dev/null)
 
@@ -40,12 +40,12 @@ while [ "$(getprop init.svc.surfaceflinger)" != stopped ]; do
     sleep 0.1
 done
 sleep 0.5
-[ -n "$BL" ] && echo "$DET_BACKLIGHT_LEVEL" > "$BL" 2>/dev/null
+[ -n "$BL" ] && echo "$AURORA_BACKLIGHT_LEVEL" > "$BL" 2>/dev/null
 
-"$DET/lxc/bin/lxc-attach" -P "$DET" -n guest -- /bin/sh -c '
+"$AURORA/lxc/bin/lxc-attach" -P "$AURORA" -n guest -- /bin/sh -c '
     export PATH=/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
     export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib/aarch64-linux-gnu
     export HYBRIS_LD_LIBRARY_PATH=/usr/lib/android:/vendor/lib64:/system/lib64:/odm/lib64:/apex/com.android.runtime/lib64/bionic
     export EGL_PLATFORM=hwcomposer HYBRIS_EGLPLATFORM=hwcomposer ANDROID_ROOT=/system TMPDIR=/tmp
-    exec /usr/local/bin/det-transition desktop
+    exec /usr/local/bin/aurora-transition desktop
 '

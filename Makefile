@@ -1,12 +1,16 @@
 # Convenience entrypoints. Real logic lives in the scripts these invoke.
 #
 #   make check      offline repo-wide syntax/lint sweep (scripts/check.sh)
-#   make doctor     host-side setup sanity check (det doctor, no phone needed)
+#   make doctor     host-side setup sanity check (aurora doctor, no phone needed)
 #   make module     build the Magisk module zip for the current version
 #   make zygisk     ndk-build the Zygisk module (both ABIs required)
 #   make companion  assemble the companion APK debug build
 #   make installer  start the PC porting and installation interview
 #   make kernel     merge config overlay and compile the kernel (slow)
+
+ANDROID_SDK ?= $(HOME)/android-sdk
+ANDROID_NDK ?= $(ANDROID_SDK)/ndk/27.2.12479018
+JAVA_HOME ?= $(ANDROID_SDK)/jdk-17
 
 .PHONY: check doctor module zygisk companion installer installer-test kernel
 
@@ -14,16 +18,16 @@ check:
 	./scripts/check.sh
 
 doctor:
-	./det doctor
+	./aurora doctor
 
 module:
 	./magisk-module/build-module.sh
 
 zygisk:
-	cd zygisk && ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=jni/Android.mk NDK_APPLICATION_MK=jni/Application.mk
+	cd zygisk && $(ANDROID_NDK)/ndk-build NDK_PROJECT_PATH=. APP_BUILD_SCRIPT=jni/Android.mk NDK_APPLICATION_MK=jni/Application.mk
 
 companion:
-	~/android-sdk/gradle-8.7/bin/gradle --no-daemon -p companion assembleDebug
+	JAVA_HOME=$(JAVA_HOME) $(ANDROID_SDK)/gradle-8.7/bin/gradle --no-daemon -p companion assembleDebug
 
 installer:
 	./aurora-installer
