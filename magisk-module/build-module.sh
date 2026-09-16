@@ -128,10 +128,11 @@ cp "$ZYGISK_32" "$WORK/zygisk/armeabi-v7a.so"
 
 OUT="$PWD/aurora-magisk-v$AURORA_VERSION.zip"
 rm -f "$OUT"
-# Python zipfile keeps this independent of zip(1). Fixed metadata plus a
-# sorted file list make repeated release builds byte-for-byte reproducible.
+# Python zipfile keeps this independent of zip(1). Fixed timestamps plus a
+# sorted file list make repeated release builds byte-for-byte reproducible;
+# the Unix mode is preserved so guest-assets keep their executable bit.
 (cd "$WORK" && SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-315532800}" python3 - "$OUT" <<'PY'
-import os, stat, sys, time, zipfile
+import os, sys, time, zipfile
 out = sys.argv[1]
 epoch = max(315532800, int(os.environ['SOURCE_DATE_EPOCH']))
 stamp = time.gmtime(epoch)[:6]
@@ -141,7 +142,7 @@ with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
     for path in paths:
         info = zipfile.ZipInfo(path, stamp)
         info.compress_type = zipfile.ZIP_DEFLATED
-        info.external_attr = (stat.S_IFREG | 0o644) << 16
+        info.external_attr = os.stat(path).st_mode << 16
         with open(path, 'rb') as src:
             z.writestr(info, src.read(), compress_type=zipfile.ZIP_DEFLATED,
                        compresslevel=9)

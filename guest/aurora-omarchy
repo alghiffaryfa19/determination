@@ -2,9 +2,13 @@
 set -eu
 
 export OMARCHY_PATH=${AURORA_OMARCHY_PATH:-/usr/local/share/aurora-omarchy}
-QUICKSHELL=${AURORA_OMARCHY_QUICKSHELL:-/opt/hyprland/bin/quickshell}
+PREFIX=${AURORA_DHYPRLAND_PREFIX:-/opt/hyprland}
+QUICKSHELL=${AURORA_OMARCHY_QUICKSHELL:-$PREFIX/bin/quickshell}
 CONFIG=$OMARCHY_PATH/shell
-export PATH="$OMARCHY_PATH/bin:/opt/hyprland/bin:/usr/local/bin:/usr/bin:/bin"
+export PATH="$OMARCHY_PATH/bin:$PREFIX/bin:/usr/local/bin:/usr/bin:/bin"
+# Quickshell ships a private Qt runtime under the compositor prefix; without
+# this path it cannot load libQt6Qml*.so.6 and the shell never starts.
+export LD_LIBRARY_PATH="$PREFIX/lib/compat:$PREFIX/lib:/usr/local/lib:/usr/local/lib/aarch64-linux-gnu"
 export XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
 # Hyprland itself uses null EGL; shell windows are android_wlegl clients.
 export EGL_PLATFORM=wayland HYBRIS_EGLPLATFORM=wayland QT_QPA_PLATFORM=wayland

@@ -108,6 +108,13 @@ fi
 if [ -d "$AURORA/guest-assets/omarchy" ]; then
     mkdir -p "$GUEST_ROOT/usr/local/share/aurora-omarchy"
     cp -a "$AURORA/guest-assets/omarchy/." "$GUEST_ROOT/usr/local/share/aurora-omarchy/"
+    # Early module zips stored every entry as 0644. Restore the executable bit
+    # on the vendored Omarchy shebang scripts at every start so a stale payload
+    # repairs itself instead of shipping broken commands.
+    find "$GUEST_ROOT/usr/local/share/aurora-omarchy" -type f 2>/dev/null | while IFS= read -r f; do
+        [ "$(dd if="$f" bs=2 count=1 2>/dev/null)" = '#!' ] || continue
+        chmod 0755 "$f"
+    done
 fi
 for aurora_guest_config in "$AURORA"/guest-config/*.conf; do
     [ -f "$aurora_guest_config" ] || continue

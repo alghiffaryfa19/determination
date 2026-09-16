@@ -21,6 +21,7 @@ sh toggle/tests/guest-input-config-test.sh
 sh guest/tests/audio-session-test.sh
 sh guest/tests/compatibility-contract-test.sh
 sh guest/tests/omarchy-commands-test.sh
+sh guest/tests/omarchy-shell-test.sh
 sh guest/tests/osk-test.sh
 sh guest/tests/portable-rootfs-test.sh
 sh guest/tests/platform-runtime-test.sh

@@ -57,6 +57,15 @@ if [ -d "$MODPATH/guest-assets/opal" ]; then
         cp -a "$MODPATH/guest-assets/opal/." "$GUEST_ROOT/usr/local/share/aurora-opal/"
     fi
 fi
+# The vendored Omarchy commands are shebang scripts whose executable bit must
+# survive packaging. Restore it after every copy, regardless of zip metadata.
+restore_script_modes() {
+    [ -d "$1" ] || return 0
+    find "$1" -type f 2>/dev/null | while IFS= read -r f; do
+        [ "$(dd if="$f" bs=2 count=1 2>/dev/null)" = '#!' ] || continue
+        chmod 0755 "$f"
+    done
+}
 if [ -d "$MODPATH/guest-assets/omarchy" ]; then
     mkdir -p "$STAGE/guest-assets/omarchy"
     cp -a "$MODPATH/guest-assets/omarchy/." "$STAGE/guest-assets/omarchy/"
@@ -64,6 +73,8 @@ if [ -d "$MODPATH/guest-assets/omarchy" ]; then
         mkdir -p "$GUEST_ROOT/usr/local/share/aurora-omarchy"
         cp -a "$MODPATH/guest-assets/omarchy/." "$GUEST_ROOT/usr/local/share/aurora-omarchy/"
     fi
+    restore_script_modes "$STAGE/guest-assets/omarchy"
+    restore_script_modes "$GUEST_ROOT/usr/local/share/aurora-omarchy"
 fi
 for aurora_guest_config in "$MODPATH"/guest-config/*.conf; do
     [ -f "$aurora_guest_config" ] || continue
