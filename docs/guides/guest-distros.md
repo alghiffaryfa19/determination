@@ -65,13 +65,18 @@ Path fields accept alternatives separated by `|`, because the same session has
 to be satisfiable on Debian, Arch, and Alpine layouts:
 
 ```text
-compositor=/usr/local/bin/phoc|/usr/bin/phoc
 required_binaries=/usr/libexec/phosh|/usr/bin/phosh,/usr/bin/squeekboard
 ```
 
 `session-select` resolves each group to the path that exists on this guest and
 hands the resolved path to the launcher, so `desktop-on` never tries a path that
-was simply written for another distro. `session-catalog` computes readiness from
+was simply written for another distro. Alternatives are for the same upstream
+software in different layouts, not for a different build: the phosh compositor
+stays Aurora's patched build at `/usr/local/bin/phoc` (provided by the
+`build`/`build_deps` pair above), while the phosh shell's path is a Debian
+versus Arch difference. A session that accepts two compositor builds would be
+accepting two renderer stacks, so that is a qualification decision, not a path
+convenience. `session-catalog` computes readiness from
 the same field, and its verdict is what the installer reports: an environment
 whose compositor still has to be compiled finishes as a warning naming the
 missing binary and the provisioner that produces it, never as a success. When
